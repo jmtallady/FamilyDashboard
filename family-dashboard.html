@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .date-time {
+            font-size: 24px;
+            opacity: 0.9;
+        }
+
+        .kids-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .kid-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .kid-name {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .points-display {
+            font-size: 72px;
+            font-weight: bold;
+            text-align: center;
+            margin: 30px 0;
+            color: #764ba2;
+        }
+
+        .points-label {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            font-size: 32px;
+            width: 80px;
+            height: 80px;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .minus-btn {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .minus-btn:hover {
+            background: #ff5252;
+            transform: scale(1.1);
+        }
+
+        .plus-btn {
+            background: #51cf66;
+            color: white;
+        }
+
+        .plus-btn:hover {
+            background: #40c057;
+            transform: scale(1.1);
+        }
+
+        .reset-container {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .reset-btn {
+            background: white;
+            color: #667eea;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            width: auto;
+            height: auto;
+        }
+
+        .reset-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .status-message {
+            text-align: center;
+            color: white;
+            font-size: 18px;
+            margin-top: 20px;
+            min-height: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Family Dashboard</h1>
+            <div class="date-time" id="dateTime"></div>
+        </div>
+
+        <div class="kids-container">
+            <div class="kid-card">
+                <div class="kid-name">Clara</div>
+                <div class="points-label">Behavior Points</div>
+                <div class="points-display" id="clara-points">5</div>
+                <div class="button-group">
+                    <button class="minus-btn" onclick="adjustPoints('clara', -1)">−</button>
+                    <button class="plus-btn" onclick="adjustPoints('clara', 1)">+</button>
+                </div>
+            </div>
+
+            <div class="kid-card">
+                <div class="kid-name">Calvin</div>
+                <div class="points-label">Behavior Points</div>
+                <div class="points-display" id="calvin-points">5</div>
+                <div class="button-group">
+                    <button class="minus-btn" onclick="adjustPoints('calvin', -1)">−</button>
+                    <button class="plus-btn" onclick="adjustPoints('calvin', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="reset-container">
+            <button class="reset-btn" onclick="resetToFive()">Reset Both to 5</button>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <script>
+        // Initialize points from localStorage or default to 5
+        function initializePoints() {
+            const today = new Date().toDateString();
+            const lastReset = localStorage.getItem('lastReset');
+            
+            // If it's a new day, reset to 5
+            if (lastReset !== today) {
+                localStorage.setItem('clara', '5');
+                localStorage.setItem('calvin', '5');
+                localStorage.setItem('lastReset', today);
+            }
+            
+            // Load points from localStorage
+            const claraPoints = localStorage.getItem('clara') || '5';
+            const calvinPoints = localStorage.getItem('calvin') || '5';
+            
+            document.getElementById('clara-points').textContent = claraPoints;
+            document.getElementById('calvin-points').textContent = calvinPoints;
+        }
+
+        // Adjust points for a kid
+        function adjustPoints(kid, change) {
+            const pointsElement = document.getElementById(`${kid}-points`);
+            let currentPoints = parseInt(pointsElement.textContent);
+            let newPoints = currentPoints + change;
+            
+            // Don't go below 0
+            if (newPoints < 0) {
+                showMessage(`${kid === 'clara' ? 'Clara' : 'Calvin'} already at 0 points!`);
+                return;
+            }
+            
+            pointsElement.textContent = newPoints;
+            localStorage.setItem(kid, newPoints.toString());
+            
+            const action = change > 0 ? 'earned' : 'lost';
+            const name = kid === 'clara' ? 'Clara' : 'Calvin';
+            showMessage(`${name} ${action} a point! Now at ${newPoints}`);
+        }
+
+        // Reset both kids to 5
+        function resetToFive() {
+            document.getElementById('clara-points').textContent = '5';
+            document.getElementById('calvin-points').textContent = '5';
+            localStorage.setItem('clara', '5');
+            localStorage.setItem('calvin', '5');
+            localStorage.setItem('lastReset', new Date().toDateString());
+            showMessage('Both reset to 5 points!');
+        }
+
+        // Show status message
+        function showMessage(message) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            setTimeout(() => {
+                statusElement.textContent = '';
+            }, 3000);
+        }
+
+        // Update date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('dateTime').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        // Auto-reset at midnight
+        function checkForMidnight() {
+            const now = new Date();
+            const lastReset = localStorage.getItem('lastReset');
+            const today = now.toDateString();
+            
+            if (lastReset !== today && now.getHours() === 0 && now.getMinutes() === 0) {
+                resetToFive();
+            }
+        }
+
+        // Initialize on load
+        initializePoints();
+        updateDateTime();
+        
+        // Update time every minute
+        setInterval(updateDateTime, 60000);
+        
+        // Check for midnight every minute
+        setInterval(checkForMidnight, 60000);
+    </script>
+</body>
+</html>
