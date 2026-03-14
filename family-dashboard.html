@@ -330,12 +330,78 @@
                 defaultPoints: 5
             },
             pin: '1220', // Change this to your desired PIN
-            requirePinForEdits: true
+            requirePinForEdits: true,
+            sheetsApiUrl: '' // Add your Google Sheets Web App URL here after deployment
         };
 
         let isUnlocked = false;
         let unlockTimeout = null;
         let enteredPin = '';
+        let useGoogleSheets = false;
+
+        // ====== GOOGLE SHEETS INTEGRATION ======
+
+        // Fetch current points from Google Sheets
+        async function fetchPointsFromSheets() {
+            if (!CONFIG.sheetsApiUrl) {
+                console.log('No Google Sheets API URL configured');
+                return null;
+            }
+
+            try {
+                const url = `${CONFIG.sheetsApiUrl}?action=getCurrentPoints&t=${Date.now()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.points) {
+                    console.log('Fetched points from Google Sheets:', data.points);
+                    return data.points;
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error fetching from Google Sheets:', error);
+                return null;
+            }
+        }
+
+        // Save points to Google Sheets
+        async function savePointsToSheets(kidId, points, note = '') {
+            if (!CONFIG.sheetsApiUrl) {
+                console.log('No Google Sheets API URL configured');
+                return false;
+            }
+
+            try {
+                const kid = getKidByID(kidId);
+                if (!kid) return false;
+
+                const response = await fetch(CONFIG.sheetsApiUrl, {
+                    method: 'POST',
+                    mode: 'no-cors', // Required for Google Apps Script
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'logPoints',
+                        kid: kid.name,
+                        points: points,
+                        note: note
+                    })
+                });
+
+                console.log('Saved points to Google Sheets:', kidId, points);
+                return true;
+            } catch (error) {
+                console.error('Error saving to Google Sheets:', error);
+                return false;
+            }
+        }
 
         // PIN Number Pad Functions
         function addPinDigit(digit) {
@@ -387,10 +453,43 @@
             });
         }
 
-        // Initialize points from localStorage or default
-        function initializePoints() {
+        // Initialize points from Google Sheets or localStorage
+        async function initializePoints() {
             const today = new Date().toDateString();
             const lastReset = localStorage.getItem('lastReset');
+
+            // Try to fetch from Google Sheets first
+            if (CONFIG.sheetsApiUrl) {
+                const sheetPoints = await fetchPointsFromSheets();
+
+                if (sheetPoints) {
+                    useGoogleSheets = true;
+                    console.log('Using Google Sheets as data source');
+
+                    // Update UI with points from sheet
+                    Object.values(CONFIG).forEach(kid => {
+                        if (kid.id) {
+                            const kidData = sheetPoints[kid.id.toLowerCase()];
+                            const points = kidData ? kidData.points : kid.defaultPoints;
+
+                            const element = document.getElementById(`${kid.id}-points`);
+                            if (element) {
+                                element.textContent = points;
+                            }
+
+                            // Also save to localStorage as backup
+                            localStorage.setItem(kid.id, points.toString());
+                        }
+                    });
+
+                    showMessage('📊 Loaded from Google Sheets');
+                    return;
+                }
+            }
+
+            // Fallback to localStorage
+            console.log('Using localStorage as data source');
+            useGoogleSheets = false;
 
             // If it's a new day, reset to defaults
             if (lastReset !== today) {
@@ -412,6 +511,10 @@
                     }
                 }
             });
+
+            if (!CONFIG.sheetsApiUrl) {
+                showMessage('💾 Using offline mode');
+            }
         }
 
         // Get kid config by ID
@@ -462,7 +565,7 @@
         }
 
         // Adjust points for a kid
-        function adjustPoints(kidId, change) {
+        async function adjustPoints(kidId, change) {
             // Check if PIN is required and user is not unlocked
             if (CONFIG.requirePinForEdits && !isUnlocked) {
                 showPinModal();
@@ -492,21 +595,32 @@
                 return;
             }
 
+            // Update UI immediately
             pointsElement.textContent = newPoints;
+
+            // Save to localStorage (always, as backup)
             localStorage.setItem(kidId, newPoints.toString());
 
             const action = change > 0 ? 'earned' : 'lost';
-            showMessage(`${kid.name} ${action} a point! Now at ${newPoints}`);
+            const actionPast = change > 0 ? 'earned' : 'lost';
+            showMessage(`${kid.name} ${actionPast} a point! Now at ${newPoints}`);
+
+            // Save to Google Sheets if configured
+            if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+                const note = `${actionPast} via dashboard`;
+                await savePointsToSheets(kidId, newPoints, note);
+            }
         }
 
         // Reset all kids to default points
-        function resetToFive() {
+        async function resetToFive() {
             // Check if PIN is required and user is not unlocked
             if (CONFIG.requirePinForEdits && !isUnlocked) {
                 showPinModal();
                 return;
             }
 
+            // Update UI and localStorage
             Object.values(CONFIG).forEach(kid => {
                 if (kid.id) {
                     document.getElementById(`${kid.id}-points`).textContent = kid.defaultPoints;
@@ -515,6 +629,15 @@
             });
             localStorage.setItem('lastReset', new Date().toDateString());
             showMessage('All reset to default points!');
+
+            // Save to Google Sheets if configured
+            if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+                for (const kid of Object.values(CONFIG)) {
+                    if (kid.id) {
+                        await savePointsToSheets(kid.id, kid.defaultPoints, 'Reset to default');
+                    }
+                }
+            }
         }
 
         // Show status message
