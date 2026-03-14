@@ -70,7 +70,7 @@
             },
             pin: '1220', // Change this to your desired PIN
             requirePinForEdits: true,
-            sheetsApiUrl: '' // Add your Google Sheets Web App URL here after deployment
+            sheetsApiUrl: 'https://script.google.com/macros/s/AKfycbxGpKE8kZEv5PKbBfteVru3WcyP_qfX7U_eV5TEZrfPxrfxrlNmjqh3BRpsnSdNIsRNIQ/exec' // Add your Google Sheets Web App URL here after deployment
         };
 
         let isUnlocked = false;
@@ -423,6 +423,38 @@
             }
         }
 
+        // Auto-save to Google Sheets at 9pm Eastern (before Pi shutdown)
+        async function checkFor9pmSave() {
+            // Get current time in Eastern timezone
+            const now = new Date();
+            const easternTimeString = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
+            const easternTime = new Date(easternTimeString);
+            const hour = easternTime.getHours();
+            const minute = easternTime.getMinutes();
+
+            // Check if it's 9:00 PM Eastern and we haven't saved yet today
+            const lastSaveDate = localStorage.getItem('lastAutoSave');
+            const todayString = easternTime.toDateString();
+
+            if (hour === 21 && minute === 0 && lastSaveDate !== todayString) {
+                console.log('9pm Eastern - Auto-saving to Google Sheets...');
+
+                if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+                    // Save current points for all kids
+                    for (const kid of Object.values(CONFIG)) {
+                        if (kid.id) {
+                            const points = parseInt(document.getElementById(`${kid.id}-points`)?.textContent || kid.defaultPoints);
+                            await savePointsToSheets(kid.id, points, 'End of day auto-save');
+                        }
+                    }
+
+                    localStorage.setItem('lastAutoSave', todayString);
+                    showMessage('✅ Auto-saved to Google Sheets');
+                    console.log('Auto-save complete!');
+                }
+            }
+        }
+
         // Initialize on load
         generateKidCards();
         initializePoints();
@@ -433,6 +465,9 @@
 
         // Check for midnight every minute
         setInterval(checkForMidnight, 60000);
+
+        // Check for 9pm save every minute
+        setInterval(checkFor9pmSave, 60000);
     </script>
 </body>
 </html>

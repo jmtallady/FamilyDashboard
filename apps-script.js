@@ -113,7 +113,7 @@ function getCurrentPoints() {
 }
 
 // ====== LOG NEW POINTS ENTRY ======
-// Appends a new row to the Points Log
+// Updates today's row for the kid, or creates a new one if it doesn't exist
 function logPoints(params) {
   try {
     const { kid, points, note } = params;
@@ -129,25 +129,63 @@ function logPoints(params) {
     }
 
     const today = new Date();
-    const lastRow = sheet.getLastRow();
-    const newRow = lastRow + 1;
+    const todayDateString = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
 
-    // Append new row: Date | Kid | Points | Note
-    sheet.getRange(newRow, CONFIG.columns.date).setValue(today);
-    sheet.getRange(newRow, CONFIG.columns.kid).setValue(kid);
-    sheet.getRange(newRow, CONFIG.columns.points).setValue(points);
-    if (note) {
-      sheet.getRange(newRow, CONFIG.columns.note).setValue(note);
+    // Get all data to find if today's entry exists
+    const lastRow = sheet.getLastRow();
+    let existingRow = null;
+
+    if (lastRow >= CONFIG.startRow) {
+      const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 4).getValues();
+
+      // Look for today's entry for this kid
+      for (let i = data.length - 1; i >= 0; i--) {
+        const [date, rowKid] = data[i];
+        const rowDateString = Utilities.formatDate(new Date(date), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+        if (rowDateString === todayDateString && rowKid.toLowerCase() === kid.toLowerCase()) {
+          existingRow = CONFIG.startRow + i;
+          break;
+        }
+      }
     }
 
-    return jsonResponse({
-      success: true,
-      kid: kid,
-      points: points,
-      date: today.toLocaleDateString(),
-      row: newRow,
-      message: 'Points logged successfully'
-    });
+    if (existingRow) {
+      // Update existing row
+      sheet.getRange(existingRow, CONFIG.columns.points).setValue(points);
+      if (note) {
+        sheet.getRange(existingRow, CONFIG.columns.note).setValue(note);
+      }
+
+      return jsonResponse({
+        success: true,
+        kid: kid,
+        points: points,
+        date: today.toLocaleDateString(),
+        row: existingRow,
+        updated: true,
+        message: 'Points updated for today'
+      });
+    } else {
+      // Create new row for today
+      const newRow = lastRow + 1;
+      sheet.getRange(newRow, CONFIG.columns.date).setValue(today);
+      sheet.getRange(newRow, CONFIG.columns.kid).setValue(kid);
+      sheet.getRange(newRow, CONFIG.columns.points).setValue(points);
+      if (note) {
+        sheet.getRange(newRow, CONFIG.columns.note).setValue(note);
+      }
+
+      return jsonResponse({
+        success: true,
+        kid: kid,
+        points: points,
+        date: today.toLocaleDateString(),
+        row: newRow,
+        updated: false,
+        message: 'Points logged for today'
+      });
+    }
 
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);
