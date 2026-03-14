@@ -138,6 +138,133 @@
             margin-top: 20px;
             min-height: 30px;
         }
+
+        /* PIN Modal Styles */
+        .pin-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pin-modal.active {
+            display: flex;
+        }
+
+        .pin-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .pin-content h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .pin-display {
+            font-size: 48px;
+            padding: 20px;
+            text-align: center;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            letter-spacing: 20px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .num-btn {
+            font-size: 32px;
+            width: 80px;
+            height: 80px;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .num-btn:hover {
+            background: #5568d3;
+            transform: scale(1.05);
+        }
+
+        .num-btn:active {
+            transform: scale(0.95);
+        }
+
+        .clear-btn {
+            background: #ff6b6b;
+        }
+
+        .clear-btn:hover {
+            background: #ff5252;
+        }
+
+        .pin-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .pin-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            width: auto;
+            height: auto;
+        }
+
+        .unlock-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #51cf66;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            display: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .unlock-indicator.active {
+            display: block;
+        }
+
+        .unlock-indicator:hover {
+            background: #40c057;
+            transform: scale(1.05);
+        }
+
+        .unlock-indicator:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -147,26 +274,8 @@
             <div class="date-time" id="dateTime"></div>
         </div>
 
-        <div class="kids-container">
-            <div class="kid-card">
-                <div class="kid-name">Clara</div>
-                <div class="points-label">Behavior Points</div>
-                <div class="points-display" id="clara-points">5</div>
-                <div class="button-group">
-                    <button class="minus-btn" onclick="adjustPoints('clara', -1)">−</button>
-                    <button class="plus-btn" onclick="adjustPoints('clara', 1)">+</button>
-                </div>
-            </div>
-
-            <div class="kid-card">
-                <div class="kid-name">Calvin</div>
-                <div class="points-label">Behavior Points</div>
-                <div class="points-display" id="calvin-points">5</div>
-                <div class="button-group">
-                    <button class="minus-btn" onclick="adjustPoints('calvin', -1)">−</button>
-                    <button class="plus-btn" onclick="adjustPoints('calvin', 1)">+</button>
-                </div>
-            </div>
+        <div class="kids-container" id="kidsContainer">
+            <!-- Kids will be dynamically generated from CONFIG -->
         </div>
 
         <div class="reset-container">
@@ -176,55 +285,236 @@
         <div class="status-message" id="statusMessage"></div>
     </div>
 
+    <!-- PIN Modal -->
+    <div class="pin-modal" id="pinModal">
+        <div class="pin-content">
+            <h2>Enter PIN to Edit</h2>
+            <div class="pin-display" id="pinDisplay">••••</div>
+
+            <div class="numpad">
+                <button class="num-btn" onclick="addPinDigit('1')">1</button>
+                <button class="num-btn" onclick="addPinDigit('2')">2</button>
+                <button class="num-btn" onclick="addPinDigit('3')">3</button>
+                <button class="num-btn" onclick="addPinDigit('4')">4</button>
+                <button class="num-btn" onclick="addPinDigit('5')">5</button>
+                <button class="num-btn" onclick="addPinDigit('6')">6</button>
+                <button class="num-btn" onclick="addPinDigit('7')">7</button>
+                <button class="num-btn" onclick="addPinDigit('8')">8</button>
+                <button class="num-btn" onclick="addPinDigit('9')">9</button>
+                <button class="num-btn clear-btn" onclick="clearPin()">Clear</button>
+                <button class="num-btn" onclick="addPinDigit('0')">0</button>
+                <button class="num-btn clear-btn" onclick="backspacePin()">⌫</button>
+            </div>
+
+            <div class="pin-buttons">
+                <button class="pin-btn plus-btn" onclick="checkPin()">Unlock</button>
+                <button class="pin-btn reset-btn" onclick="closePinModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unlock Indicator -->
+    <div class="unlock-indicator" id="unlockIndicator" onclick="lockDashboard()">🔓 Unlocked (click to lock)</div>
+
     <script>
-        // Initialize points from localStorage or default to 5
+        // ====== CONFIGURATION ======
+        const CONFIG = {
+            kid1: {
+                name: 'Clara',
+                id: 'clara',
+                defaultPoints: 5
+            },
+            kid2: {
+                name: 'Champ',
+                id: 'champ',
+                defaultPoints: 5
+            },
+            pin: '1220', // Change this to your desired PIN
+            requirePinForEdits: true
+        };
+
+        let isUnlocked = false;
+        let unlockTimeout = null;
+        let enteredPin = '';
+
+        // PIN Number Pad Functions
+        function addPinDigit(digit) {
+            if (enteredPin.length < 4) {
+                enteredPin += digit;
+                updatePinDisplay();
+            }
+        }
+
+        function backspacePin() {
+            enteredPin = enteredPin.slice(0, -1);
+            updatePinDisplay();
+        }
+
+        function clearPin() {
+            enteredPin = '';
+            updatePinDisplay();
+        }
+
+        function updatePinDisplay() {
+            const display = document.getElementById('pinDisplay');
+            if (enteredPin.length === 0) {
+                display.textContent = '••••';
+            } else {
+                display.textContent = '•'.repeat(enteredPin.length) + '•'.repeat(4 - enteredPin.length);
+            }
+        }
+
+        // Generate kid cards dynamically
+        function generateKidCards() {
+            const container = document.getElementById('kidsContainer');
+            container.innerHTML = '';
+
+            Object.values(CONFIG).forEach(kid => {
+                if (kid.id) { // Skip non-kid config items
+                    const card = `
+                        <div class="kid-card">
+                            <div class="kid-name">${kid.name}</div>
+                            <div class="points-label">Behavior Points</div>
+                            <div class="points-display" id="${kid.id}-points">${kid.defaultPoints}</div>
+                            <div class="button-group">
+                                <button class="minus-btn" onclick="adjustPoints('${kid.id}', -1)">−</button>
+                                <button class="plus-btn" onclick="adjustPoints('${kid.id}', 1)">+</button>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += card;
+                }
+            });
+        }
+
+        // Initialize points from localStorage or default
         function initializePoints() {
             const today = new Date().toDateString();
             const lastReset = localStorage.getItem('lastReset');
-            
-            // If it's a new day, reset to 5
+
+            // If it's a new day, reset to defaults
             if (lastReset !== today) {
-                localStorage.setItem('clara', '5');
-                localStorage.setItem('calvin', '5');
+                Object.values(CONFIG).forEach(kid => {
+                    if (kid.id) {
+                        localStorage.setItem(kid.id, kid.defaultPoints.toString());
+                    }
+                });
                 localStorage.setItem('lastReset', today);
             }
-            
+
             // Load points from localStorage
-            const claraPoints = localStorage.getItem('clara') || '5';
-            const calvinPoints = localStorage.getItem('calvin') || '5';
-            
-            document.getElementById('clara-points').textContent = claraPoints;
-            document.getElementById('calvin-points').textContent = calvinPoints;
+            Object.values(CONFIG).forEach(kid => {
+                if (kid.id) {
+                    const points = localStorage.getItem(kid.id) || kid.defaultPoints.toString();
+                    const element = document.getElementById(`${kid.id}-points`);
+                    if (element) {
+                        element.textContent = points;
+                    }
+                }
+            });
+        }
+
+        // Get kid config by ID
+        function getKidByID(kidId) {
+            return Object.values(CONFIG).find(kid => kid.id === kidId);
+        }
+
+        // PIN Modal Functions
+        function showPinModal() {
+            enteredPin = '';
+            updatePinDisplay();
+            document.getElementById('pinModal').classList.add('active');
+        }
+
+        function closePinModal() {
+            document.getElementById('pinModal').classList.remove('active');
+            enteredPin = '';
+        }
+
+        function lockDashboard() {
+            isUnlocked = false;
+            clearTimeout(unlockTimeout);
+            document.getElementById('unlockIndicator').classList.remove('active');
+            showMessage('🔒 Dashboard locked!');
+        }
+
+        function checkPin() {
+            if (enteredPin === CONFIG.pin) {
+                isUnlocked = true;
+                closePinModal();
+                showMessage('Unlocked! You can now edit points.');
+
+                // Show unlock indicator
+                document.getElementById('unlockIndicator').classList.add('active');
+
+                // Auto-lock after 2 minutes of inactivity
+                clearTimeout(unlockTimeout);
+                unlockTimeout = setTimeout(() => {
+                    isUnlocked = false;
+                    document.getElementById('unlockIndicator').classList.remove('active');
+                    showMessage('Auto-locked for security');
+                }, 120000); // 2 minutes
+            } else {
+                showMessage('❌ Incorrect PIN!');
+                enteredPin = '';
+                updatePinDisplay();
+            }
         }
 
         // Adjust points for a kid
-        function adjustPoints(kid, change) {
-            const pointsElement = document.getElementById(`${kid}-points`);
-            let currentPoints = parseInt(pointsElement.textContent);
-            let newPoints = currentPoints + change;
-            
-            // Don't go below 0
-            if (newPoints < 0) {
-                showMessage(`${kid === 'clara' ? 'Clara' : 'Calvin'} already at 0 points!`);
+        function adjustPoints(kidId, change) {
+            // Check if PIN is required and user is not unlocked
+            if (CONFIG.requirePinForEdits && !isUnlocked) {
+                showPinModal();
                 return;
             }
-            
+
+            // Reset the auto-lock timer
+            if (isUnlocked) {
+                clearTimeout(unlockTimeout);
+                unlockTimeout = setTimeout(() => {
+                    isUnlocked = false;
+                    document.getElementById('unlockIndicator').classList.remove('active');
+                    showMessage('Auto-locked for security');
+                }, 120000);
+            }
+
+            const kid = getKidByID(kidId);
+            if (!kid) return;
+
+            const pointsElement = document.getElementById(`${kidId}-points`);
+            let currentPoints = parseInt(pointsElement.textContent);
+            let newPoints = currentPoints + change;
+
+            // Don't go below 0
+            if (newPoints < 0) {
+                showMessage(`${kid.name} already at 0 points!`);
+                return;
+            }
+
             pointsElement.textContent = newPoints;
-            localStorage.setItem(kid, newPoints.toString());
-            
+            localStorage.setItem(kidId, newPoints.toString());
+
             const action = change > 0 ? 'earned' : 'lost';
-            const name = kid === 'clara' ? 'Clara' : 'Calvin';
-            showMessage(`${name} ${action} a point! Now at ${newPoints}`);
+            showMessage(`${kid.name} ${action} a point! Now at ${newPoints}`);
         }
 
-        // Reset both kids to 5
+        // Reset all kids to default points
         function resetToFive() {
-            document.getElementById('clara-points').textContent = '5';
-            document.getElementById('calvin-points').textContent = '5';
-            localStorage.setItem('clara', '5');
-            localStorage.setItem('calvin', '5');
+            // Check if PIN is required and user is not unlocked
+            if (CONFIG.requirePinForEdits && !isUnlocked) {
+                showPinModal();
+                return;
+            }
+
+            Object.values(CONFIG).forEach(kid => {
+                if (kid.id) {
+                    document.getElementById(`${kid.id}-points`).textContent = kid.defaultPoints;
+                    localStorage.setItem(kid.id, kid.defaultPoints.toString());
+                }
+            });
             localStorage.setItem('lastReset', new Date().toDateString());
-            showMessage('Both reset to 5 points!');
+            showMessage('All reset to default points!');
         }
 
         // Show status message
@@ -255,19 +545,30 @@
             const now = new Date();
             const lastReset = localStorage.getItem('lastReset');
             const today = now.toDateString();
-            
+
             if (lastReset !== today && now.getHours() === 0 && now.getMinutes() === 0) {
-                resetToFive();
+                // Auto-reset bypasses PIN requirement
+                Object.values(CONFIG).forEach(kid => {
+                    if (kid.id) {
+                        const element = document.getElementById(`${kid.id}-points`);
+                        if (element) {
+                            element.textContent = kid.defaultPoints;
+                        }
+                        localStorage.setItem(kid.id, kid.defaultPoints.toString());
+                    }
+                });
+                localStorage.setItem('lastReset', today);
             }
         }
 
         // Initialize on load
+        generateKidCards();
         initializePoints();
         updateDateTime();
-        
+
         // Update time every minute
         setInterval(updateDateTime, 60000);
-        
+
         // Check for midnight every minute
         setInterval(checkForMidnight, 60000);
     </script>
