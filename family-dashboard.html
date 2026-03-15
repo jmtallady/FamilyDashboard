@@ -7,21 +7,39 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Family Dashboard</h1>
-            <div class="date-time" id="dateTime"></div>
+    <div class="dashboard-layout">
+        <!-- Left Sidebar: Clock, Weather, Calendar -->
+        <div class="sidebar">
+            <div class="clock-widget">
+                <div class="clock-time" id="clockTime">12:00:00</div>
+                <div class="clock-date" id="clockDate">Loading...</div>
+            </div>
+
+            <div class="weather-widget" id="weatherWidget">
+                <!-- Weather will be added here -->
+            </div>
+
+            <div class="calendar-widget" id="calendarWidget">
+                <!-- Calendar will be added here -->
+            </div>
         </div>
 
-        <div class="kids-container" id="kidsContainer">
-            <!-- Kids will be dynamically generated from CONFIG -->
-        </div>
+        <!-- Main Content: Kids Cards -->
+        <div class="main-content">
+            <div class="header">
+                <h1>Family Dashboard</h1>
+            </div>
 
-        <div class="reset-container">
-            <button class="reset-btn" onclick="endOfDayAll()">End of Day for All Kids</button>
-        </div>
+            <div class="kids-container" id="kidsContainer">
+                <!-- Kids will be dynamically generated from CONFIG -->
+            </div>
 
-        <div class="status-message" id="statusMessage"></div>
+            <div class="reset-container">
+                <button class="reset-btn" onclick="endOfDayAll()">End of Day for All Kids</button>
+            </div>
+
+            <div class="status-message" id="statusMessage"></div>
+        </div>
     </div>
 
     <!-- PIN Modal -->
@@ -558,15 +576,27 @@
         // Update date and time
         function updateDateTime() {
             const now = new Date();
-            const options = { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+
+            // Update clock time (with seconds)
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const timeElement = document.getElementById('clockTime');
+            if (timeElement) {
+                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+
+            // Update clock date
+            const dateOptions = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             };
-            document.getElementById('dateTime').textContent = now.toLocaleDateString('en-US', options);
+            const dateElement = document.getElementById('clockDate');
+            if (dateElement) {
+                dateElement.textContent = now.toLocaleDateString('en-US', dateOptions);
+            }
         }
 
         // Reset daily BP to 5 at midnight
@@ -639,8 +669,8 @@
         initializePoints();
         updateDateTime();
 
-        // Update time every minute
-        setInterval(updateDateTime, 60000);
+        // Update time every second
+        setInterval(updateDateTime, 1000);
 
         // Check for midnight every minute
         setInterval(checkForMidnight, 60000);
