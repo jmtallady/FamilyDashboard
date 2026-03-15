@@ -12,8 +12,8 @@ In your Google Sheet, create a new tab called **"Chores"** (case-sensitive).
 
 In the Chores sheet, create a table with these headers in Row 1:
 
-| Kid | Chore ID | Chore Name | BP | Type |
-|-----|----------|------------|-----|------|
+| Kid | Chore ID | Chore Name | BP | Multiplier | Type |
+|-----|----------|------------|-----|------------|------|
 
 ### 3. Add Your Chores
 
@@ -23,25 +23,36 @@ There are two types of chores:
 
 #### Example Chores Configuration:
 
-| Kid | Chore ID | Chore Name | BP | Type |
-|-----|----------|------------|-----|------|
-| Clara | bed | Make Bed | 1 | individual |
-| Clara | homework | Do Homework | 2 | individual |
-| Clara | room | Clean Room | 2 | individual |
-| Champ | bed | Make Bed | 1 | individual |
-| Champ | toys | Put Away Toys | 1 | individual |
-| Champ | room | Clean Room | 2 | individual |
-|  | dishes | Help with Dishes | 1 | shared |
-|  | trash | Take Out Trash | 2 | shared |
-|  | pets | Feed Pets | 1 | shared |
+| Kid | Chore ID | Chore Name | BP | Multiplier | Type |
+|-----|----------|------------|-----|------------|------|
+| Clara | bed | Make Bed | 1 | 1 | individual |
+| Clara | homework | Do Homework | 2 | 1 | individual |
+| Clara | room | Clean Room | 2 | 1 | individual |
+| Clara | practice | Music Practice | 1 | 3 | individual |
+| Champ | bed | Make Bed | 1 | 1 | individual |
+| Champ | toys | Put Away Toys | 1 | 2 | individual |
+| Champ | room | Clean Room | 2 | 1 | individual |
+|  | dishes | Help with Dishes | 1 | 1 | shared |
+|  | trash | Take Out Trash | 2 | 1 | shared |
+|  | pets | Feed Pets | 1 | 1 | shared |
 
 ### Column Descriptions:
 
 - **Kid**: The kid's name (for individual chores). Leave blank for shared chores.
 - **Chore ID**: A unique identifier (lowercase, no spaces). Examples: `bed`, `homework`, `dishes`
 - **Chore Name**: The display name shown in the dashboard
-- **BP**: Behavior Points awarded when the chore is approved by a parent
+- **BP**: Base Behavior Points for this chore
+- **Multiplier**: Multiplies the BP earned (use `1` for normal chores, `2` or `3` for chores worth extra points)
 - **Type**: Either `individual` (assigned to specific kid) or `shared` (any kid can do)
+
+### Understanding Multipliers:
+
+The multiplier is useful for:
+- **Chores that take longer**: "Music Practice" with BP=1 and Multiplier=3 earns 3 BP
+- **Chores done multiple times**: "Put Away Toys" with BP=1 and Multiplier=2 earns 2 BP
+- **Extra effort chores**: "Deep Clean Room" with BP=2 and Multiplier=2 earns 4 BP
+
+The dashboard displays this as: `+1×3 (3 BP)` or just `+2 BP` if multiplier is 1.
 
 ### How Chores Work:
 

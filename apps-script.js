@@ -342,16 +342,17 @@ function getChores() {
     };
 
     // Skip header row, read chore data
-    // Expected columns: Kid | Chore ID | Chore Name | BP | Type (individual/shared)
+    // Expected columns: Kid | Chore ID | Chore Name | BP | Multiplier | Type (individual/shared)
     for (let i = 1; i < data.length; i++) {
-      const [kid, choreId, choreName, bp, type] = data[i];
+      const [kid, choreId, choreName, bp, multiplier, type] = data[i];
 
       if (!choreId || !choreName) continue; // Skip empty rows
 
       const chore = {
         id: choreId.toString().toLowerCase(),
         name: choreName,
-        bp: parseInt(bp) || 1
+        bp: parseInt(bp) || 1,
+        multiplier: parseInt(multiplier) || 1
       };
 
       if (type === 'shared') {

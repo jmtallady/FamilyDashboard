@@ -924,7 +924,7 @@
         }
 
         // Approve chore completion (awards BP)
-        async function approveChore(kidId, choreId, choreName, bp) {
+        async function approveChore(kidId, choreId, choreName, bp, multiplier = 1) {
             // Check if PIN is required and user is not unlocked
             if (CONFIG.requirePinForEdits && !isUnlocked) {
                 showPinModal();
@@ -937,10 +937,13 @@
             // Mark as approved
             setChoreStatus(kidId, choreId, 'approved');
 
+            // Calculate total BP with multiplier
+            const totalBP = bp * multiplier;
+
             // Award BP
             const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
             let currentDailyBP = parseInt(dailyBPElement.textContent);
-            let newDailyBP = currentDailyBP + bp;
+            let newDailyBP = currentDailyBP + totalBP;
 
             // Update UI
             dailyBPElement.textContent = newDailyBP;
@@ -952,11 +955,13 @@
                 const pcElement = document.getElementById(`${kidId}-pc`);
                 const currentTotalBP = parseInt(totalBPElement.textContent);
                 const currentPC = parseInt(pcElement.textContent);
-                await savePointsToSheets(kidId, newDailyBP, currentTotalBP, currentPC, 'chore-approved', `Completed chore: ${choreName} (+${bp} BP)`);
+                const note = multiplier > 1 ? `Completed chore: ${choreName} (+${bp}×${multiplier} = ${totalBP} BP)` : `Completed chore: ${choreName} (+${totalBP} BP)`;
+                await savePointsToSheets(kidId, newDailyBP, currentTotalBP, currentPC, 'chore-approved', note);
             }
 
             renderChores();
-            showMessage(`✅ Approved! ${kid.name} earned ${bp} BP for: ${choreName}`);
+            const bpMessage = multiplier > 1 ? `${bp}×${multiplier} = ${totalBP} BP` : `${totalBP} BP`;
+            showMessage(`✅ Approved! ${kid.name} earned ${bpMessage} for: ${choreName}`);
         }
 
         // Reject chore completion
@@ -1021,13 +1026,15 @@
                         const status = getChoreStatus(kid.id, chore.id);
                         const statusClass = status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'incomplete';
                         const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '⬜';
+                        const totalBP = chore.bp * (chore.multiplier || 1);
+                        const bpDisplay = chore.multiplier > 1 ? `+${chore.bp}×${chore.multiplier} (${totalBP} BP)` : `+${chore.bp} BP`;
 
                         html += `
                             <div class="chore-item ${statusClass}">
                                 <div class="chore-info">
                                     <span class="chore-status-icon">${statusIcon}</span>
                                     <span class="chore-name">${chore.name}</span>
-                                    <span class="chore-bp">+${chore.bp} BP</span>
+                                    <span class="chore-bp">${bpDisplay}</span>
                                 </div>
                                 <div class="chore-actions">`;
 
@@ -1035,7 +1042,7 @@
                             html += `<button class="chore-btn complete-btn" onclick="markChoreComplete('${kid.id}', '${chore.id}')">Mark Done</button>`;
                         } else if (status === 'pending') {
                             html += `
-                                <button class="chore-btn approve-btn" onclick="approveChore('${kid.id}', '${chore.id}', '${chore.name}', ${chore.bp})">Approve</button>
+                                <button class="chore-btn approve-btn" onclick="approveChore('${kid.id}', '${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">Approve</button>
                                 <button class="chore-btn reject-btn" onclick="rejectChore('${kid.id}', '${chore.id}')">Reject</button>`;
                         } else {
                             html += `<span class="approved-text">Completed!</span>`;
@@ -1056,10 +1063,13 @@
 
                 CHORES.shared.forEach(chore => {
                     // For shared chores, show completion status for each kid
+                    const totalBP = chore.bp * (chore.multiplier || 1);
+                    const bpDisplay = chore.multiplier > 1 ? `+${chore.bp}×${chore.multiplier} (${totalBP} BP)` : `+${chore.bp} BP`;
+
                     html += `<div class="shared-chore-item">
                         <div class="shared-chore-header">
                             <span class="chore-name">${chore.name}</span>
-                            <span class="chore-bp">+${chore.bp} BP</span>
+                            <span class="chore-bp">${bpDisplay}</span>
                         </div>
                         <div class="shared-chore-kids">`;
 
@@ -1078,7 +1088,7 @@
                                 html += `<button class="chore-btn-small complete-btn" onclick="markChoreComplete('${kid.id}', '${chore.id}', true)">Done</button>`;
                             } else if (status === 'pending') {
                                 html += `
-                                    <button class="chore-btn-small approve-btn" onclick="approveChore('${kid.id}', '${chore.id}', '${chore.name}', ${chore.bp})">✓</button>
+                                    <button class="chore-btn-small approve-btn" onclick="approveChore('${kid.id}', '${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>
                                     <button class="chore-btn-small reject-btn" onclick="rejectChore('${kid.id}', '${chore.id}')">✗</button>`;
                             }
 
