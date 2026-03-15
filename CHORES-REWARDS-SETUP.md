@@ -12,38 +12,37 @@ In your Google Sheet, create a new tab called **"Chores"** (case-sensitive).
 
 In the Chores sheet, create a table with these headers in Row 1:
 
-| Kid | Chore ID | Chore Name | BP | Multiplier | Type |
-|-----|----------|------------|-----|------------|------|
+| Kid | Chore ID | Chore Name | BP | Multiplier |
+|-----|----------|------------|-----|------------|
 
 ### 3. Add Your Chores
 
 There are two types of chores:
-- **Individual**: Assigned to a specific kid
-- **Shared**: Any kid can complete
+- **Individual**: Assigned to a specific kid (put kid's name in Kid column)
+- **Shared**: Any kid can complete (leave Kid column blank)
 
 #### Example Chores Configuration:
 
-| Kid | Chore ID | Chore Name | BP | Multiplier | Type |
-|-----|----------|------------|-----|------------|------|
-| Clara | bed | Make Bed | 1 | 1 | individual |
-| Clara | homework | Do Homework | 2 | 1 | individual |
-| Clara | room | Clean Room | 2 | 1 | individual |
-| Clara | practice | Music Practice | 1 | 3 | individual |
-| Champ | bed | Make Bed | 1 | 1 | individual |
-| Champ | toys | Put Away Toys | 1 | 2 | individual |
-| Champ | room | Clean Room | 2 | 1 | individual |
-|  | dishes | Help with Dishes | 1 | 1 | shared |
-|  | trash | Take Out Trash | 2 | 1 | shared |
-|  | pets | Feed Pets | 1 | 1 | shared |
+| Kid | Chore ID | Chore Name | BP | Multiplier |
+|-----|----------|------------|-----|------------|
+| Clara | bed | Make Bed | 1 | 1 |
+| Clara | homework | Do Homework | 2 | 1 |
+| Clara | room | Clean Room | 2 | 1 |
+| Clara | practice | Music Practice | 1 | 3 |
+| Champ | bed | Make Bed | 1 | 1 |
+| Champ | toys | Put Away Toys | 1 | 2 |
+| Champ | room | Clean Room | 2 | 1 |
+|  | dishes | Help with Dishes | 1 | 1 |
+|  | trash | Take Out Trash | 2 | 1 |
+|  | pets | Feed Pets | 1 | 1 |
 
 ### Column Descriptions:
 
-- **Kid**: The kid's name (for individual chores). Leave blank for shared chores.
+- **Kid**: The kid's name for individual chores. Leave blank for shared chores that anyone can do.
 - **Chore ID**: A unique identifier (lowercase, no spaces). Examples: `bed`, `homework`, `dishes`
 - **Chore Name**: The display name shown in the dashboard
 - **BP**: Base Behavior Points for this chore
-- **Multiplier**: Multiplies the BP earned (use `1` for normal chores, `2` or `3` for chores worth extra points)
-- **Type**: Either `individual` (assigned to specific kid) or `shared` (any kid can do)
+- **Multiplier**: Multiplies the BP earned (use `1` for normal chores, `2` or `3` for chores worth extra points). Set to `0` to hide/disable a chore without deleting it.
 
 ### Understanding Multipliers:
 
@@ -51,6 +50,7 @@ The multiplier is useful for:
 - **Chores that take longer**: "Music Practice" with BP=1 and Multiplier=3 earns 3 BP
 - **Chores done multiple times**: "Put Away Toys" with BP=1 and Multiplier=2 earns 2 BP
 - **Extra effort chores**: "Deep Clean Room" with BP=2 and Multiplier=2 earns 4 BP
+- **Disabling chores**: Set Multiplier=0 to temporarily hide a chore without deleting the row
 
 The dashboard displays this as: `+1×3 (3 BP)` or just `+2 BP` if multiplier is 1.
 
@@ -142,8 +142,9 @@ This means you'll see a detailed history of all chore completions and reward pur
 
 **Dashboard shows "No chores configured":**
 - Make sure the sheet is named exactly **"Chores"** (case-sensitive)
-- Verify Row 1 has headers: Kid, Chore ID, Chore Name, BP, Type
+- Verify Row 1 has headers: Kid, Chore ID, Chore Name, BP, Multiplier
 - Make sure your Apps Script is deployed and updated
+- Check that chores have a Multiplier > 0 (0 or blank will hide them)
 
 **Dashboard shows "No rewards configured":**
 - Make sure the sheet is named exactly **"Rewards"** (case-sensitive)

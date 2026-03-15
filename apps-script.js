@@ -342,22 +342,29 @@ function getChores() {
     };
 
     // Skip header row, read chore data
-    // Expected columns: Kid | Chore ID | Chore Name | BP | Multiplier | Type (individual/shared)
+    // Expected columns: Kid | Chore ID | Chore Name | BP | Multiplier
     for (let i = 1; i < data.length; i++) {
-      const [kid, choreId, choreName, bp, multiplier, type] = data[i];
+      const [kid, choreId, choreName, bp, multiplier] = data[i];
 
       if (!choreId || !choreName) continue; // Skip empty rows
+
+      const rawMultiplier = parseInt(multiplier);
+
+      // Skip chores with multiplier <= 0 (disabled chores)
+      if (!isNaN(rawMultiplier) && rawMultiplier <= 0) continue;
 
       const chore = {
         id: choreId.toString().toLowerCase(),
         name: choreName,
         bp: parseInt(bp) || 1,
-        multiplier: parseInt(multiplier) || 1
+        multiplier: isNaN(rawMultiplier) ? 1 : rawMultiplier
       };
 
-      if (type === 'shared') {
+      // If kid column is blank, add to shared list
+      // If kid column has a value, add to that kid's individual list
+      if (!kid || kid.toString().trim() === '') {
         chores.shared.push(chore);
-      } else if (kid) {
+      } else {
         const kidId = kid.toString().toLowerCase();
         if (!chores.individual[kidId]) {
           chores.individual[kidId] = [];
