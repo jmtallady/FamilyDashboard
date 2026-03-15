@@ -557,7 +557,8 @@
         }
 
         function checkPin() {
-            if (enteredPin === CONFIG.pin) {
+            // Convert CONFIG.pin to string for comparison (it's stored as a number in Config sheet)
+            if (enteredPin === CONFIG.pin.toString()) {
                 isUnlocked = true;
                 closePinModal();
                 showMessage('Unlocked! You can now edit points.');
