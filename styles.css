@@ -390,6 +390,27 @@ button {
     align-items: center;
     justify-content: center;
     background: #f8f9fa;
+    transition: all 0.2s ease;
+}
+
+.pin-display.pulse {
+    animation: pulse-animation 0.3s ease;
+}
+
+@keyframes pulse-animation {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); border-color: #51cf66; }
+    100% { transform: scale(1); }
+}
+
+.pin-error {
+    color: #ff6b6b;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: -10px;
+    margin-bottom: 15px;
+    min-height: 20px;
+    display: none;
 }
 
 .numpad {
@@ -602,6 +623,10 @@ body.dark-mode .pin-display {
     background: #1a202c;
     border-color: #a78bfa;
     color: #e2e8f0;
+}
+
+body.dark-mode .pin-error {
+    color: #fc8181;
 }
 
 /* Buttons in dark mode keep their original colors for visibility */
@@ -1025,44 +1050,48 @@ body.dark-mode .kid-selector-name {
 
 /* Compact Kid Cards */
 .kid-card {
-    padding: 12px;
+    padding: 8px;
 }
 
 .kid-name {
-    font-size: 16px;
-    margin-bottom: 8px;
+    font-size: 14px;
+    margin-bottom: 6px;
 }
 
 .points-display {
-    font-size: 32px;
-    margin: 6px 0;
+    font-size: 28px;
+    margin: 5px 0;
 }
 
 .points-label {
-    font-size: 12px;
-    margin-bottom: 5px;
+    font-size: 11px;
+    margin-bottom: 4px;
 }
 
 .currency-section {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .total-bp-section,
 .prize-coins-section {
-    padding-top: 10px;
+    padding-top: 8px;
 }
 
 button {
-    font-size: 20px;
-    width: 45px;
-    height: 45px;
+    font-size: 18px;
+    width: 40px;
+    height: 40px;
+}
+
+.button-group {
+    gap: 8px;
 }
 
 .end-of-day-btn,
 .cash-in-btn {
-    padding: 6px 10px;
-    font-size: 11px;
-    margin-top: 6px;
+    padding: 5px 8px;
+    font-size: 10px;
+    margin-top: 5px;
 }
 
 /* Compact Chores */

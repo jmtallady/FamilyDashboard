@@ -21,8 +21,8 @@ Copy and paste this structure into your Config sheet:
 | Key | Value |
 |-----|-------|
 | **Key** | **Value** |
-| kid1 | {"name":"Clara","id":"clara","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0} |
-| kid2 | {"name":"Champ","id":"champ","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0} |
+| kid1 | {"name":"Clara","id":"clara","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0,"pin":"1111"} |
+| kid2 | {"name":"Champ","id":"champ","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0,"pin":"2222"} |
 | pin | 1220 |
 | requirePinForEdits | true |
 | conversionRate | {"bp":50,"pc":100} |
@@ -37,9 +37,15 @@ Copy and paste this structure into your Config sheet:
 - Edit the `kid1` and `kid2` rows with your kids' names
 - Add more kids by adding rows: `kid3`, `kid4`, etc.
 - Make sure each kid has: `name`, `id` (lowercase), `defaultDailyBP`, `defaultTotalBP`, `defaultPrizeCoins`
+- **Individual Kid PINs (Optional)**: Add a `"pin"` field to each kid's configuration to enable self-service
+  - When a kid has a PIN, they can cash in their own BP and purchase rewards without parent approval
+  - Kids will be prompted to enter their PIN before completing these actions
+  - Example: `{"name":"Clara","id":"clara","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0,"pin":"1111"}`
+  - If a kid doesn't have a PIN, parents can still complete these actions when unlocked
 
-**PIN:**
-- Change the `pin` value to your desired 4-digit PIN
+**Parent PIN:**
+- Change the `pin` value to your desired 4-digit parent PIN
+- The parent PIN is used for: approving/rejecting chores, adjusting daily BP, end of day operations
 
 **Weather:**
 - Get your coordinates from Google Maps (right-click → copy coordinates)
@@ -69,9 +75,9 @@ Here's what your Config sheet should look like:
 
 ```
 Row 1:  Key                  Value
-Row 2:  kid1                 {"name":"Alice","id":"alice","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0}
-Row 3:  kid2                 {"name":"Bob","id":"bob","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0}
-Row 4:  kid3                 {"name":"Charlie","id":"charlie","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0}
+Row 2:  kid1                 {"name":"Alice","id":"alice","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0,"pin":"1111"}
+Row 3:  kid2                 {"name":"Bob","id":"bob","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0,"pin":"2222"}
+Row 4:  kid3                 {"name":"Charlie","id":"charlie","defaultDailyBP":5,"defaultTotalBP":0,"defaultPrizeCoins":0,"pin":"3333"}
 Row 5:  pin                  4567
 Row 6:  requirePinForEdits   true
 Row 7:  conversionRate       {"bp":50,"pc":100}

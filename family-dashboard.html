@@ -71,8 +71,9 @@
     <!-- PIN Modal -->
     <div class="pin-modal" id="pinModal">
         <div class="pin-content">
-            <h2>Enter PIN to Edit</h2>
+            <h2 id="pinModalTitle">Enter PIN to Edit</h2>
             <div class="pin-display" id="pinDisplay">••••</div>
+            <div class="pin-error" id="pinError"></div>
 
             <div class="numpad">
                 <button class="num-btn" onclick="addPinDigit('1')">1</button>
@@ -123,6 +124,14 @@
         let useGoogleSheets = false;
         let CHORES = null;
         let REWARDS = null;
+
+        // PIN context for kid-specific authentication
+        let pinContext = {
+            type: 'parent',  // 'parent' or 'kid'
+            kidId: null,      // The kid ID when type is 'kid'
+            action: null,     // 'cash-in' or 'purchase'
+            callback: null    // Function to call after successful PIN entry
+        };
 
         // ====== GOOGLE SHEETS INTEGRATION ======
 
@@ -408,6 +417,7 @@
             if (enteredPin.length < 4) {
                 enteredPin += digit;
                 updatePinDisplay();
+                clearPinError();
             }
         }
 
@@ -424,10 +434,17 @@
         function updatePinDisplay() {
             const display = document.getElementById('pinDisplay');
             if (enteredPin.length === 0) {
-                display.textContent = '••••';
+                display.textContent = '○○○○';
             } else {
-                display.textContent = '•'.repeat(enteredPin.length) + '•'.repeat(4 - enteredPin.length);
+                // Show filled circles for entered digits, empty circles for remaining
+                display.textContent = '●'.repeat(enteredPin.length) + '○'.repeat(4 - enteredPin.length);
             }
+
+            // Add a pulse animation to the display when a digit is added
+            display.classList.add('pulse');
+            setTimeout(() => {
+                display.classList.remove('pulse');
+            }, 200);
         }
 
         // Generate kid cards dynamically
@@ -561,15 +578,62 @@
         }
 
         // PIN Modal Functions
-        function showPinModal() {
+        function showPinModal(type = 'parent', kidId = null, action = null, callback = null) {
+            pinContext.type = type;
+            pinContext.kidId = kidId;
+            pinContext.action = action;
+            pinContext.callback = callback;
+
             enteredPin = '';
             updatePinDisplay();
+
+            // Update modal title based on context
+            const titleElement = document.getElementById('pinModalTitle');
+            if (type === 'parent') {
+                titleElement.textContent = 'Enter Parent PIN';
+            } else if (type === 'kid') {
+                const kid = getKidByID(kidId);
+                if (action === 'cash-in') {
+                    titleElement.textContent = `${kid.name}, Enter Your PIN to Cash In`;
+                } else if (action === 'purchase') {
+                    titleElement.textContent = `${kid.name}, Enter Your PIN to Purchase`;
+                } else {
+                    titleElement.textContent = `${kid.name}, Enter Your PIN`;
+                }
+            }
+
             document.getElementById('pinModal').classList.add('active');
         }
 
         function closePinModal() {
             document.getElementById('pinModal').classList.remove('active');
             enteredPin = '';
+            clearPinError();
+            pinContext = {
+                type: 'parent',
+                kidId: null,
+                action: null,
+                callback: null
+            };
+        }
+
+        // Show error message in the PIN modal
+        function showPinError(message) {
+            const errorElement = document.getElementById('pinError');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                clearPinError();
+            }, 3000);
+        }
+
+        // Clear error message in the PIN modal
+        function clearPinError() {
+            const errorElement = document.getElementById('pinError');
+            errorElement.textContent = '';
+            errorElement.style.display = 'none';
         }
 
         function lockDashboard() {
@@ -580,24 +644,51 @@
         }
 
         function checkPin() {
-            // Convert CONFIG.pin to string for comparison (it's stored as a number in Config sheet)
-            if (enteredPin === CONFIG.pin.toString()) {
-                isUnlocked = true;
-                closePinModal();
-                showMessage('Unlocked! You can now edit points.');
+            let pinValid = false;
 
-                // Show unlock indicator
-                document.getElementById('unlockIndicator').classList.add('active');
+            // Check if it's a parent PIN request
+            if (pinContext.type === 'parent') {
+                // Convert CONFIG.pin to string for comparison (it's stored as a number in Config sheet)
+                if (enteredPin === CONFIG.pin.toString()) {
+                    pinValid = true;
+                    isUnlocked = true;
+                    closePinModal();
+                    showMessage('Unlocked! You can now edit points.');
 
-                // Auto-lock after 2 minutes of inactivity
-                clearTimeout(unlockTimeout);
-                unlockTimeout = setTimeout(() => {
-                    isUnlocked = false;
-                    document.getElementById('unlockIndicator').classList.remove('active');
-                    showMessage('Auto-locked for security');
-                }, 120000); // 2 minutes
-            } else {
-                showMessage('❌ Incorrect PIN!');
+                    // Show unlock indicator
+                    document.getElementById('unlockIndicator').classList.add('active');
+
+                    // Auto-lock after 2 minutes of inactivity
+                    clearTimeout(unlockTimeout);
+                    unlockTimeout = setTimeout(() => {
+                        isUnlocked = false;
+                        document.getElementById('unlockIndicator').classList.remove('active');
+                        showMessage('Auto-locked for security');
+                    }, 120000); // 2 minutes
+                }
+            }
+            // Check if it's a kid PIN request
+            else if (pinContext.type === 'kid') {
+                const kid = getKidByID(pinContext.kidId);
+                if (kid && kid.pin && enteredPin === kid.pin.toString()) {
+                    pinValid = true;
+
+                    // Capture callback before closing modal (closePinModal resets pinContext)
+                    const callback = pinContext.callback;
+
+                    closePinModal();
+                    showMessage(`✓ Welcome, ${kid.name}!`);
+
+                    // Execute the callback function if provided
+                    if (callback) {
+                        callback();
+                    }
+                }
+            }
+
+            // Handle incorrect PIN
+            if (!pinValid) {
+                showPinError('❌ Incorrect PIN!');
                 enteredPin = '';
                 updatePinDisplay();
             }
@@ -704,22 +795,22 @@
 
         // Cash in total behavior points for prize coins
         async function cashInPoints(kidId) {
-            // Check if PIN is required and user is not unlocked
-            if (CONFIG.requirePinForEdits && !isUnlocked) {
-                showPinModal();
+            const kid = getKidByID(kidId);
+            if (!kid) return;
+
+            // If kid has a PIN, require kid PIN. Otherwise, allow without authentication.
+            if (kid.pin) {
+                // Request kid PIN
+                showPinModal('kid', kidId, 'cash-in', () => performCashIn(kidId));
                 return;
             }
 
-            // Reset the auto-lock timer
-            if (isUnlocked) {
-                clearTimeout(unlockTimeout);
-                unlockTimeout = setTimeout(() => {
-                    isUnlocked = false;
-                    document.getElementById('unlockIndicator').classList.remove('active');
-                    showMessage('Auto-locked for security');
-                }, 120000);
-            }
+            // No kid PIN, proceed with cash-in
+            await performCashIn(kidId);
+        }
 
+        // Perform the actual cash-in operation
+        async function performCashIn(kidId) {
             const kid = getKidByID(kidId);
             if (!kid) return;
 
@@ -1112,12 +1203,6 @@
 
         // Show kid selector modal for purchasing a reward
         function showKidSelector(rewardId, rewardName, cost, icon) {
-            // Check if PIN is required and user is not unlocked
-            if (CONFIG.requirePinForEdits && !isUnlocked) {
-                showPinModal();
-                return;
-            }
-
             selectedReward = { id: rewardId, name: rewardName, cost, icon };
 
             // Generate kid selection buttons
@@ -1166,8 +1251,39 @@
                 return;
             }
 
+            // Capture the reward before closing selector (closeKidSelector sets selectedReward to null)
+            const reward = selectedReward;
+
+            // Close kid selector first
+            closeKidSelector();
+
+            // If kid has a PIN, require kid PIN. Otherwise, allow without PIN.
+            if (kid.pin) {
+                // Request kid PIN
+                showPinModal('kid', kidId, 'purchase', () => performPurchase(kidId, reward));
+                return;
+            }
+
+            // No kid PIN required, proceed with purchase
+            await performPurchase(kidId, reward);
+        }
+
+        // Perform the actual purchase operation
+        async function performPurchase(kidId, reward) {
+            const kid = getKidByID(kidId);
+            if (!kid || !reward) return;
+
+            const pcElement = document.getElementById(`${kidId}-pc`);
+            const currentPC = parseInt(pcElement.textContent);
+
+            // Double-check they can still afford it
+            if (currentPC < reward.cost) {
+                showMessage(`${kid.name} needs ${reward.cost} PC but only has ${currentPC} PC!`);
+                return;
+            }
+
             // Deduct Prize Coins
-            const newPC = currentPC - selectedReward.cost;
+            const newPC = currentPC - reward.cost;
             pcElement.textContent = newPC;
             localStorage.setItem(`${kidId}-pc`, newPC.toString());
 
@@ -1177,11 +1293,10 @@
                 const totalBPElement = document.getElementById(`${kidId}-total-bp`);
                 const currentDailyBP = parseInt(dailyBPElement.textContent);
                 const currentTotalBP = parseInt(totalBPElement.textContent);
-                await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${selectedReward.name} ${selectedReward.icon} (-${selectedReward.cost} PC)`);
+                await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${reward.name} ${reward.icon} (-${reward.cost} PC)`);
             }
 
-            showMessage(`🎉 ${kid.name} purchased ${selectedReward.icon} ${selectedReward.name} for ${selectedReward.cost} PC! Remaining: ${newPC} PC`);
-            closeKidSelector();
+            showMessage(`🎉 ${kid.name} purchased ${reward.icon} ${reward.name} for ${reward.cost} PC! Remaining: ${newPC} PC`);
         }
 
         // Render rewards section
