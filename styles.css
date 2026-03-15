@@ -464,3 +464,144 @@ button {
 .unlock-indicator:active {
     transform: scale(0.95);
 }
+
+/* Dark Mode Toggle Button */
+.dark-mode-toggle {
+    background: white;
+    border-radius: 15px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 24px;
+    user-select: none;
+}
+
+.dark-mode-toggle:hover {
+    transform: scale(1.05);
+}
+
+.dark-mode-toggle:active {
+    transform: scale(0.95);
+}
+
+/* ==========================================
+   DARK MODE STYLES
+   ========================================== */
+
+body.dark-mode {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+/* Dark mode for all white widgets */
+body.dark-mode .kid-card,
+body.dark-mode .clock-widget,
+body.dark-mode .weather-widget,
+body.dark-mode .calendar-widget,
+body.dark-mode .pin-content,
+body.dark-mode .dark-mode-toggle {
+    background: #2d3748;
+    color: #e2e8f0;
+}
+
+/* Clock */
+body.dark-mode .clock-time {
+    color: #a78bfa;
+}
+
+body.dark-mode .clock-date {
+    color: #cbd5e0;
+}
+
+/* Weather */
+body.dark-mode .weather-temp-large {
+    color: #a78bfa;
+}
+
+body.dark-mode .weather-humidity {
+    color: #a0aec0;
+}
+
+body.dark-mode .weather-current {
+    border-bottom: 1px solid #4a5568;
+}
+
+body.dark-mode .hourly-forecast-item {
+    background: #1a202c;
+    color: #e2e8f0;
+}
+
+body.dark-mode .forecast-hour {
+    color: #cbd5e0;
+}
+
+body.dark-mode .forecast-temp {
+    color: #a78bfa;
+}
+
+/* Calendar */
+body.dark-mode .calendar-header {
+    color: #a78bfa;
+    border-bottom: 2px solid #4a5568;
+}
+
+body.dark-mode .calendar-event {
+    background: #1a202c;
+    border-left: 3px solid #a78bfa;
+}
+
+body.dark-mode .event-time {
+    color: #a0aec0;
+}
+
+body.dark-mode .event-title {
+    color: #e2e8f0;
+}
+
+/* Kid Cards */
+body.dark-mode .kid-name {
+    color: #a78bfa;
+}
+
+body.dark-mode .points-display {
+    color: #c084fc;
+}
+
+body.dark-mode .points-label {
+    color: #cbd5e0;
+}
+
+body.dark-mode .total-bp-section,
+body.dark-mode .prize-coins-section {
+    border-top: 2px solid #4a5568;
+}
+
+body.dark-mode .total-bp-display {
+    color: #818cf8;
+}
+
+body.dark-mode .prize-coins-display {
+    color: #fbbf24;
+}
+
+/* PIN Modal */
+body.dark-mode .pin-content h2 {
+    color: #a78bfa;
+}
+
+body.dark-mode .pin-display {
+    background: #1a202c;
+    border-color: #a78bfa;
+    color: #e2e8f0;
+}
+
+/* Buttons in dark mode keep their original colors for visibility */
+body.dark-mode .reset-btn {
+    background: #4a5568;
+    color: #e2e8f0;
+}
+
+body.dark-mode .reset-btn:hover {
+    background: #2d3748;
+}

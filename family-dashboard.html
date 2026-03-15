@@ -10,6 +10,10 @@
     <div class="dashboard-layout">
         <!-- Left Sidebar: Clock, Weather, Calendar -->
         <div class="sidebar">
+            <div class="dark-mode-toggle" onclick="toggleDarkMode()">
+                <span id="darkModeIcon">🌙</span>
+            </div>
+
             <div class="clock-widget">
                 <div class="clock-time" id="clockTime">12:00:00</div>
                 <div class="clock-date" id="clockDate">Loading...</div>
@@ -760,6 +764,23 @@
             }, 3000);
         }
 
+        // Dark mode toggle
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            document.getElementById('darkModeIcon').textContent = isDark ? '☀️' : '🌙';
+        }
+
+        // Load dark mode preference
+        function loadDarkMode() {
+            const isDark = localStorage.getItem('darkMode') === 'true';
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('darkModeIcon').textContent = '☀️';
+            }
+        }
+
         // Update date and time
         function updateDateTime() {
             const now = new Date();
@@ -853,6 +874,9 @@
 
         // Initialize on load
         async function initialize() {
+            // Load dark mode preference first
+            loadDarkMode();
+
             // Load config first
             CONFIG = await fetchConfig();
 
