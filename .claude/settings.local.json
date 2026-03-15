@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd two-column layout with sidebar for clock, weather, and calendar\n\n- Restructured layout with left sidebar \\(200px\\) and main content area\n- Moved clock to sidebar with larger display and seconds\n- Clock updates every second now \\(was every minute\\)\n- Added placeholder widgets for weather and calendar\n- DakBoard-style layout with clock on left, kids cards on right\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)"
+    ]
+  }
+}

@@ -44,11 +44,13 @@ function doGet(e) {
     return getCurrentPoints();
   } else if (action === 'getCalendarEvents') {
     return getCalendarEvents(e.parameter.days);
+  } else if (action === 'getConfig') {
+    return getConfig();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
 
-  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, or ?action=test' }, 400);
+  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, or ?action=test' }, 400);
 }
 
 function doPost(e) {
@@ -206,6 +208,44 @@ function logPoints(params) {
         message: 'Points logged for today'
       });
     }
+
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== GET CONFIGURATION ======
+// Returns configuration from the Config sheet
+function getConfig() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Config');
+
+    if (!sheet) {
+      return jsonResponse({ error: 'Config sheet not found. Please create a "Config" sheet.' }, 404);
+    }
+
+    // Read configuration from sheet (Key-Value pairs in columns A and B)
+    const data = sheet.getDataRange().getValues();
+    const config = {};
+
+    // Skip header row, read key-value pairs
+    for (let i = 1; i < data.length; i++) {
+      const [key, value] = data[i];
+      if (key) {
+        // Try to parse JSON values, otherwise use as string
+        try {
+          config[key] = JSON.parse(value);
+        } catch {
+          config[key] = value;
+        }
+      }
+    }
+
+    return jsonResponse({
+      success: true,
+      config: config,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);

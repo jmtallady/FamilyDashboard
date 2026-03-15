@@ -75,39 +75,9 @@
 
     <script>
         // ====== CONFIGURATION ======
-        const CONFIG = {
-            kid1: {
-                name: 'Clara',
-                id: 'clara',
-                defaultDailyBP: 5,      // Daily behavior points (resets each day)
-                defaultTotalBP: 0,      // Accumulative total (never resets)
-                defaultPrizeCoins: 0
-            },
-            kid2: {
-                name: 'Champ',
-                id: 'champ',
-                defaultDailyBP: 5,
-                defaultTotalBP: 0,
-                defaultPrizeCoins: 0
-            },
-            pin: '1220', // Change this to your desired PIN
-            requirePinForEdits: true,
-            conversionRate: { bp: 50, pc: 100 }, // 50 Total BP = 100 PC
-            sheetsApiUrl: 'https://script.google.com/macros/s/AKfycbxGpKE8kZEv5PKbBfteVru3WcyP_qfX7U_eV5TEZrfPxrfxrlNmjqh3BRpsnSdNIsRNIQ/exec', // Add your Google Sheets Web App URL here after deployment
-
-            // Weather configuration (get coordinates from Google Maps)
-            weather: {
-                latitude: 40.7128,   // Default: New York - UPDATE THIS
-                longitude: -74.0060, // Default: New York - UPDATE THIS
-                timezone: 'America/New_York'  // IANA timezone
-            },
-
-            // Calendar configuration
-            calendar: {
-                enabled: true,  // Set to false to hide calendar widget
-                daysAhead: 7    // Number of days to show (1-30)
-            }
-        };
+        // CONFIG is loaded from Google Sheets Config tab
+        let CONFIG = null;
+        const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbxGpKE8kZEv5PKbBfteVru3WcyP_qfX7U_eV5TEZrfPxrfxrlNmjqh3BRpsnSdNIsRNIQ/exec';
 
         let isUnlocked = false;
         let unlockTimeout = null;
@@ -116,15 +86,39 @@
 
         // ====== GOOGLE SHEETS INTEGRATION ======
 
+        // Fetch configuration from Google Sheets
+        async function fetchConfig() {
+            try {
+                const url = `${SHEETS_API_URL}?action=getConfig&t=${Date.now()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.config) {
+                    console.log('Loaded config from Google Sheets');
+                    return data.config;
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error fetching config:', error);
+                return null;
+            }
+        }
+
         // Fetch current points from Google Sheets
         async function fetchPointsFromSheets() {
-            if (!CONFIG.sheetsApiUrl) {
+            if (!SHEETS_API_URL) {
                 console.log('No Google Sheets API URL configured');
                 return null;
             }
 
             try {
-                const url = `${CONFIG.sheetsApiUrl}?action=getCurrentPoints&t=${Date.now()}`;
+                const url = `${SHEETS_API_URL}?action=getCurrentPoints&t=${Date.now()}`;
                 const response = await fetch(url);
 
                 if (!response.ok) {
@@ -147,7 +141,7 @@
 
         // Save points to Google Sheets
         async function savePointsToSheets(kidId, dailyBP, totalBP, prizeCoins, type = 'behavior', note = '') {
-            if (!CONFIG.sheetsApiUrl) {
+            if (!SHEETS_API_URL) {
                 console.log('No Google Sheets API URL configured');
                 return false;
             }
@@ -156,7 +150,7 @@
                 const kid = getKidByID(kidId);
                 if (!kid) return false;
 
-                const response = await fetch(CONFIG.sheetsApiUrl, {
+                const response = await fetch(SHEETS_API_URL, {
                     method: 'POST',
                     mode: 'no-cors', // Required for Google Apps Script
                     headers: {
@@ -266,14 +260,14 @@
 
         // Fetch calendar events from Google Apps Script
         async function fetchCalendarEvents() {
-            if (!CONFIG.calendar || !CONFIG.calendar.enabled || !CONFIG.sheetsApiUrl) {
+            if (!CONFIG.calendar || !CONFIG.calendar.enabled || !SHEETS_API_URL) {
                 console.log('Calendar not configured or disabled');
                 return null;
             }
 
             try {
                 const days = CONFIG.calendar.daysAhead || 7;
-                const url = `${CONFIG.sheetsApiUrl}?action=getCalendarEvents&days=${days}&t=${Date.now()}`;
+                const url = `${SHEETS_API_URL}?action=getCalendarEvents&days=${days}&t=${Date.now()}`;
                 const response = await fetch(url);
 
                 if (!response.ok) {
@@ -436,7 +430,7 @@
             const lastReset = localStorage.getItem('lastReset');
 
             // Try to fetch from Google Sheets first
-            if (CONFIG.sheetsApiUrl) {
+            if (SHEETS_API_URL) {
                 const sheetPoints = await fetchPointsFromSheets();
 
                 if (sheetPoints) {
@@ -508,7 +502,7 @@
                 }
             });
 
-            if (!CONFIG.sheetsApiUrl) {
+            if (!SHEETS_API_URL) {
                 showMessage('💾 Using offline mode');
             }
         }
@@ -601,7 +595,7 @@
             showMessage(`${kid.name} ${actionPast} a daily point! Now at ${newDailyBP} today`);
 
             // Save to Google Sheets if configured
-            if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+            if (useGoogleSheets && SHEETS_API_URL) {
                 const totalBPElement = document.getElementById(`${kidId}-total-bp`);
                 const pcElement = document.getElementById(`${kidId}-pc`);
                 const currentTotalBP = parseInt(totalBPElement.textContent);
@@ -652,7 +646,7 @@
             showMessage(`${kid.name}: Added ${currentDailyBP} to bank! Total BP: ${newTotalBP}, Daily reset to ${newDailyBP}`);
 
             // Save to Google Sheets if configured
-            if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+            if (useGoogleSheets && SHEETS_API_URL) {
                 const pcElement = document.getElementById(`${kidId}-pc`);
                 const currentPC = parseInt(pcElement.textContent);
                 await savePointsToSheets(kidId, newDailyBP, newTotalBP, currentPC, 'end-of-day', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
@@ -708,7 +702,7 @@
             showMessage(`${kid.name} cashed in ${CONFIG.conversionRate.bp} Total BP for ${CONFIG.conversionRate.pc} PC! Bank: ${newTotalBP} BP, PC: ${newPC}`);
 
             // Save to Google Sheets if configured
-            if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+            if (useGoogleSheets && SHEETS_API_URL) {
                 await savePointsToSheets(kidId, currentDailyBP, newTotalBP, newPC, 'cash-in', `Converted ${CONFIG.conversionRate.bp} Total BP to ${CONFIG.conversionRate.pc} PC`);
             }
         }
@@ -746,7 +740,7 @@
                     summary.push(`${kid.name}: +${currentDailyBP} → ${newTotalBP} total`);
 
                     // Save to Google Sheets if configured
-                    if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+                    if (useGoogleSheets && SHEETS_API_URL) {
                         const pcElement = document.getElementById(`${kid.id}-pc`);
                         const currentPC = parseInt(pcElement.textContent);
                         await savePointsToSheets(kid.id, newDailyBP, newTotalBP, currentPC, 'end-of-day-all', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
@@ -808,7 +802,7 @@
                             localStorage.setItem(`${kid.id}-daily-bp`, kid.defaultDailyBP.toString());
 
                             // Save to Google Sheets if configured
-                            if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+                            if (useGoogleSheets && SHEETS_API_URL) {
                                 const totalBPElement = document.getElementById(`${kid.id}-total-bp`);
                                 const pcElement = document.getElementById(`${kid.id}-pc`);
                                 const currentTotalBP = parseInt(totalBPElement.textContent);
@@ -839,7 +833,7 @@
             if (hour === 21 && minute === 0 && lastSaveDate !== todayString) {
                 console.log('9pm Eastern - Auto-saving to Google Sheets...');
 
-                if (useGoogleSheets && CONFIG.sheetsApiUrl) {
+                if (useGoogleSheets && SHEETS_API_URL) {
                     // Save current points for all kids
                     for (const kid of Object.values(CONFIG)) {
                         if (kid.id) {
@@ -858,11 +852,24 @@
         }
 
         // Initialize on load
-        generateKidCards();
-        initializePoints();
-        updateDateTime();
-        updateWeather();
-        updateCalendar();
+        async function initialize() {
+            // Load config first
+            CONFIG = await fetchConfig();
+
+            if (!CONFIG) {
+                document.body.innerHTML = '<div style="color: white; text-align: center; padding: 50px; font-size: 20px;">⚠️ Failed to load configuration from Google Sheets.<br><br>Please check your Config sheet setup.</div>';
+                return;
+            }
+
+            // Initialize dashboard
+            generateKidCards();
+            await initializePoints();
+            updateDateTime();
+            updateWeather();
+            updateCalendar();
+        }
+
+        initialize();
 
         // Update time every second
         setInterval(updateDateTime, 1000);

@@ -51,35 +51,53 @@ Follow the complete setup guide: **[SETUP-GUIDE.md](SETUP-GUIDE.md)**
 
 ## ⚙️ Configuration
 
-Edit the `CONFIG` object in [family-dashboard.html](family-dashboard.html) (around line 60):
+**Security First!** Your personal settings are kept in a separate file that's NOT committed to GitHub.
+
+### Initial Setup
+
+1. Copy `config.example.js` to `config.js`:
+   ```bash
+   cp config.example.js config.js
+   ```
+
+2. Edit `config.js` with your personal settings:
+   - Kid names and IDs
+   - Your PIN code
+   - Google Sheets Web App URL
+   - Your location coordinates (for weather)
+
+3. `config.js` is automatically ignored by git, so your sensitive data stays private!
+
+### Example Configuration
+
+See [config.example.js](config.example.js) for the full template. Here's a quick example:
 
 ```javascript
 const CONFIG = {
     kid1: {
-        name: 'Clara',      // Change to your kid's name
-        id: 'clara',        // Lowercase ID for internal use
-        defaultPoints: 5    // Starting points each day
+        name: 'YourKidName',
+        id: 'yourkid',
+        defaultDailyBP: 5
     },
-    kid2: {
-        name: 'Champ',      // Second kid's name
-        id: 'champ',
-        defaultPoints: 5
-    },
-    pin: '1220',                    // Change your PIN!
-    requirePinForEdits: true,       // Set to false to disable PIN
-    sheetsApiUrl: ''                // Add Google Sheets Web App URL here
+    pin: '1234',  // Change this!
+    weather: {
+        latitude: 40.7128,   // Your coordinates
+        longitude: -74.0060
+    }
 };
 ```
 
 ### Adding More Kids
 
-Just add another kid object:
+Just add another kid object to your `config.js`:
 
 ```javascript
 kid3: {
     name: 'Alex',
     id: 'alex',
-    defaultPoints: 5
+    defaultDailyBP: 5,
+    defaultTotalBP: 0,
+    defaultPrizeCoins: 0
 }
 ```
 
