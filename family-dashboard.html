@@ -95,6 +95,18 @@
         </div>
     </div>
 
+    <!-- Kid Selector Modal -->
+    <div class="pin-modal" id="kidSelectorModal">
+        <div class="pin-content">
+            <div id="kidSelectorContent">
+                <!-- Content will be dynamically generated -->
+            </div>
+            <div class="pin-buttons">
+                <button class="pin-btn reset-btn" onclick="closeKidSelector()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Unlock Indicator -->
     <div class="unlock-indicator" id="unlockIndicator" onclick="lockDashboard()">🔓 Unlocked (click to lock)</div>
 
@@ -108,6 +120,8 @@
         let unlockTimeout = null;
         let enteredPin = '';
         let useGoogleSheets = false;
+        let CHORES = null;
+        let REWARDS = null;
 
         // ====== GOOGLE SHEETS INTEGRATION ======
 
@@ -803,6 +817,74 @@
             }
         }
 
+        // ====== FETCH CHORES AND REWARDS ======
+
+        // Fetch chores from Google Sheets
+        async function fetchChores() {
+            try {
+                const url = `${SHEETS_API_URL}?action=getChores&t=${Date.now()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.chores) {
+                    console.log('Loaded chores from Google Sheets');
+                    return data.chores;
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error fetching chores:', error);
+                return null;
+            }
+        }
+
+        // Fetch rewards from Google Sheets
+        async function fetchRewards() {
+            try {
+                const url = `${SHEETS_API_URL}?action=getRewards&t=${Date.now()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.rewards) {
+                    console.log('Loaded rewards from Google Sheets');
+                    return data.rewards;
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error fetching rewards:', error);
+                return null;
+            }
+        }
+
+        // Detect if emoji is supported
+        function supportsEmoji() {
+            const canvas = document.createElement('canvas');
+            if (!canvas.getContext) return false;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return false;
+
+            ctx.textBaseline = 'top';
+            ctx.font = '16px Arial';
+            ctx.fillText('😀', 0, 0);
+
+            return ctx.getImageData(8, 8, 1, 1).data[0] !== 0;
+        }
+
+        // Check emoji support once
+        const EMOJI_SUPPORTED = supportsEmoji();
+
         // ====== CHORES FUNCTIONALITY ======
 
         // Get chore completion status from localStorage
@@ -918,7 +1000,7 @@
 
         // Render chores section
         function renderChores() {
-            if (!CONFIG || !CONFIG.chores) {
+            if (!CHORES) {
                 document.getElementById('choresContainer').innerHTML = '<div style="text-align: center; color: #999;">No chores configured</div>';
                 return;
             }
@@ -928,8 +1010,8 @@
 
             // Render individual chores for each kid
             Object.values(CONFIG).forEach(kid => {
-                if (kid.id && CONFIG.chores.individual && CONFIG.chores.individual[kid.id]) {
-                    const chores = CONFIG.chores.individual[kid.id];
+                if (kid.id && CHORES.individual && CHORES.individual[kid.id]) {
+                    const chores = CHORES.individual[kid.id];
 
                     html += `<div class="chore-kid-section">
                         <h3>${kid.name}'s Chores</h3>
@@ -967,12 +1049,12 @@
             });
 
             // Render shared chores
-            if (CONFIG.chores.shared && CONFIG.chores.shared.length > 0) {
+            if (CHORES.shared && CHORES.shared.length > 0) {
                 html += `<div class="chore-kid-section">
                     <h3>Shared Chores (Anyone Can Do)</h3>
                     <div class="chore-list">`;
 
-                CONFIG.chores.shared.forEach(chore => {
+                CHORES.shared.forEach(chore => {
                     // For shared chores, show completion status for each kid
                     html += `<div class="shared-chore-item">
                         <div class="shared-chore-header">
@@ -1015,35 +1097,66 @@
 
         // ====== REWARDS FUNCTIONALITY ======
 
-        // Purchase a reward
-        async function purchaseReward(rewardId, rewardName, cost, icon) {
+        let selectedReward = null;
+
+        // Show kid selector modal for purchasing a reward
+        function showKidSelector(rewardId, rewardName, cost, icon, text) {
             // Check if PIN is required and user is not unlocked
             if (CONFIG.requirePinForEdits && !isUnlocked) {
                 showPinModal();
                 return;
             }
 
-            // Ask which kid is purchasing
-            const kidId = prompt(`Which kid is purchasing "${rewardName}"? Enter: ${Object.values(CONFIG).filter(k => k.id).map(k => k.id).join(', ')}`);
+            selectedReward = { id: rewardId, name: rewardName, cost, icon, text };
 
-            if (!kidId) return;
+            // Generate kid selection buttons
+            let html = '<h2>Who is purchasing?</h2>';
+            html += '<div class="kid-selector-grid">';
 
+            Object.values(CONFIG).forEach(kid => {
+                if (kid.id) {
+                    const pcElement = document.getElementById(`${kid.id}-pc`);
+                    const currentPC = parseInt(pcElement.textContent);
+                    const canAfford = currentPC >= cost;
+                    const disabledClass = canAfford ? '' : 'disabled';
+
+                    html += `
+                        <div class="kid-selector-card ${disabledClass}" onclick="confirmPurchase('${kid.id}')">
+                            <div class="kid-selector-name">${kid.name}</div>
+                            <div class="kid-selector-pc">${currentPC} PC</div>
+                            ${canAfford ? '<div class="kid-selector-status">✓</div>' : '<div class="kid-selector-status">Not enough</div>'}
+                        </div>
+                    `;
+                }
+            });
+
+            html += '</div>';
+
+            document.getElementById('kidSelectorContent').innerHTML = html;
+            document.getElementById('kidSelectorModal').classList.add('active');
+        }
+
+        // Close kid selector modal
+        function closeKidSelector() {
+            document.getElementById('kidSelectorModal').classList.remove('active');
+            selectedReward = null;
+        }
+
+        // Confirm purchase for selected kid
+        async function confirmPurchase(kidId) {
             const kid = getKidByID(kidId);
-            if (!kid) {
-                showMessage('Invalid kid ID!');
-                return;
-            }
+            if (!kid || !selectedReward) return;
 
             const pcElement = document.getElementById(`${kidId}-pc`);
             const currentPC = parseInt(pcElement.textContent);
 
-            if (currentPC < cost) {
-                showMessage(`${kid.name} needs ${cost} PC but only has ${currentPC} PC!`);
+            if (currentPC < selectedReward.cost) {
+                showMessage(`${kid.name} needs ${selectedReward.cost} PC but only has ${currentPC} PC!`);
                 return;
             }
 
             // Deduct Prize Coins
-            const newPC = currentPC - cost;
+            const newPC = currentPC - selectedReward.cost;
             pcElement.textContent = newPC;
             localStorage.setItem(`${kidId}-pc`, newPC.toString());
 
@@ -1053,15 +1166,18 @@
                 const totalBPElement = document.getElementById(`${kidId}-total-bp`);
                 const currentDailyBP = parseInt(dailyBPElement.textContent);
                 const currentTotalBP = parseInt(totalBPElement.textContent);
-                await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${rewardName} ${icon} (-${cost} PC)`);
+                const icon = EMOJI_SUPPORTED ? selectedReward.icon : selectedReward.text;
+                await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${selectedReward.name} ${icon} (-${selectedReward.cost} PC)`);
             }
 
-            showMessage(`🎉 ${kid.name} purchased ${icon} ${rewardName} for ${cost} PC! Remaining: ${newPC} PC`);
+            const displayIcon = EMOJI_SUPPORTED ? selectedReward.icon : selectedReward.text;
+            showMessage(`🎉 ${kid.name} purchased ${displayIcon} ${selectedReward.name} for ${selectedReward.cost} PC! Remaining: ${newPC} PC`);
+            closeKidSelector();
         }
 
         // Render rewards section
         function renderRewards() {
-            if (!CONFIG || !CONFIG.rewards || CONFIG.rewards.length === 0) {
+            if (!REWARDS || REWARDS.length === 0) {
                 document.getElementById('rewardsContainer').innerHTML = '<div style="text-align: center; color: #999;">No rewards configured</div>';
                 return;
             }
@@ -1069,13 +1185,16 @@
             const container = document.getElementById('rewardsContainer');
             let html = '';
 
-            CONFIG.rewards.forEach(reward => {
+            REWARDS.forEach(reward => {
+                // Use emoji if supported, otherwise use text fallback
+                const displayIcon = EMOJI_SUPPORTED ? reward.icon : reward.text;
+
                 html += `
                     <div class="reward-card">
-                        <div class="reward-icon">${reward.icon}</div>
+                        <div class="reward-icon">${displayIcon}</div>
                         <div class="reward-name">${reward.name}</div>
                         <div class="reward-cost">${reward.cost} PC</div>
-                        <button class="reward-btn" onclick="purchaseReward('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}')">Purchase</button>
+                        <button class="reward-btn" onclick="showKidSelector('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}', '${reward.text}')">Purchase</button>
                     </div>
                 `;
             });
@@ -1186,6 +1305,10 @@
                 document.body.innerHTML = '<div style="color: white; text-align: center; padding: 50px; font-size: 20px;">⚠️ Failed to load configuration from Google Sheets.<br><br>Please check your Config sheet setup.</div>';
                 return;
             }
+
+            // Load chores and rewards from separate sheets
+            CHORES = await fetchChores();
+            REWARDS = await fetchRewards();
 
             // Initialize dashboard
             generateKidCards();

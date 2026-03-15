@@ -936,3 +936,230 @@ body.dark-mode .reward-card:hover {
 body.dark-mode .reward-name {
     color: #e2e8f0;
 }
+
+/* ==========================================
+   KID SELECTOR MODAL
+   ========================================== */
+
+.kid-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.kid-selector-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+}
+
+.kid-selector-card:hover:not(.disabled) {
+    border-color: #51cf66;
+    transform: scale(1.05);
+    background: #e6f9ed;
+}
+
+.kid-selector-card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #fff1f0;
+}
+
+.kid-selector-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 8px;
+}
+
+.kid-selector-pc {
+    font-size: 24px;
+    font-weight: bold;
+    color: #f59f00;
+    margin-bottom: 8px;
+}
+
+.kid-selector-status {
+    font-size: 14px;
+    color: #51cf66;
+    font-weight: 500;
+}
+
+.kid-selector-card.disabled .kid-selector-status {
+    color: #ff6b6b;
+}
+
+/* Dark mode for kid selector */
+body.dark-mode .kid-selector-card {
+    background: #1a202c;
+}
+
+body.dark-mode .kid-selector-card:hover:not(.disabled) {
+    background: #1a2e1f;
+}
+
+body.dark-mode .kid-selector-card.disabled {
+    background: #2d1f1f;
+}
+
+body.dark-mode .kid-selector-name {
+    color: #a78bfa;
+}
+
+/* ==========================================
+   COMPACT MODE - Smaller sizes for Pi display
+   ========================================== */
+
+/* Compact Kid Cards */
+.kid-card {
+    padding: 12px;
+}
+
+.kid-name {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.points-display {
+    font-size: 32px;
+    margin: 6px 0;
+}
+
+.points-label {
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.currency-section {
+    margin-bottom: 10px;
+}
+
+.total-bp-section,
+.prize-coins-section {
+    padding-top: 10px;
+}
+
+button {
+    font-size: 20px;
+    width: 45px;
+    height: 45px;
+}
+
+.end-of-day-btn,
+.cash-in-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    margin-top: 6px;
+}
+
+/* Compact Chores */
+.chores-section,
+.rewards-section {
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.section-header {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+}
+
+.section-header h2 {
+    font-size: 18px;
+}
+
+.chore-kid-section {
+    margin-bottom: 15px;
+}
+
+.chore-kid-section h3 {
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.chore-list {
+    gap: 6px;
+}
+
+.chore-item {
+    padding: 8px 12px;
+}
+
+.chore-status-icon {
+    font-size: 16px;
+}
+
+.chore-name {
+    font-size: 13px;
+}
+
+.chore-bp {
+    font-size: 11px;
+}
+
+.chore-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+}
+
+.shared-chore-item {
+    margin-bottom: 12px;
+    padding: 8px;
+}
+
+.shared-chore-header {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+}
+
+.shared-chore-kids {
+    gap: 6px;
+}
+
+.shared-chore-kid {
+    padding: 6px;
+}
+
+.kid-name-small {
+    font-size: 11px;
+}
+
+.chore-btn-small {
+    padding: 3px 6px;
+    font-size: 10px;
+}
+
+/* Compact Rewards */
+.rewards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+}
+
+.reward-card {
+    padding: 12px;
+}
+
+.reward-icon {
+    font-size: 32px;
+    margin-bottom: 6px;
+}
+
+.reward-name {
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.reward-cost {
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.reward-btn {
+    padding: 6px;
+    font-size: 11px;
+}

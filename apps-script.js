@@ -46,11 +46,15 @@ function doGet(e) {
     return getCalendarEvents(e.parameter.days);
   } else if (action === 'getConfig') {
     return getConfig();
+  } else if (action === 'getChores') {
+    return getChores();
+  } else if (action === 'getRewards') {
+    return getRewards();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
 
-  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, or ?action=test' }, 400);
+  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, ?action=getChores, ?action=getRewards, or ?action=test' }, 400);
 }
 
 function doPost(e) {
@@ -140,20 +144,52 @@ function logPoints(params) {
 
     const today = new Date();
     const todayDateString = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-
-    // Get all data to find if today's entry exists
     const lastRow = sheet.getLastRow();
+
+    // For chore-approved and reward-purchase, always append a new row
+    // For other types, update today's row if it exists
+    if (type === 'chore-approved' || type === 'reward-purchase') {
+      // Always append new row for chores and rewards
+      const newRow = lastRow + 1;
+      sheet.getRange(newRow, CONFIG.columns.date).setValue(today);
+      sheet.getRange(newRow, CONFIG.columns.kid).setValue(kid);
+      sheet.getRange(newRow, CONFIG.columns.dailyBP).setValue(dailyBP);
+      sheet.getRange(newRow, CONFIG.columns.totalBP).setValue(totalBP);
+      sheet.getRange(newRow, CONFIG.columns.prizeCoins).setValue(prizeCoins);
+      sheet.getRange(newRow, CONFIG.columns.type).setValue(type);
+      if (note) {
+        sheet.getRange(newRow, CONFIG.columns.note).setValue(note);
+      }
+
+      return jsonResponse({
+        success: true,
+        kid: kid,
+        dailyBP: dailyBP,
+        totalBP: totalBP,
+        prizeCoins: prizeCoins,
+        type: type,
+        date: today.toLocaleDateString(),
+        row: newRow,
+        updated: false,
+        message: 'Points logged'
+      });
+    }
+
+    // For other types, find and update today's entry
     let existingRow = null;
 
     if (lastRow >= CONFIG.startRow) {
       const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 7).getValues();
 
-      // Look for today's entry for this kid
+      // Look for today's entry for this kid (excluding chore/reward types)
       for (let i = data.length - 1; i >= 0; i--) {
-        const [date, rowKid] = data[i];
+        const [date, rowKid, , , , rowType] = data[i];
         const rowDateString = Utilities.formatDate(new Date(date), Session.getScriptTimeZone(), 'yyyy-MM-dd');
 
-        if (rowDateString === todayDateString && rowKid.toLowerCase() === kid.toLowerCase()) {
+        if (rowDateString === todayDateString &&
+            rowKid.toLowerCase() === kid.toLowerCase() &&
+            rowType !== 'chore-approved' &&
+            rowType !== 'reward-purchase') {
           existingRow = CONFIG.startRow + i;
           break;
         }
@@ -281,6 +317,97 @@ function getCalendarEvents(daysParam) {
       events: eventList,
       count: eventList.length,
       daysAhead: days,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== GET CHORES ======
+// Returns chores configuration from the Chores sheet
+function getChores() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chores');
+
+    if (!sheet) {
+      return jsonResponse({ error: 'Chores sheet not found. Please create a "Chores" sheet.' }, 404);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const chores = {
+      individual: {},
+      shared: []
+    };
+
+    // Skip header row, read chore data
+    // Expected columns: Kid | Chore ID | Chore Name | BP | Type (individual/shared)
+    for (let i = 1; i < data.length; i++) {
+      const [kid, choreId, choreName, bp, type] = data[i];
+
+      if (!choreId || !choreName) continue; // Skip empty rows
+
+      const chore = {
+        id: choreId.toString().toLowerCase(),
+        name: choreName,
+        bp: parseInt(bp) || 1
+      };
+
+      if (type === 'shared') {
+        chores.shared.push(chore);
+      } else if (kid) {
+        const kidId = kid.toString().toLowerCase();
+        if (!chores.individual[kidId]) {
+          chores.individual[kidId] = [];
+        }
+        chores.individual[kidId].push(chore);
+      }
+    }
+
+    return jsonResponse({
+      success: true,
+      chores: chores,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== GET REWARDS ======
+// Returns rewards configuration from the Rewards sheet
+function getRewards() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Rewards');
+
+    if (!sheet) {
+      return jsonResponse({ error: 'Rewards sheet not found. Please create a "Rewards" sheet.' }, 404);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const rewards = [];
+
+    // Skip header row, read reward data
+    // Expected columns: ID | Name | Cost | Icon | Text Fallback
+    for (let i = 1; i < data.length; i++) {
+      const [id, name, cost, icon, textFallback] = data[i];
+
+      if (!id || !name) continue; // Skip empty rows
+
+      rewards.push({
+        id: id.toString().toLowerCase(),
+        name: name,
+        cost: parseInt(cost) || 0,
+        icon: icon || '🎁',
+        text: textFallback || name.toUpperCase()
+      });
+    }
+
+    return jsonResponse({
+      success: true,
+      rewards: rewards,
       timestamp: new Date().toISOString()
     });
 
