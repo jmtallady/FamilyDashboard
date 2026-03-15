@@ -29,7 +29,7 @@
             </div>
         </div>
 
-        <!-- Main Content: Kids Cards -->
+        <!-- Main Content: Kids Cards and Rewards -->
         <div class="main-content">
             <div class="header">
                 <h1>Family Dashboard</h1>
@@ -45,17 +45,6 @@
 
             <div class="status-message" id="statusMessage"></div>
 
-            <!-- Chores Section -->
-            <div class="chores-section">
-                <div class="section-header">
-                    <h2>📋 Chores</h2>
-                    <button class="reset-btn" onclick="resetAllChores()" style="font-size: 12px; padding: 8px 15px;">Reset All Chores</button>
-                </div>
-                <div id="choresContainer">
-                    <!-- Chores will be dynamically generated -->
-                </div>
-            </div>
-
             <!-- Rewards Section -->
             <div class="rewards-section">
                 <div class="section-header">
@@ -63,6 +52,20 @@
                 </div>
                 <div class="rewards-grid" id="rewardsContainer">
                     <!-- Rewards will be dynamically generated -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Chores -->
+        <div class="right-column">
+            <!-- Chores Section -->
+            <div class="chores-section">
+                <div class="section-header">
+                    <h2>📋 Chores</h2>
+                    <button class="reset-btn" onclick="resetAllChores()" style="font-size: 10px; padding: 6px 10px;">Reset</button>
+                </div>
+                <div id="choresContainer">
+                    <!-- Chores will be dynamically generated -->
                 </div>
             </div>
         </div>
@@ -235,7 +238,7 @@
 
             try {
                 const { latitude, longitude, timezone } = CONFIG.weather;
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,weather_code&timezone=${timezone}&forecast_days=1`;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,weather_code&timezone=${timezone}&temperature_unit=fahrenheit&forecast_days=1`;
 
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -1335,13 +1338,16 @@
         function updateDateTime() {
             const now = new Date();
 
-            // Update clock time (with seconds)
-            const hours = now.getHours().toString().padStart(2, '0');
+            // Update clock time (12-hour format with AM/PM)
+            let hours = now.getHours();
             const minutes = now.getMinutes().toString().padStart(2, '0');
             const seconds = now.getSeconds().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // 0 should be 12
             const timeElement = document.getElementById('clockTime');
             if (timeElement) {
-                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+                timeElement.textContent = `${hours}:${minutes}:${seconds} ${ampm}`;
             }
 
             // Update clock date
