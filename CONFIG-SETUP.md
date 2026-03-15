@@ -28,6 +28,8 @@ Copy and paste this structure into your Config sheet:
 | conversionRate | {"bp":50,"pc":100} |
 | weather | {"latitude":42.87035582295225,"longitude":-85.61757137488162,"timezone":"America/New_York"} |
 | calendar | {"enabled":true,"daysAhead":7} |
+| chores | {"individual":{"clara":[{"id":"bed","name":"Make Bed","bp":1}],"champ":[{"id":"bed","name":"Make Bed","bp":1}]},"shared":[{"id":"dishes","name":"Help with Dishes","bp":1}]} |
+| rewards | [{"id":"candy","name":"Candy Bar","cost":50,"icon":"🍫"},{"id":"toy","name":"Small Toy","cost":200,"icon":"🧸"}] |
 
 ### 4. Customize Your Values
 
@@ -48,6 +50,19 @@ Copy and paste this structure into your Config sheet:
 - Set `enabled` to `true` or `false`
 - Set `daysAhead` to how many days of events to show (1-30)
 
+**Chores:**
+- Configure both individual chores (assigned to specific kids) and shared chores (any kid can do)
+- Each chore has: `id` (unique identifier), `name` (display name), `bp` (behavior points awarded when approved)
+- Individual chores are organized by kid ID: `"individual":{"clara":[...], "champ":[...]}`
+- Shared chores are in a single array: `"shared":[...]`
+- Kids mark chores complete, parents approve to award points
+
+**Rewards:**
+- Create a prize store where kids can spend Prize Coins
+- Each reward has: `id` (unique), `name`, `cost` (Prize Coins), `icon` (emoji)
+- Kids can purchase rewards when they have enough Prize Coins
+- Example: `{"id":"movie","name":"Movie Night","cost":150,"icon":"🎬"}`
+
 ### 5. Example Configuration
 
 Here's what your Config sheet should look like:
@@ -62,6 +77,8 @@ Row 6:  requirePinForEdits   true
 Row 7:  conversionRate       {"bp":50,"pc":100}
 Row 8:  weather              {"latitude":40.7128,"longitude":-74.0060,"timezone":"America/New_York"}
 Row 9:  calendar             {"enabled":true,"daysAhead":7}
+Row 10: chores               {"individual":{"alice":[{"id":"bed","name":"Make Bed","bp":1},{"id":"homework","name":"Homework","bp":2}],"bob":[{"id":"bed","name":"Make Bed","bp":1},{"id":"toys","name":"Clean Room","bp":2}]},"shared":[{"id":"dishes","name":"Help with Dishes","bp":1},{"id":"trash","name":"Take Out Trash","bp":2}]}
+Row 11: rewards              [{"id":"candy","name":"Candy Bar","cost":50,"icon":"🍫"},{"id":"ice-cream","name":"Ice Cream","cost":75,"icon":"🍦"},{"id":"toy","name":"Small Toy","cost":200,"icon":"🧸"},{"id":"movie","name":"Movie Night","cost":150,"icon":"🎬"}]
 ```
 
 ## Benefits of This Approach

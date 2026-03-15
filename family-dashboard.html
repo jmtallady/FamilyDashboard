@@ -43,6 +43,27 @@
             </div>
 
             <div class="status-message" id="statusMessage"></div>
+
+            <!-- Chores Section -->
+            <div class="chores-section">
+                <div class="section-header">
+                    <h2>📋 Chores</h2>
+                    <button class="reset-btn" onclick="resetAllChores()" style="font-size: 12px; padding: 8px 15px;">Reset All Chores</button>
+                </div>
+                <div id="choresContainer">
+                    <!-- Chores will be dynamically generated -->
+                </div>
+            </div>
+
+            <!-- Rewards Section -->
+            <div class="rewards-section">
+                <div class="section-header">
+                    <h2>🎁 Rewards Store</h2>
+                </div>
+                <div class="rewards-grid" id="rewardsContainer">
+                    <!-- Rewards will be dynamically generated -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -781,6 +802,286 @@
             }
         }
 
+        // ====== CHORES FUNCTIONALITY ======
+
+        // Get chore completion status from localStorage
+        function getChoreStatus(kidId, choreId) {
+            const today = new Date().toDateString();
+            const key = `chore-${kidId}-${choreId}-${today}`;
+            return localStorage.getItem(key) || 'incomplete'; // 'incomplete', 'pending', 'approved'
+        }
+
+        // Set chore completion status in localStorage
+        function setChoreStatus(kidId, choreId, status) {
+            const today = new Date().toDateString();
+            const key = `chore-${kidId}-${choreId}-${today}`;
+            localStorage.setItem(key, status);
+        }
+
+        // Mark chore as complete (pending approval)
+        function markChoreComplete(kidId, choreId, isShared = false) {
+            const currentStatus = getChoreStatus(kidId, choreId);
+
+            if (currentStatus === 'approved') {
+                showMessage('This chore is already approved!');
+                return;
+            }
+
+            if (currentStatus === 'pending') {
+                showMessage('This chore is waiting for approval!');
+                return;
+            }
+
+            // Mark as pending
+            setChoreStatus(kidId, choreId, 'pending');
+            renderChores();
+
+            const kid = getKidByID(kidId);
+            showMessage(`${kid.name} marked chore complete! Waiting for parent approval.`);
+        }
+
+        // Approve chore completion (awards BP)
+        async function approveChore(kidId, choreId, choreName, bp) {
+            // Check if PIN is required and user is not unlocked
+            if (CONFIG.requirePinForEdits && !isUnlocked) {
+                showPinModal();
+                return;
+            }
+
+            const kid = getKidByID(kidId);
+            if (!kid) return;
+
+            // Mark as approved
+            setChoreStatus(kidId, choreId, 'approved');
+
+            // Award BP
+            const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
+            let currentDailyBP = parseInt(dailyBPElement.textContent);
+            let newDailyBP = currentDailyBP + bp;
+
+            // Update UI
+            dailyBPElement.textContent = newDailyBP;
+            localStorage.setItem(`${kidId}-daily-bp`, newDailyBP.toString());
+
+            // Save to Google Sheets if configured
+            if (useGoogleSheets && SHEETS_API_URL) {
+                const totalBPElement = document.getElementById(`${kidId}-total-bp`);
+                const pcElement = document.getElementById(`${kidId}-pc`);
+                const currentTotalBP = parseInt(totalBPElement.textContent);
+                const currentPC = parseInt(pcElement.textContent);
+                await savePointsToSheets(kidId, newDailyBP, currentTotalBP, currentPC, 'chore-approved', `Completed chore: ${choreName} (+${bp} BP)`);
+            }
+
+            renderChores();
+            showMessage(`✅ Approved! ${kid.name} earned ${bp} BP for: ${choreName}`);
+        }
+
+        // Reject chore completion
+        function rejectChore(kidId, choreId) {
+            // Check if PIN is required and user is not unlocked
+            if (CONFIG.requirePinForEdits && !isUnlocked) {
+                showPinModal();
+                return;
+            }
+
+            const kid = getKidByID(kidId);
+            if (!kid) return;
+
+            // Reset to incomplete
+            setChoreStatus(kidId, choreId, 'incomplete');
+            renderChores();
+            showMessage(`❌ Rejected chore for ${kid.name}`);
+        }
+
+        // Reset all chores to incomplete
+        function resetAllChores() {
+            // Check if PIN is required and user is not unlocked
+            if (CONFIG.requirePinForEdits && !isUnlocked) {
+                showPinModal();
+                return;
+            }
+
+            const today = new Date().toDateString();
+            const keys = Object.keys(localStorage);
+
+            // Remove all chore status keys for today
+            keys.forEach(key => {
+                if (key.startsWith('chore-') && key.endsWith(today)) {
+                    localStorage.removeItem(key);
+                }
+            });
+
+            renderChores();
+            showMessage('🔄 All chores reset!');
+        }
+
+        // Render chores section
+        function renderChores() {
+            if (!CONFIG || !CONFIG.chores) {
+                document.getElementById('choresContainer').innerHTML = '<div style="text-align: center; color: #999;">No chores configured</div>';
+                return;
+            }
+
+            const container = document.getElementById('choresContainer');
+            let html = '';
+
+            // Render individual chores for each kid
+            Object.values(CONFIG).forEach(kid => {
+                if (kid.id && CONFIG.chores.individual && CONFIG.chores.individual[kid.id]) {
+                    const chores = CONFIG.chores.individual[kid.id];
+
+                    html += `<div class="chore-kid-section">
+                        <h3>${kid.name}'s Chores</h3>
+                        <div class="chore-list">`;
+
+                    chores.forEach(chore => {
+                        const status = getChoreStatus(kid.id, chore.id);
+                        const statusClass = status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'incomplete';
+                        const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '⬜';
+
+                        html += `
+                            <div class="chore-item ${statusClass}">
+                                <div class="chore-info">
+                                    <span class="chore-status-icon">${statusIcon}</span>
+                                    <span class="chore-name">${chore.name}</span>
+                                    <span class="chore-bp">+${chore.bp} BP</span>
+                                </div>
+                                <div class="chore-actions">`;
+
+                        if (status === 'incomplete') {
+                            html += `<button class="chore-btn complete-btn" onclick="markChoreComplete('${kid.id}', '${chore.id}')">Mark Done</button>`;
+                        } else if (status === 'pending') {
+                            html += `
+                                <button class="chore-btn approve-btn" onclick="approveChore('${kid.id}', '${chore.id}', '${chore.name}', ${chore.bp})">Approve</button>
+                                <button class="chore-btn reject-btn" onclick="rejectChore('${kid.id}', '${chore.id}')">Reject</button>`;
+                        } else {
+                            html += `<span class="approved-text">Completed!</span>`;
+                        }
+
+                        html += `</div></div>`;
+                    });
+
+                    html += `</div></div>`;
+                }
+            });
+
+            // Render shared chores
+            if (CONFIG.chores.shared && CONFIG.chores.shared.length > 0) {
+                html += `<div class="chore-kid-section">
+                    <h3>Shared Chores (Anyone Can Do)</h3>
+                    <div class="chore-list">`;
+
+                CONFIG.chores.shared.forEach(chore => {
+                    // For shared chores, show completion status for each kid
+                    html += `<div class="shared-chore-item">
+                        <div class="shared-chore-header">
+                            <span class="chore-name">${chore.name}</span>
+                            <span class="chore-bp">+${chore.bp} BP</span>
+                        </div>
+                        <div class="shared-chore-kids">`;
+
+                    Object.values(CONFIG).forEach(kid => {
+                        if (kid.id) {
+                            const status = getChoreStatus(kid.id, chore.id);
+                            const statusClass = status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'incomplete';
+                            const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '⬜';
+
+                            html += `
+                                <div class="shared-chore-kid ${statusClass}">
+                                    <span class="kid-name-small">${kid.name}</span>
+                                    <span class="chore-status-icon">${statusIcon}</span>`;
+
+                            if (status === 'incomplete') {
+                                html += `<button class="chore-btn-small complete-btn" onclick="markChoreComplete('${kid.id}', '${chore.id}', true)">Done</button>`;
+                            } else if (status === 'pending') {
+                                html += `
+                                    <button class="chore-btn-small approve-btn" onclick="approveChore('${kid.id}', '${chore.id}', '${chore.name}', ${chore.bp})">✓</button>
+                                    <button class="chore-btn-small reject-btn" onclick="rejectChore('${kid.id}', '${chore.id}')">✗</button>`;
+                            }
+
+                            html += `</div>`;
+                        }
+                    });
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div></div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // ====== REWARDS FUNCTIONALITY ======
+
+        // Purchase a reward
+        async function purchaseReward(rewardId, rewardName, cost, icon) {
+            // Check if PIN is required and user is not unlocked
+            if (CONFIG.requirePinForEdits && !isUnlocked) {
+                showPinModal();
+                return;
+            }
+
+            // Ask which kid is purchasing
+            const kidId = prompt(`Which kid is purchasing "${rewardName}"? Enter: ${Object.values(CONFIG).filter(k => k.id).map(k => k.id).join(', ')}`);
+
+            if (!kidId) return;
+
+            const kid = getKidByID(kidId);
+            if (!kid) {
+                showMessage('Invalid kid ID!');
+                return;
+            }
+
+            const pcElement = document.getElementById(`${kidId}-pc`);
+            const currentPC = parseInt(pcElement.textContent);
+
+            if (currentPC < cost) {
+                showMessage(`${kid.name} needs ${cost} PC but only has ${currentPC} PC!`);
+                return;
+            }
+
+            // Deduct Prize Coins
+            const newPC = currentPC - cost;
+            pcElement.textContent = newPC;
+            localStorage.setItem(`${kidId}-pc`, newPC.toString());
+
+            // Save to Google Sheets if configured
+            if (useGoogleSheets && SHEETS_API_URL) {
+                const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
+                const totalBPElement = document.getElementById(`${kidId}-total-bp`);
+                const currentDailyBP = parseInt(dailyBPElement.textContent);
+                const currentTotalBP = parseInt(totalBPElement.textContent);
+                await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${rewardName} ${icon} (-${cost} PC)`);
+            }
+
+            showMessage(`🎉 ${kid.name} purchased ${icon} ${rewardName} for ${cost} PC! Remaining: ${newPC} PC`);
+        }
+
+        // Render rewards section
+        function renderRewards() {
+            if (!CONFIG || !CONFIG.rewards || CONFIG.rewards.length === 0) {
+                document.getElementById('rewardsContainer').innerHTML = '<div style="text-align: center; color: #999;">No rewards configured</div>';
+                return;
+            }
+
+            const container = document.getElementById('rewardsContainer');
+            let html = '';
+
+            CONFIG.rewards.forEach(reward => {
+                html += `
+                    <div class="reward-card">
+                        <div class="reward-icon">${reward.icon}</div>
+                        <div class="reward-name">${reward.name}</div>
+                        <div class="reward-cost">${reward.cost} PC</div>
+                        <button class="reward-btn" onclick="purchaseReward('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}')">Purchase</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
         // Update date and time
         function updateDateTime() {
             const now = new Date();
@@ -891,6 +1192,8 @@
             updateDateTime();
             updateWeather();
             updateCalendar();
+            renderChores();
+            renderRewards();
         }
 
         initialize();

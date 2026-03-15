@@ -605,3 +605,334 @@ body.dark-mode .reset-btn {
 body.dark-mode .reset-btn:hover {
     background: #2d3748;
 }
+
+/* ==========================================
+   CHORES AND REWARDS SECTIONS
+   ========================================== */
+
+/* Section Containers */
+.chores-section,
+.rewards-section {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.section-header h2 {
+    font-size: 20px;
+    color: #667eea;
+    margin: 0;
+}
+
+/* Chores Styling */
+.chore-kid-section {
+    margin-bottom: 20px;
+}
+
+.chore-kid-section:last-child {
+    margin-bottom: 0;
+}
+
+.chore-kid-section h3 {
+    font-size: 16px;
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.chore-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chore-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #ddd;
+    transition: all 0.3s ease;
+}
+
+.chore-item.pending {
+    border-left-color: #f59f00;
+    background: #fff8e6;
+}
+
+.chore-item.approved {
+    border-left-color: #51cf66;
+    background: #e6f9ed;
+}
+
+.chore-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chore-status-icon {
+    font-size: 18px;
+}
+
+.chore-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.chore-bp {
+    font-size: 12px;
+    color: #667eea;
+    font-weight: bold;
+}
+
+.chore-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.chore-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.complete-btn {
+    background: #5c7cfa;
+    color: white;
+}
+
+.complete-btn:hover {
+    background: #4c6ef5;
+    transform: scale(1.05);
+}
+
+.approve-btn {
+    background: #51cf66;
+    color: white;
+}
+
+.approve-btn:hover {
+    background: #40c057;
+    transform: scale(1.05);
+}
+
+.reject-btn {
+    background: #ff6b6b;
+    color: white;
+}
+
+.reject-btn:hover {
+    background: #ff5252;
+    transform: scale(1.05);
+}
+
+.approved-text {
+    font-size: 12px;
+    color: #51cf66;
+    font-weight: bold;
+}
+
+/* Shared Chores */
+.shared-chore-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.shared-chore-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.shared-chore-kids {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.shared-chore-kid {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    background: white;
+    border-radius: 8px;
+    border-left: 3px solid #ddd;
+}
+
+.shared-chore-kid.pending {
+    border-left-color: #f59f00;
+    background: #fff8e6;
+}
+
+.shared-chore-kid.approved {
+    border-left-color: #51cf66;
+    background: #e6f9ed;
+}
+
+.kid-name-small {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+}
+
+.chore-btn-small {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+/* Rewards Styling */
+.rewards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+}
+
+.reward-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.reward-card:hover {
+    border-color: #667eea;
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.reward-icon {
+    font-size: 40px;
+    margin-bottom: 8px;
+}
+
+.reward-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.reward-cost {
+    font-size: 14px;
+    font-weight: bold;
+    color: #f59f00;
+    margin-bottom: 10px;
+}
+
+.reward-btn {
+    width: 100%;
+    padding: 8px;
+    font-size: 12px;
+    border: none;
+    border-radius: 6px;
+    background: #667eea;
+    color: white;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.reward-btn:hover {
+    background: #5568d3;
+    transform: scale(1.05);
+}
+
+/* Dark Mode for Chores and Rewards */
+body.dark-mode .chores-section,
+body.dark-mode .rewards-section {
+    background: #2d3748;
+    color: #e2e8f0;
+}
+
+body.dark-mode .section-header {
+    border-bottom-color: #4a5568;
+}
+
+body.dark-mode .section-header h2 {
+    color: #a78bfa;
+}
+
+body.dark-mode .chore-kid-section h3 {
+    color: #a78bfa;
+}
+
+body.dark-mode .chore-item {
+    background: #1a202c;
+    color: #e2e8f0;
+}
+
+body.dark-mode .chore-item.pending {
+    background: #2d2416;
+}
+
+body.dark-mode .chore-item.approved {
+    background: #1a2e1f;
+}
+
+body.dark-mode .chore-name,
+body.dark-mode .kid-name-small {
+    color: #e2e8f0;
+}
+
+body.dark-mode .shared-chore-item {
+    background: #1a202c;
+}
+
+body.dark-mode .shared-chore-header {
+    border-bottom-color: #4a5568;
+}
+
+body.dark-mode .shared-chore-kid {
+    background: #2d3748;
+}
+
+body.dark-mode .shared-chore-kid.pending {
+    background: #2d2416;
+}
+
+body.dark-mode .shared-chore-kid.approved {
+    background: #1a2e1f;
+}
+
+body.dark-mode .reward-card {
+    background: #1a202c;
+    color: #e2e8f0;
+}
+
+body.dark-mode .reward-card:hover {
+    border-color: #a78bfa;
+}
+
+body.dark-mode .reward-name {
+    color: #e2e8f0;
+}
