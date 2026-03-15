@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Family Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Emoji:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="dashboard-layout">
@@ -296,6 +294,14 @@
             `;
 
             document.getElementById('weatherWidget').innerHTML = html;
+
+            // Parse emojis in weather widget
+            if (typeof twemoji !== 'undefined') {
+                twemoji.parse(document.getElementById('weatherWidget'), {
+                    folder: 'svg',
+                    ext: '.svg'
+                });
+            }
         }
 
         // ====== CALENDAR INTEGRATION ======
@@ -870,23 +876,7 @@
             }
         }
 
-        // Detect if emoji is supported
-        function supportsEmoji() {
-            const canvas = document.createElement('canvas');
-            if (!canvas.getContext) return false;
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return false;
-
-            ctx.textBaseline = 'top';
-            ctx.font = '16px Arial';
-            ctx.fillText('😀', 0, 0);
-
-            return ctx.getImageData(8, 8, 1, 1).data[0] !== 0;
-        }
-
-        // Check emoji support once
-        const EMOJI_SUPPORTED = supportsEmoji();
+        // Twemoji will handle all emoji rendering, no detection needed
 
         // ====== CHORES FUNCTIONALITY ======
 
@@ -1106,6 +1096,14 @@
             }
 
             container.innerHTML = html;
+
+            // Parse emojis in chores section
+            if (typeof twemoji !== 'undefined') {
+                twemoji.parse(document.getElementById('choresContainer'), {
+                    folder: 'svg',
+                    ext: '.svg'
+                });
+            }
         }
 
         // ====== REWARDS FUNCTIONALITY ======
@@ -1113,14 +1111,14 @@
         let selectedReward = null;
 
         // Show kid selector modal for purchasing a reward
-        function showKidSelector(rewardId, rewardName, cost, icon, text) {
+        function showKidSelector(rewardId, rewardName, cost, icon) {
             // Check if PIN is required and user is not unlocked
             if (CONFIG.requirePinForEdits && !isUnlocked) {
                 showPinModal();
                 return;
             }
 
-            selectedReward = { id: rewardId, name: rewardName, cost, icon, text };
+            selectedReward = { id: rewardId, name: rewardName, cost, icon };
 
             // Generate kid selection buttons
             let html = '<h2>Who is purchasing?</h2>';
@@ -1179,12 +1177,10 @@
                 const totalBPElement = document.getElementById(`${kidId}-total-bp`);
                 const currentDailyBP = parseInt(dailyBPElement.textContent);
                 const currentTotalBP = parseInt(totalBPElement.textContent);
-                const icon = EMOJI_SUPPORTED ? selectedReward.icon : selectedReward.text;
-                await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${selectedReward.name} ${icon} (-${selectedReward.cost} PC)`);
+                await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${selectedReward.name} ${selectedReward.icon} (-${selectedReward.cost} PC)`);
             }
 
-            const displayIcon = EMOJI_SUPPORTED ? selectedReward.icon : selectedReward.text;
-            showMessage(`🎉 ${kid.name} purchased ${displayIcon} ${selectedReward.name} for ${selectedReward.cost} PC! Remaining: ${newPC} PC`);
+            showMessage(`🎉 ${kid.name} purchased ${selectedReward.icon} ${selectedReward.name} for ${selectedReward.cost} PC! Remaining: ${newPC} PC`);
             closeKidSelector();
         }
 
@@ -1199,20 +1195,25 @@
             let html = '';
 
             REWARDS.forEach(reward => {
-                // Use emoji if supported, otherwise use text fallback
-                const displayIcon = EMOJI_SUPPORTED ? reward.icon : reward.text;
-
                 html += `
                     <div class="reward-card">
-                        <div class="reward-icon">${displayIcon}</div>
+                        <div class="reward-icon">${reward.icon}</div>
                         <div class="reward-name">${reward.name}</div>
                         <div class="reward-cost">${reward.cost} PC</div>
-                        <button class="reward-btn" onclick="showKidSelector('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}', '${reward.text}')">Purchase</button>
+                        <button class="reward-btn" onclick="showKidSelector('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}')">Purchase</button>
                     </div>
                 `;
             });
 
             container.innerHTML = html;
+
+            // Parse emojis in rewards section
+            if (typeof twemoji !== 'undefined') {
+                twemoji.parse(document.getElementById('rewardsContainer'), {
+                    folder: 'svg',
+                    ext: '.svg'
+                });
+            }
         }
 
         // Update date and time
@@ -1331,6 +1332,14 @@
             updateCalendar();
             renderChores();
             renderRewards();
+
+            // Parse emojis with Twemoji (converts emoji to images)
+            if (typeof twemoji !== 'undefined') {
+                twemoji.parse(document.body, {
+                    folder: 'svg',
+                    ext: '.svg'
+                });
+            }
         }
 
         initialize();

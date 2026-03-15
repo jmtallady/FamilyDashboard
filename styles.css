@@ -9,10 +9,18 @@
 }
 
 body {
-    font-family: Arial, 'Noto Emoji', sans-serif;
+    font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
     padding: 10px;
+}
+
+/* Twemoji image styling */
+img.emoji {
+    height: 1em;
+    width: 1em;
+    margin: 0 0.05em 0 0.1em;
+    vertical-align: -0.1em;
 }
 
 /* Two-column layout: sidebar and main content */
