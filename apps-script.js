@@ -42,11 +42,13 @@ function doGet(e) {
 
   if (action === 'getCurrentPoints') {
     return getCurrentPoints();
+  } else if (action === 'getCalendarEvents') {
+    return getCalendarEvents(e.parameter.days);
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
 
-  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints or ?action=test' }, 400);
+  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, or ?action=test' }, 400);
 }
 
 function doPost(e) {
@@ -204,6 +206,43 @@ function logPoints(params) {
         message: 'Points logged for today'
       });
     }
+
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== GET CALENDAR EVENTS ======
+// Returns upcoming calendar events from primary calendar
+function getCalendarEvents(daysParam) {
+  try {
+    const days = parseInt(daysParam) || 7; // Default to 7 days
+    const calendar = CalendarApp.getDefaultCalendar();
+
+    const now = new Date();
+    const endDate = new Date();
+    endDate.setDate(now.getDate() + days);
+
+    const events = calendar.getEvents(now, endDate);
+
+    const eventList = events.map(event => {
+      return {
+        title: event.getTitle(),
+        start: event.getStartTime().toISOString(),
+        end: event.getEndTime().toISOString(),
+        allDay: event.isAllDayEvent(),
+        location: event.getLocation() || '',
+        description: event.getDescription() || ''
+      };
+    });
+
+    return jsonResponse({
+      success: true,
+      events: eventList,
+      count: eventList.length,
+      daysAhead: days,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);

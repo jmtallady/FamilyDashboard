@@ -122,14 +122,48 @@ body {
     color: #667eea;
 }
 
-/* Calendar Widget Placeholder */
+/* Calendar Widget */
 .calendar-widget {
     background: white;
     border-radius: 15px;
-    padding: 15px;
+    padding: 12px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    min-height: 200px;
     flex: 1;
+    overflow-y: auto;
+}
+
+.calendar-header {
+    font-size: 12px;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.calendar-event {
+    padding: 8px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.calendar-event:last-child {
+    margin-bottom: 0;
+}
+
+.event-time {
+    font-size: 9px;
+    color: #999;
+    margin-bottom: 3px;
+}
+
+.event-title {
+    font-size: 11px;
+    color: #333;
+    font-weight: 500;
+    line-height: 1.3;
 }
 
 .header {

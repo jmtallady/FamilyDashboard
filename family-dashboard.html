@@ -100,6 +100,12 @@
                 latitude: 40.7128,   // Default: New York - UPDATE THIS
                 longitude: -74.0060, // Default: New York - UPDATE THIS
                 timezone: 'America/New_York'  // IANA timezone
+            },
+
+            // Calendar configuration
+            calendar: {
+                enabled: true,  // Set to false to hide calendar widget
+                daysAhead: 7    // Number of days to show (1-30)
             }
         };
 
@@ -254,6 +260,105 @@
             `;
 
             document.getElementById('weatherWidget').innerHTML = html;
+        }
+
+        // ====== CALENDAR INTEGRATION ======
+
+        // Fetch calendar events from Google Apps Script
+        async function fetchCalendarEvents() {
+            if (!CONFIG.calendar || !CONFIG.calendar.enabled || !CONFIG.sheetsApiUrl) {
+                console.log('Calendar not configured or disabled');
+                return null;
+            }
+
+            try {
+                const days = CONFIG.calendar.daysAhead || 7;
+                const url = `${CONFIG.sheetsApiUrl}?action=getCalendarEvents&days=${days}&t=${Date.now()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.events) {
+                    console.log('Fetched calendar events:', data.events.length);
+                    return data.events;
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error fetching calendar:', error);
+                return null;
+            }
+        }
+
+        // Format date for display
+        function formatEventDate(isoString, allDay) {
+            const date = new Date(isoString);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+            if (allDay) {
+                return dateStr;
+            }
+
+            const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+            // Check if today or tomorrow
+            if (date.toDateString() === today.toDateString()) {
+                return `Today ${timeStr}`;
+            } else if (date.toDateString() === tomorrow.toDateString()) {
+                return `Tom ${timeStr}`;
+            }
+
+            return `${dateStr} ${timeStr}`;
+        }
+
+        // Update calendar widget display
+        async function updateCalendar() {
+            const calendarWidget = document.getElementById('calendarWidget');
+
+            if (!CONFIG.calendar || !CONFIG.calendar.enabled) {
+                calendarWidget.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 10px;">Calendar disabled</div>';
+                return;
+            }
+
+            const events = await fetchCalendarEvents();
+
+            if (!events) {
+                calendarWidget.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 10px;">Calendar unavailable<br><small>Check Google Apps Script</small></div>';
+                return;
+            }
+
+            if (events.length === 0) {
+                calendarWidget.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 10px;">No upcoming events</div>';
+                return;
+            }
+
+            // Show next 5 events
+            const eventsHtml = events.slice(0, 5).map(event => {
+                const timeDisplay = formatEventDate(event.start, event.allDay);
+                const titleTruncated = event.title.length > 25 ? event.title.substring(0, 25) + '...' : event.title;
+
+                return `
+                    <div class="calendar-event">
+                        <div class="event-time">${timeDisplay}</div>
+                        <div class="event-title">${titleTruncated}</div>
+                    </div>
+                `;
+            }).join('');
+
+            const html = `
+                <div class="calendar-header">Upcoming Events</div>
+                ${eventsHtml}
+            `;
+
+            calendarWidget.innerHTML = html;
         }
 
         // PIN Number Pad Functions
@@ -757,12 +862,16 @@
         initializePoints();
         updateDateTime();
         updateWeather();
+        updateCalendar();
 
         // Update time every second
         setInterval(updateDateTime, 1000);
 
         // Update weather every 10 minutes
         setInterval(updateWeather, 600000);
+
+        // Update calendar every 15 minutes
+        setInterval(updateCalendar, 900000);
 
         // Check for midnight every minute
         setInterval(checkForMidnight, 60000);
