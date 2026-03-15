@@ -50,6 +50,32 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
+.currency-section {
+    margin-bottom: 30px;
+}
+
+.currency-section:last-child {
+    margin-bottom: 0;
+}
+
+.total-bp-section {
+    border-top: 2px solid #f0f0f0;
+    padding-top: 25px;
+}
+
+.total-bp-display {
+    color: #5c7cfa;
+}
+
+.prize-coins-section {
+    border-top: 2px solid #f0f0f0;
+    padding-top: 25px;
+}
+
+.prize-coins-display {
+    color: #f59f00;
+}
+
 .kid-name {
     font-size: 32px;
     font-weight: bold;
@@ -126,6 +152,36 @@ button {
 
 .reset-btn:hover {
     background: #f0f0f0;
+}
+
+.end-of-day-btn {
+    background: #5c7cfa;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    border-radius: 10px;
+    width: 100%;
+    height: auto;
+    margin-top: 10px;
+}
+
+.end-of-day-btn:hover {
+    background: #4c6ef5;
+}
+
+.cash-in-btn {
+    background: #f59f00;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    border-radius: 10px;
+    width: 100%;
+    height: auto;
+    margin-top: 10px;
+}
+
+.cash-in-btn:hover {
+    background: #e67700;
 }
 
 .status-message {

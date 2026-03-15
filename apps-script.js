@@ -6,7 +6,7 @@
 // SETUP INSTRUCTIONS:
 // 1. Create new Google Sheet with this structure:
 //    - Sheet name: "Points Log"
-//    - Row 1 headers: Date | Kid | Points | Note
+//    - Row 1 headers: Date | Kid | Daily BP | Total BP | Prize Coins | Type | Note
 //
 // 2. In Google Sheets, go to Extensions > Apps Script
 // 3. Delete any existing code and paste THIS code
@@ -26,10 +26,13 @@ const CONFIG = {
   pointsLogSheet: 'Points Log',
   startRow: 2,  // First data row (row 1 is headers)
   columns: {
-    date: 1,    // Column A
-    kid: 2,     // Column B
-    points: 3,  // Column C
-    note: 4     // Column D
+    date: 1,      // Column A
+    kid: 2,       // Column B
+    dailyBP: 3,   // Column C
+    totalBP: 4,   // Column D
+    prizeCoins: 5, // Column E
+    type: 6,      // Column F
+    note: 7       // Column G
   }
 };
 
@@ -83,19 +86,22 @@ function getCurrentPoints() {
       });
     }
 
-    const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 4).getValues();
+    const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 7).getValues();
 
     // Find the most recent entry for each kid
     const latestPoints = {};
 
     // Process rows in reverse order (most recent first)
     for (let i = data.length - 1; i >= 0; i--) {
-      const [date, kid, points, note] = data[i];
+      const [date, kid, dailyBP, totalBP, prizeCoins, type, note] = data[i];
 
       if (kid && !latestPoints[kid.toLowerCase()]) {
         latestPoints[kid.toLowerCase()] = {
-          points: points || 5,
+          dailyBP: dailyBP || 5,
+          totalBP: totalBP || 0,
+          prizeCoins: prizeCoins || 0,
           date: date ? new Date(date).toLocaleDateString() : null,
+          type: type || '',
           note: note || ''
         };
       }
@@ -116,10 +122,10 @@ function getCurrentPoints() {
 // Updates today's row for the kid, or creates a new one if it doesn't exist
 function logPoints(params) {
   try {
-    const { kid, points, note } = params;
+    const { kid, dailyBP, totalBP, prizeCoins, type, note } = params;
 
-    if (!kid || points === undefined) {
-      return jsonResponse({ error: 'Missing required fields: kid, points' }, 400);
+    if (!kid || dailyBP === undefined || totalBP === undefined || prizeCoins === undefined) {
+      return jsonResponse({ error: 'Missing required fields: kid, dailyBP, totalBP, prizeCoins' }, 400);
     }
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.pointsLogSheet);
@@ -136,7 +142,7 @@ function logPoints(params) {
     let existingRow = null;
 
     if (lastRow >= CONFIG.startRow) {
-      const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 4).getValues();
+      const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 7).getValues();
 
       // Look for today's entry for this kid
       for (let i = data.length - 1; i >= 0; i--) {
@@ -152,7 +158,10 @@ function logPoints(params) {
 
     if (existingRow) {
       // Update existing row
-      sheet.getRange(existingRow, CONFIG.columns.points).setValue(points);
+      sheet.getRange(existingRow, CONFIG.columns.dailyBP).setValue(dailyBP);
+      sheet.getRange(existingRow, CONFIG.columns.totalBP).setValue(totalBP);
+      sheet.getRange(existingRow, CONFIG.columns.prizeCoins).setValue(prizeCoins);
+      sheet.getRange(existingRow, CONFIG.columns.type).setValue(type || 'behavior');
       if (note) {
         sheet.getRange(existingRow, CONFIG.columns.note).setValue(note);
       }
@@ -160,7 +169,10 @@ function logPoints(params) {
       return jsonResponse({
         success: true,
         kid: kid,
-        points: points,
+        dailyBP: dailyBP,
+        totalBP: totalBP,
+        prizeCoins: prizeCoins,
+        type: type,
         date: today.toLocaleDateString(),
         row: existingRow,
         updated: true,
@@ -171,7 +183,10 @@ function logPoints(params) {
       const newRow = lastRow + 1;
       sheet.getRange(newRow, CONFIG.columns.date).setValue(today);
       sheet.getRange(newRow, CONFIG.columns.kid).setValue(kid);
-      sheet.getRange(newRow, CONFIG.columns.points).setValue(points);
+      sheet.getRange(newRow, CONFIG.columns.dailyBP).setValue(dailyBP);
+      sheet.getRange(newRow, CONFIG.columns.totalBP).setValue(totalBP);
+      sheet.getRange(newRow, CONFIG.columns.prizeCoins).setValue(prizeCoins);
+      sheet.getRange(newRow, CONFIG.columns.type).setValue(type || 'behavior');
       if (note) {
         sheet.getRange(newRow, CONFIG.columns.note).setValue(note);
       }
@@ -179,7 +194,10 @@ function logPoints(params) {
       return jsonResponse({
         success: true,
         kid: kid,
-        points: points,
+        dailyBP: dailyBP,
+        totalBP: totalBP,
+        prizeCoins: prizeCoins,
+        type: type,
         date: today.toLocaleDateString(),
         row: newRow,
         updated: false,
@@ -212,7 +230,10 @@ function testLogPoints() {
   const params = {
     action: 'logPoints',
     kid: 'Clara',
-    points: 7,
+    dailyBP: 5,
+    totalBP: 25,
+    prizeCoins: 50,
+    type: 'test',
     note: 'Test from Apps Script'
   };
 
