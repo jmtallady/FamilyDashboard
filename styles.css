@@ -30,6 +30,8 @@ img.emoji {
     gap: 12px;
     max-width: 1600px;
     margin: 0 auto;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* Left Sidebar */
@@ -37,12 +39,16 @@ img.emoji {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    height: 100vh;
+    overflow-y: auto;
 }
 
 /* Main Content Area */
 .main-content {
     display: flex;
     flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
 }
 
 /* Right Column for Chores */
@@ -50,6 +56,8 @@ img.emoji {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* Clock Widget */
@@ -658,6 +666,20 @@ body.dark-mode .reset-btn:hover {
     padding: 20px;
     margin-top: 20px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chores-section {
+    flex: 1;
+    min-height: 0;
+}
+
+#choresContainer,
+#activitiesContainer {
+    overflow-y: auto;
+    flex: 1;
 }
 
 .section-header {
@@ -1106,11 +1128,13 @@ button {
 .rewards-section {
     padding: 10px;
     margin-top: 0;
+    /* Preserve flex and overflow from main styles */
 }
 
 .section-header {
     margin-bottom: 8px;
     padding-bottom: 6px;
+    flex-shrink: 0;
 }
 
 .section-header h2 {
