@@ -68,6 +68,16 @@
                     <!-- Chores will be dynamically generated -->
                 </div>
             </div>
+
+            <!-- Activities Section -->
+            <div class="chores-section">
+                <div class="section-header">
+                    <h2>⭐ Activities</h2>
+                </div>
+                <div id="activitiesContainer">
+                    <!-- Activities will be dynamically generated -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -127,6 +137,7 @@
         let useGoogleSheets = false;
         let CHORES = null;
         let REWARDS = null;
+        let ACTIVITIES = null;
 
         // PIN context for kid-specific authentication
         let pinContext = {
@@ -970,6 +981,30 @@
             }
         }
 
+        // Fetch activities from Google Sheets
+        async function fetchActivities() {
+            try {
+                const url = `${SHEETS_API_URL}?action=getActivities&t=${Date.now()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.activities) {
+                    console.log('Loaded activities from Google Sheets');
+                    return data.activities;
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error fetching activities:', error);
+                return null;
+            }
+        }
+
         // Twemoji will handle all emoji rendering, no detection needed
 
         // ====== CHORES FUNCTIONALITY ======
@@ -1223,6 +1258,201 @@
             showMessage(`${kid.name} marked chore complete! Waiting for parent approval.`);
         }
 
+        // ====== ACTIVITIES FUNCTIONALITY ======
+
+        // Get the current week key (YYYY-WXX format, e.g., "2026-W11")
+        function getCurrentWeekKey() {
+            const now = new Date();
+            const startOfYear = new Date(now.getFullYear(), 0, 1);
+            const days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
+            const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+            return `${now.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+        }
+
+        // Get activity completion count for current week
+        function getActivityCount(kidId, activityId) {
+            const weekKey = getCurrentWeekKey();
+            const key = `activity-${kidId}-${activityId}-${weekKey}`;
+            return parseInt(localStorage.getItem(key)) || 0;
+        }
+
+        // Increment activity completion count
+        function incrementActivityCount(kidId, activityId) {
+            const weekKey = getCurrentWeekKey();
+            const key = `activity-${kidId}-${activityId}-${weekKey}`;
+            const currentCount = getActivityCount(kidId, activityId);
+            localStorage.setItem(key, currentCount + 1);
+        }
+
+        // Complete activity (awards BP immediately, no approval needed)
+        async function completeActivity(kidId, activityId, activityName, bp, multiplier, maxPerWeek) {
+            const kid = getKidByID(kidId);
+            if (!kid) return;
+
+            // Check if under the limit
+            const currentCount = getActivityCount(kidId, activityId);
+            if (currentCount >= maxPerWeek) {
+                showMessage(`${kid.name} has already completed this activity ${maxPerWeek} times this week!`);
+                return;
+            }
+
+            // Increment count
+            incrementActivityCount(kidId, activityId);
+
+            // Calculate total BP with multiplier
+            const totalBP = bp * multiplier;
+
+            // Award BP immediately
+            kid.dailyBP += totalBP;
+
+            // Save to Google Sheets
+            if (useGoogleSheets) {
+                await savePointsToSheets(kid.id, kid.dailyBP, kid.totalBP, kid.prizeCoins, 'activity', `Completed activity: ${activityName} (+${totalBP} BP)`);
+            }
+
+            // Update UI
+            updateKidDisplay(kid.id);
+            renderActivities();
+
+            const newCount = getActivityCount(kidId, activityId);
+            showMessage(`🌟 ${kid.name} completed "${activityName}"! Earned ${totalBP} BP (${newCount}/${maxPerWeek} this week)`);
+        }
+
+        // Show kid selector for shared activity completion
+        let selectedActivity = null;
+
+        function showActivityKidSelector(activityId, activityName, bp, multiplier, maxPerWeek) {
+            selectedActivity = { id: activityId, name: activityName, bp, multiplier, maxPerWeek };
+
+            let html = '<h2>Who completed this activity?</h2>';
+            html += '<div class="kid-selector-grid">';
+
+            Object.values(CONFIG).forEach(kid => {
+                if (kid.id) {
+                    const currentCount = getActivityCount(kid.id, activityId);
+                    const canComplete = currentCount < maxPerWeek;
+
+                    html += `
+                        <div class="kid-selector-card ${!canComplete ? 'disabled' : ''}" ${canComplete ? `onclick="selectKidForActivity('${kid.id}')"` : ''}>
+                            <div class="kid-selector-name">${kid.name}</div>
+                            <div class="kid-selector-count" style="font-size: 11px; color: ${canComplete ? '#666' : '#999'};">${currentCount}/${maxPerWeek} this week</div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += '</div>';
+
+            document.getElementById('kidSelectorContent').innerHTML = html;
+            document.getElementById('kidSelectorModal').classList.add('active');
+        }
+
+        function selectKidForActivity(kidId) {
+            if (!selectedActivity) return;
+
+            closeKidSelector();
+            completeActivity(kidId, selectedActivity.id, selectedActivity.name, selectedActivity.bp, selectedActivity.multiplier, selectedActivity.maxPerWeek);
+            selectedActivity = null;
+        }
+
+        // Render activities section (compact view)
+        function renderActivities() {
+            if (!ACTIVITIES) {
+                document.getElementById('activitiesContainer').innerHTML = '<div style="text-align: center; color: #999;">No activities configured</div>';
+                return;
+            }
+
+            const container = document.getElementById('activitiesContainer');
+            let html = '<div class="chore-list">';
+            let allActivities = [];
+
+            // Collect all shared activities first
+            if (ACTIVITIES.shared && ACTIVITIES.shared.length > 0) {
+                ACTIVITIES.shared.forEach(activity => {
+                    allActivities.push({
+                        ...activity,
+                        kidId: null,
+                        isShared: true,
+                        displayName: activity.name
+                    });
+                });
+            }
+
+            // Collect all individual activities
+            Object.values(CONFIG).forEach(kid => {
+                if (kid.id && ACTIVITIES.individual && ACTIVITIES.individual[kid.id]) {
+                    ACTIVITIES.individual[kid.id].forEach(activity => {
+                        allActivities.push({
+                            ...activity,
+                            kidId: kid.id,
+                            kidName: kid.name,
+                            isShared: false,
+                            displayName: activity.name
+                        });
+                    });
+                }
+            });
+
+            // Render all activities in one compact list
+            allActivities.forEach(activity => {
+                // For shared activities, we'll show a combined view
+                // For individual activities, show that kid's count
+                if (activity.isShared) {
+                    // Show shared activity with button that opens kid selector
+                    const totalBP = activity.bp * (activity.multiplier || 1);
+                    const bpDisplay = activity.multiplier > 1 ? `+${activity.bp}×${activity.multiplier} (${totalBP} BP)` : `+${activity.bp} BP`;
+
+                    html += `
+                        <div class="chore-item">
+                            <div class="chore-info">
+                                <span class="chore-status-icon">⭐</span>
+                                <span class="chore-name">${activity.displayName}</span>
+                                <span class="chore-bp">${bpDisplay}</span>
+                            </div>
+                            <div class="chore-actions">
+                                <button class="chore-btn complete-btn" onclick="showActivityKidSelector('${activity.id}', '${activity.name}', ${activity.bp}, ${activity.multiplier || 1}, ${activity.maxPerWeek})">Complete</button>
+                            </div>
+                        </div>`;
+                } else {
+                    // Individual activity - show that kid's count
+                    const count = getActivityCount(activity.kidId, activity.id);
+                    const maxReached = count >= activity.maxPerWeek;
+                    const totalBP = activity.bp * (activity.multiplier || 1);
+                    const bpDisplay = activity.multiplier > 1 ? `+${activity.bp}×${activity.multiplier} (${totalBP} BP)` : `+${activity.bp} BP`;
+
+                    html += `
+                        <div class="chore-item ${maxReached ? 'approved' : ''}">
+                            <div class="chore-info">
+                                <span class="chore-status-icon">${maxReached ? '✅' : '⭐'}</span>
+                                <span class="chore-name">${activity.displayName}</span>
+                                <span class="chore-bp">${bpDisplay}</span>
+                            </div>
+                            <div class="chore-actions">`;
+
+                    if (maxReached) {
+                        html += `<span class="approved-text" style="font-size: 10px;">${count}/${activity.maxPerWeek}</span>`;
+                    } else {
+                        html += `
+                            <span style="font-size: 10px; color: #666; margin-right: 6px;">${count}/${activity.maxPerWeek}</span>
+                            <button class="chore-btn complete-btn" onclick="completeActivity('${activity.kidId}', '${activity.id}', '${activity.name}', ${activity.bp}, ${activity.multiplier || 1}, ${activity.maxPerWeek})">Complete</button>`;
+                    }
+
+                    html += `</div></div>`;
+                }
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Parse emojis in activities section
+            if (typeof twemoji !== 'undefined') {
+                twemoji.parse(document.getElementById('activitiesContainer'), {
+                    folder: 'svg',
+                    ext: '.svg'
+                });
+            }
+        }
+
         // ====== REWARDS FUNCTIONALITY ======
 
         let selectedReward = null;
@@ -1464,9 +1694,10 @@
                 return;
             }
 
-            // Load chores and rewards from separate sheets
+            // Load chores, rewards, and activities from separate sheets
             CHORES = await fetchChores();
             REWARDS = await fetchRewards();
+            ACTIVITIES = await fetchActivities();
 
             // Initialize dashboard
             generateKidCards();
@@ -1476,6 +1707,7 @@
             updateCalendar();
             renderChores();
             renderRewards();
+            renderActivities();
 
             // Parse emojis with Twemoji (converts emoji to images)
             if (typeof twemoji !== 'undefined') {

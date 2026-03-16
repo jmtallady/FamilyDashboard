@@ -50,11 +50,13 @@ function doGet(e) {
     return getChores();
   } else if (action === 'getRewards') {
     return getRewards();
+  } else if (action === 'getActivities') {
+    return getActivities();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
 
-  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, ?action=getChores, ?action=getRewards, or ?action=test' }, 400);
+  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, ?action=getChores, ?action=getRewards, ?action=getActivities, or ?action=test' }, 400);
 }
 
 function doPost(e) {
@@ -416,6 +418,66 @@ function getRewards() {
     return jsonResponse({
       success: true,
       rewards: rewards,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== GET ACTIVITIES ======
+// Returns activities configuration from the Activities sheet
+function getActivities() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Activities');
+
+    if (!sheet) {
+      return jsonResponse({ error: 'Activities sheet not found. Please create an "Activities" sheet.' }, 404);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const activities = {
+      individual: {},
+      shared: []
+    };
+
+    // Skip header row, read activity data
+    // Expected columns: Kid | Activity ID | Activity Name | BP | Max Per Week | Multiplier
+    for (let i = 1; i < data.length; i++) {
+      const [kid, activityId, activityName, bp, maxPerWeek, multiplier] = data[i];
+
+      if (!activityId || !activityName) continue; // Skip empty rows
+
+      const rawMultiplier = parseInt(multiplier);
+
+      // Skip activities with multiplier <= 0 (disabled activities)
+      if (!isNaN(rawMultiplier) && rawMultiplier <= 0) continue;
+
+      const activity = {
+        id: activityId.toString().toLowerCase(),
+        name: activityName,
+        bp: parseInt(bp) || 1,
+        maxPerWeek: parseInt(maxPerWeek) || 7,
+        multiplier: isNaN(rawMultiplier) ? 1 : rawMultiplier
+      };
+
+      // If kid column is blank, add to shared list
+      // If kid column has a value, add to that kid's individual list
+      if (!kid || kid.toString().trim() === '') {
+        activities.shared.push(activity);
+      } else {
+        const kidId = kid.toString().toLowerCase();
+        if (!activities.individual[kidId]) {
+          activities.individual[kidId] = [];
+        }
+        activities.individual[kidId].push(activity);
+      }
+    }
+
+    return jsonResponse({
+      success: true,
+      activities: activities,
       timestamp: new Date().toISOString()
     });
 
