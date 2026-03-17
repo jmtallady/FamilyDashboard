@@ -153,10 +153,10 @@ export async function adjustDailyBP(kidId, change) {
     if (getIsUnlocked()) {
         clearTimeout(getUnlockTimeout());
         setUnlockTimeout(setTimeout(() => {
-            isUnlocked = false;
+            setIsUnlocked(false);
             document.getElementById('unlockIndicator').classList.remove('active');
             showMessage('Auto-locked for security');
-        }, 120000);
+        }, 120000));
     }
 
     const kid = getKidByID(kidId);
@@ -230,10 +230,10 @@ export async function endOfDay(kidId) {
     if (getIsUnlocked()) {
         clearTimeout(getUnlockTimeout());
         setUnlockTimeout(setTimeout(() => {
-            isUnlocked = false;
+            setIsUnlocked(false);
             document.getElementById('unlockIndicator').classList.remove('active');
             showMessage('Auto-locked for security');
-        }, 120000);
+        }, 120000));
     }
 
     const kid = getKidByID(kidId);
