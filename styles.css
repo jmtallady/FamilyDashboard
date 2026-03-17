@@ -214,13 +214,13 @@ img.emoji {
 
 .kid-card {
     background: white;
-    border-radius: 15px;
-    padding: 15px;
+    border-radius: 12px;
+    padding: 8px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
 .currency-section {
-    margin-bottom: 15px;
+    margin-bottom: 8px;
 }
 
 .currency-section:last-child {
@@ -229,7 +229,7 @@ img.emoji {
 
 .total-bp-section {
     border-top: 2px solid #f0f0f0;
-    padding-top: 15px;
+    padding-top: 8px;
 }
 
 .total-bp-display {
@@ -238,7 +238,7 @@ img.emoji {
 
 .prize-coins-section {
     border-top: 2px solid #f0f0f0;
-    padding-top: 15px;
+    padding-top: 8px;
 }
 
 .prize-coins-display {
@@ -246,39 +246,39 @@ img.emoji {
 }
 
 .kid-name {
-    font-size: 20px;
+    font-size: 14px;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
     color: #667eea;
 }
 
 .points-display {
-    font-size: 40px;
+    font-size: 28px;
     font-weight: bold;
     text-align: center;
-    margin: 10px 0;
+    margin: 4px 0;
     color: #764ba2;
 }
 
 .points-label {
     text-align: center;
-    font-size: 14px;
+    font-size: 11px;
     color: #666;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .button-group {
     display: flex;
-    gap: 10px;
+    gap: 6px;
     justify-content: center;
 }
 
 button {
-    font-size: 24px;
-    width: 50px;
-    height: 50px;
+    font-size: 18px;
+    width: 35px;
+    height: 35px;
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: bold;
@@ -306,7 +306,7 @@ button {
 
 .reset-container {
     text-align: center;
-    margin-top: 15px;
+    margin-top: 8px;
 }
 
 .reset-btn {
@@ -326,12 +326,12 @@ button {
 .end-of-day-btn {
     background: #5c7cfa;
     color: white;
-    padding: 8px 12px;
-    font-size: 12px;
-    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 10px;
+    border-radius: 6px;
     width: 100%;
     height: auto;
-    margin-top: 8px;
+    margin-top: 6px;
 }
 
 .end-of-day-btn:hover {
@@ -341,9 +341,9 @@ button {
 .cash-in-btn {
     background: #f59f00;
     color: white;
-    padding: 8px 12px;
-    font-size: 12px;
-    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 10px;
+    border-radius: 6px;
     width: 100%;
     height: auto;
     margin-top: 8px;
@@ -873,14 +873,14 @@ body.dark-mode .reset-btn:hover {
 /* Rewards Styling */
 .rewards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
 }
 
 .reward-card {
     background: #f8f9fa;
-    border-radius: 12px;
-    padding: 15px;
+    border-radius: 10px;
+    padding: 10px;
     text-align: center;
     transition: all 0.3s ease;
     border: 2px solid transparent;
@@ -893,28 +893,28 @@ body.dark-mode .reset-btn:hover {
 }
 
 .reward-icon {
-    font-size: 40px;
-    margin-bottom: 8px;
+    font-size: 30px;
+    margin-bottom: 4px;
 }
 
 .reward-name {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 500;
     color: #333;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
 }
 
 .reward-cost {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     color: #f59f00;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
 }
 
 .reward-btn {
     width: 100%;
-    padding: 8px;
-    font-size: 12px;
+    padding: 6px;
+    font-size: 10px;
     border: none;
     border-radius: 6px;
     background: #667eea;

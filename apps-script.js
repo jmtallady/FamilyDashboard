@@ -4,9 +4,13 @@
 // Deploy this as a Web App in your Google Sheet
 //
 // SETUP INSTRUCTIONS:
-// 1. Create new Google Sheet with this structure:
-//    - Sheet name: "Points Log"
-//    - Row 1 headers: Date | Kid | Daily BP | Total BP | Prize Coins | Type | Note
+// 1. Create new Google Sheet with these tabs:
+//    - "Points Log" - Row 1 headers: Date | Kid | Daily BP | Total BP | Prize Coins | Type | Note
+//    - "Config" - Row 1 headers: Key | Value
+//    - "Chores" - Row 1 headers: Kid | Chore ID | Chore Name | BP | Multiplier
+//    - "Rewards" - Row 1 headers: ID | Name | Cost | Icon | Text Fallback
+//    - "Activities" - Row 1 headers: Kid | Activity ID | Activity Name | BP | Multiplier
+//    - "Recent Activity" - Row 1 headers: Timestamp | Type | Kid Name | Item Name | Icon
 //
 // 2. In Google Sheets, go to Extensions > Apps Script
 // 3. Delete any existing code and paste THIS code
@@ -52,11 +56,15 @@ function doGet(e) {
     return getRewards();
   } else if (action === 'getActivities') {
     return getActivities();
+  } else if (action === 'saveRecentActivity') {
+    return saveRecentActivity(e.parameter.type, e.parameter.kidName, e.parameter.itemName, e.parameter.icon);
+  } else if (action === 'getRecentActivities') {
+    return getRecentActivities();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
 
-  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, ?action=getChores, ?action=getRewards, ?action=getActivities, or ?action=test' }, 400);
+  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, ?action=getChores, ?action=getRewards, ?action=getActivities, ?action=saveRecentActivity, ?action=getRecentActivities, or ?action=test' }, 400);
 }
 
 function doPost(e) {
@@ -485,6 +493,90 @@ function getActivities() {
   }
 }
 
+// ====== RECENT ACTIVITY FUNCTIONS ======
+
+// Save a recent activity to the Recent Activity sheet
+function saveRecentActivity(type, kidName, itemName, icon) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Recent Activity');
+
+    if (!sheet) {
+      Logger.log('Recent Activity sheet not found');
+      return jsonResponse({ success: false, error: 'Sheet not found' });
+    }
+
+    // Add new row at the top (after header)
+    sheet.insertRowBefore(2);
+
+    // Add the activity data
+    const timestamp = new Date();
+    sheet.getRange(2, 1).setValue(timestamp);
+    sheet.getRange(2, 2).setValue(type);
+    sheet.getRange(2, 3).setValue(kidName);
+    sheet.getRange(2, 4).setValue(itemName);
+    sheet.getRange(2, 5).setValue(icon || '');
+
+    // Keep only the last 50 entries (plus header row)
+    const maxRows = 51;
+    const currentRows = sheet.getLastRow();
+    if (currentRows > maxRows) {
+      sheet.deleteRows(maxRows + 1, currentRows - maxRows);
+    }
+
+    Logger.log('Recent activity saved: ' + type + ' - ' + kidName + ' - ' + itemName);
+    return jsonResponse({ success: true });
+
+  } catch (error) {
+    Logger.log('Error saving recent activity: ' + error);
+    return jsonResponse({ success: false, error: error.toString() });
+  }
+}
+
+// Get recent activities from the Recent Activity sheet
+function getRecentActivities() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Recent Activity');
+
+    if (!sheet) {
+      Logger.log('Recent Activity sheet not found');
+      return jsonResponse({ success: false, activities: [] });
+    }
+
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow <= 1) {
+      // No data, just headers
+      return jsonResponse({ success: true, activities: [] });
+    }
+
+    // Get all data (skip header row)
+    const range = sheet.getRange(2, 1, lastRow - 1, 5);
+    const values = range.getValues();
+
+    // Convert to activity objects
+    const activities = values.map(row => {
+      const timestamp = new Date(row[0]);
+      const timeStr = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), 'h:mm a');
+
+      return {
+        type: row[1],
+        kidName: row[2],
+        itemName: row[3],
+        icon: row[4],
+        time: timeStr,
+        timestamp: timestamp.getTime()
+      };
+    });
+
+    Logger.log('Loaded ' + activities.length + ' recent activities');
+    return jsonResponse({ success: true, activities: activities });
+
+  } catch (error) {
+    Logger.log('Error loading recent activities: ' + error);
+    return jsonResponse({ success: false, error: error.toString(), activities: [] });
+  }
+}
+
 // ====== HELPER FUNCTIONS ======
 
 // Helper to return JSON response with CORS headers
@@ -516,6 +608,16 @@ function testLogPoints() {
   Logger.log(result.getContent());
 }
 
+function testSaveRecentActivity() {
+  const result = saveRecentActivity('chore-approved', 'Clara', 'Make Bed', '✅');
+  Logger.log(result.getContent());
+}
+
+function testGetRecentActivities() {
+  const result = getRecentActivities();
+  Logger.log(result.getContent());
+}
+
 function testAPI() {
   Logger.log('Testing getCurrentPoints...');
   testGetCurrentPoints();
@@ -523,5 +625,11 @@ function testAPI() {
   Logger.log('\nTesting logPoints...');
   testLogPoints();
 
-  Logger.log('\nTests complete! Check the sheet to verify the test entry was added.');
+  Logger.log('\nTesting saveRecentActivity...');
+  testSaveRecentActivity();
+
+  Logger.log('\nTesting getRecentActivities...');
+  testGetRecentActivities();
+
+  Logger.log('\nTests complete! Check the sheets to verify the test entries were added.');
 }

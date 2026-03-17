@@ -45,13 +45,26 @@
 
             <div class="status-message" id="statusMessage"></div>
 
-            <!-- Rewards Section -->
-            <div class="rewards-section">
-                <div class="section-header">
-                    <h2>🎁 Rewards Store</h2>
+            <!-- Two Column Layout: Rewards and Recent Activity -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1; min-height: 0;">
+                <!-- Rewards Section -->
+                <div class="rewards-section" style="margin-top: 0; flex: 1; min-height: 0;">
+                    <div class="section-header">
+                        <h2>🎁 Rewards</h2>
+                    </div>
+                    <div id="rewardsContainer" style="overflow-y: auto; flex: 1;">
+                        <!-- Rewards will be dynamically generated -->
+                    </div>
                 </div>
-                <div class="rewards-grid" id="rewardsContainer">
-                    <!-- Rewards will be dynamically generated -->
+
+                <!-- Recent Activity Section -->
+                <div class="rewards-section" style="margin-top: 0; flex: 1; min-height: 0;">
+                    <div class="section-header">
+                        <h2>📋 Recent Activity</h2>
+                    </div>
+                    <div id="recentActivityContainer" style="overflow-y: auto; flex: 1;">
+                        <!-- Recent activities will be dynamically generated -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -138,6 +151,7 @@
         let CHORES = null;
         let REWARDS = null;
         let ACTIVITIES = null;
+        let recentActivities = [];
 
         // PIN context for kid-specific authentication
         let pinContext = {
@@ -1005,6 +1019,129 @@
             }
         }
 
+        // Fetch recent activities from Google Sheets
+        async function fetchRecentActivities() {
+            try {
+                const url = `${SHEETS_API_URL}?action=getRecentActivities&t=${Date.now()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.activities) {
+                    console.log('Loaded recent activities from Google Sheets');
+                    return data.activities;
+                }
+
+                return [];
+            } catch (error) {
+                console.error('Error fetching recent activities:', error);
+                return [];
+            }
+        }
+
+        // Save a recent activity to Google Sheets
+        async function saveRecentActivityToSheets(type, kidName, itemName, icon = '') {
+            if (!useGoogleSheets || !SHEETS_API_URL) {
+                return;
+            }
+
+            try {
+                const url = `${SHEETS_API_URL}?action=saveRecentActivity&type=${encodeURIComponent(type)}&kidName=${encodeURIComponent(kidName)}&itemName=${encodeURIComponent(itemName)}&icon=${encodeURIComponent(icon)}&t=${Date.now()}`;
+                await fetch(url);
+            } catch (error) {
+                console.error('Error saving recent activity to Google Sheets:', error);
+            }
+        }
+
+        // ====== RECENT ACTIVITY FUNCTIONALITY ======
+
+        // Add an activity to the recent activities log
+        function addRecentActivity(type, kidName, itemName, icon = '') {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+            recentActivities.unshift({
+                type,       // 'chore-approved', 'chore-rejected', 'activity-approved', 'activity-rejected', 'purchase'
+                kidName,
+                itemName,
+                icon,
+                time: timeStr,
+                timestamp: now.getTime()
+            });
+
+            // Keep only last 20 activities in memory
+            if (recentActivities.length > 20) {
+                recentActivities = recentActivities.slice(0, 20);
+            }
+
+            // Save to Google Sheets
+            saveRecentActivityToSheets(type, kidName, itemName, icon);
+
+            renderRecentActivity();
+        }
+
+        // Render the recent activity list
+        function renderRecentActivity() {
+            const container = document.getElementById('recentActivityContainer');
+
+            if (recentActivities.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px; font-size: 11px;">No recent activity</div>';
+                return;
+            }
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 4px;">';
+
+            recentActivities.forEach(activity => {
+                let activityIcon = '';
+                let activityText = '';
+                let activityColor = '#666';
+
+                switch(activity.type) {
+                    case 'chore-approved':
+                        activityIcon = '✅';
+                        activityText = `${activity.kidName} completed chore: ${activity.itemName}`;
+                        activityColor = '#51cf66';
+                        break;
+                    case 'chore-rejected':
+                        activityIcon = '❌';
+                        activityText = `${activity.kidName}'s chore rejected: ${activity.itemName}`;
+                        activityColor = '#ff6b6b';
+                        break;
+                    case 'activity-approved':
+                        activityIcon = '⭐';
+                        activityText = `${activity.kidName} completed activity: ${activity.itemName}`;
+                        activityColor = '#f59f00';
+                        break;
+                    case 'activity-rejected':
+                        activityIcon = '❌';
+                        activityText = `${activity.kidName}'s activity rejected: ${activity.itemName}`;
+                        activityColor = '#ff6b6b';
+                        break;
+                    case 'purchase':
+                        activityIcon = activity.icon || '🎁';
+                        activityText = `${activity.kidName} purchased: ${activity.itemName}`;
+                        activityColor = '#a78bfa';
+                        break;
+                }
+
+                html += `
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid ${activityColor};">
+                        <span style="font-size: 14px;">${activityIcon}</span>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 10px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${activityText}</div>
+                        </div>
+                        <span style="font-size: 9px; color: #999; white-space: nowrap;">${activity.time}</span>
+                    </div>`;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
         // Twemoji will handle all emoji rendering, no detection needed
 
         // ====== CHORES FUNCTIONALITY ======
@@ -1060,12 +1197,13 @@
             }
 
             renderChores();
+            addRecentActivity('chore-approved', kid.name, choreName);
             const bpMessage = multiplier > 1 ? `${bp}×${multiplier} = ${totalBP} BP` : `${totalBP} BP`;
             showMessage(`✅ Approved! ${kid.name} earned ${bpMessage} for: ${choreName}`);
         }
 
         // Reject chore completion
-        function rejectChore(kidId, choreId) {
+        function rejectChore(kidId, choreId, choreName = 'chore') {
             // Check if PIN is required and user is not unlocked
             if (CONFIG.requirePinForEdits && !isUnlocked) {
                 showPinModal();
@@ -1078,6 +1216,7 @@
             // Reset to incomplete
             setChoreStatus(kidId, choreId, 'incomplete');
             renderChores();
+            addRecentActivity('chore-rejected', kid.name, choreName);
             showMessage(`❌ Rejected chore for ${kid.name}`);
         }
 
@@ -1184,7 +1323,7 @@
                 } else if (status === 'pending') {
                     html += `
                         <button class="chore-btn approve-btn" onclick="approveChore('${assignedKidId}', '${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">Approve</button>
-                        <button class="chore-btn reject-btn" onclick="rejectChore('${assignedKidId}', '${chore.id}')">Reject</button>`;
+                        <button class="chore-btn reject-btn" onclick="rejectChore('${assignedKidId}', '${chore.id}', '${chore.name}')">Reject</button>`;
                 } else {
                     html += `<span class="approved-text">Completed!</span>`;
                 }
@@ -1363,12 +1502,13 @@
             // Update UI
             updateKidDisplay(kid.id);
             renderActivities();
+            addRecentActivity('activity-approved', kid.name, activityName);
 
             showMessage(`✅ ${kid.name} earned ${totalBP} BP for "${activityName}"!`);
         }
 
         // Reject activity completion
-        function rejectActivity(kidId, activityId) {
+        function rejectActivity(kidId, activityId, activityName = 'activity') {
             // Check if PIN is required and user is not unlocked
             if (CONFIG.requirePinForEdits && !isUnlocked) {
                 showPinModal();
@@ -1380,6 +1520,7 @@
             renderActivities();
 
             const kid = getKidByID(kidId);
+            addRecentActivity('activity-rejected', kid.name, activityName);
             showMessage(`❌ ${kid.name}'s activity was rejected.`);
         }
 
@@ -1495,7 +1636,7 @@
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                                 <span style="font-size: 11px; color: #666; min-width: 60px;">${kid.name}</span>
                                 <button class="chore-btn approve-btn" style="padding: 4px 8px; font-size: 14px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="approveActivityFromButton(this)">✓</button>
-                                <button class="chore-btn reject-btn" style="padding: 4px 8px; font-size: 14px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id})}' onclick="rejectActivityFromButton(this)">✗</button>
+                                <button class="chore-btn reject-btn" style="padding: 4px 8px; font-size: 14px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name})}' onclick="rejectActivityFromButton(this)">✗</button>
                             </div>`;
                     });
                     html += `</div>`;
@@ -1529,7 +1670,7 @@
 
         function rejectActivityFromButton(button) {
             const data = JSON.parse(button.getAttribute('data-activity'));
-            rejectActivity(data.kidId, data.activityId);
+            rejectActivity(data.kidId, data.activityId, data.activityName);
         }
 
         // ====== REWARDS FUNCTIONALITY ======
@@ -1631,39 +1772,36 @@
                 await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${reward.name} ${reward.icon} (-${reward.cost} PC)`);
             }
 
+            addRecentActivity('purchase', kid.name, reward.name, reward.icon);
             showMessage(`🎉 ${kid.name} purchased ${reward.icon} ${reward.name} for ${reward.cost} PC! Remaining: ${newPC} PC`);
         }
 
-        // Render rewards section
+        // Render rewards section (list format like chores)
         function renderRewards() {
             if (!REWARDS || REWARDS.length === 0) {
-                document.getElementById('rewardsContainer').innerHTML = '<div style="text-align: center; color: #999;">No rewards configured</div>';
+                document.getElementById('rewardsContainer').innerHTML = '<div style="text-align: center; color: #999; padding: 20px; font-size: 11px;">No rewards configured</div>';
                 return;
             }
 
             const container = document.getElementById('rewardsContainer');
-            let html = '';
+            let html = '<div class="chore-list">';
 
             REWARDS.forEach(reward => {
                 html += `
-                    <div class="reward-card">
-                        <div class="reward-icon">${reward.icon}</div>
-                        <div class="reward-name">${reward.name}</div>
-                        <div class="reward-cost">${reward.cost} PC</div>
-                        <button class="reward-btn" onclick="showKidSelector('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}')">Purchase</button>
+                    <div class="chore-item">
+                        <div class="chore-info">
+                            <span class="chore-name">${reward.name}</span>
+                            <span class="chore-bp" style="color: #f59f00;">${reward.cost} PC</span>
+                        </div>
+                        <div class="chore-actions">
+                            <button class="chore-btn complete-btn" onclick="showKidSelector('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}')">🛒</button>
+                        </div>
                     </div>
                 `;
             });
 
+            html += '</div>';
             container.innerHTML = html;
-
-            // Parse emojis in rewards section
-            if (typeof twemoji !== 'undefined') {
-                twemoji.parse(document.getElementById('rewardsContainer'), {
-                    folder: 'svg',
-                    ext: '.svg'
-                });
-            }
         }
 
         // Update date and time
@@ -1778,6 +1916,12 @@
             REWARDS = await fetchRewards();
             ACTIVITIES = await fetchActivities();
 
+            // Load recent activities from Google Sheets
+            const loadedActivities = await fetchRecentActivities();
+            if (loadedActivities && loadedActivities.length > 0) {
+                recentActivities = loadedActivities;
+            }
+
             // Initialize dashboard
             generateKidCards();
             await initializePoints();
@@ -1787,6 +1931,7 @@
             renderChores();
             renderRewards();
             renderActivities();
+            renderRecentActivity();
 
             // Parse emojis with Twemoji (converts emoji to images)
             if (typeof twemoji !== 'undefined') {
