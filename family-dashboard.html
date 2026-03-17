@@ -1313,40 +1313,52 @@
                 let activityColor = '#666';
 
                 // Parse the entry based on type
+                // Always include kid's name at the beginning for clarity
+                const kidName = entry.kid || 'Someone';
+
                 switch(entry.type) {
                     case 'chore-approved':
                         activityIcon = '✅';
-                        activityText = entry.note || `${entry.kid} completed a chore`;
+                        // Extract chore name from note if possible
+                        const choreMatch = entry.note?.match(/Completed chore: (.+?) \(/);
+                        const choreName = choreMatch ? choreMatch[1] : 'a chore';
+                        activityText = `${kidName} completed: ${choreName}`;
                         activityColor = '#51cf66';
                         break;
                     case 'activity-approved':
                         activityIcon = '⭐';
-                        activityText = entry.note || `${entry.kid} completed an activity`;
+                        // Extract activity name from note if possible
+                        const activityMatch = entry.note?.match(/Completed activity: (.+?) \(/);
+                        const activityName = activityMatch ? activityMatch[1] : 'an activity';
+                        activityText = `${kidName} completed: ${activityName}`;
                         activityColor = '#f59f00';
                         break;
                     case 'reward-purchase':
                         activityIcon = '🎁';
-                        activityText = entry.note || `${entry.kid} purchased a reward`;
+                        // Extract reward name from note if possible
+                        const rewardMatch = entry.note?.match(/Purchased: (.+?) [🎁-🧸]/);
+                        const rewardName = rewardMatch ? rewardMatch[1] : 'a reward';
+                        activityText = `${kidName} purchased: ${rewardName}`;
                         activityColor = '#a78bfa';
                         break;
                     case 'cash-in':
                         activityIcon = '💰';
-                        activityText = entry.note || `${entry.kid} cashed in BP`;
+                        activityText = `${kidName} cashed in BP`;
                         activityColor = '#4c6ef5';
                         break;
                     case 'end-of-day-auto':
                         activityIcon = '🌙';
-                        activityText = entry.note || `${entry.kid} end of day`;
+                        activityText = `${kidName}: End of day`;
                         activityColor = '#868e96';
                         break;
                     case 'daily-adjust':
                         activityIcon = '📊';
-                        activityText = entry.note || `${entry.kid} points adjusted`;
+                        activityText = `${kidName}: Points adjusted`;
                         activityColor = '#339af0';
                         break;
                     default:
                         activityIcon = '📝';
-                        activityText = entry.note || `${entry.kid} - ${entry.type}`;
+                        activityText = `${kidName}: ${entry.type}`;
                         activityColor = '#666';
                 }
 
