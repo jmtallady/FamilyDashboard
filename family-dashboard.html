@@ -1281,6 +1281,7 @@
             selectedActivity = { id: activityId, name: activityName, bp, multiplier };
 
             let html = '<h2>Who completed this activity?</h2>';
+            html += '<p style="font-size: 12px; color: #666; margin: -10px 0 15px 0;">Multiple kids can mark complete</p>';
             html += '<div class="kid-selector-grid">';
 
             Object.values(CONFIG).forEach(kid => {
@@ -1422,50 +1423,85 @@
 
             // Render all activities in one compact list
             allActivities.forEach(activity => {
-                let status = 'incomplete';
-                let assignedKidId = activity.kidId;
+                // Check all kids to see who has this activity pending or approved
+                const pendingKids = [];
+                const approvedKids = [];
 
-                // For shared activities, check if any kid completed it
+                // Determine which kids to check based on activity type
+                const kidsToCheck = [];
                 if (activity.isShared) {
+                    // Shared activity: check all kids
                     Object.values(CONFIG).forEach(kid => {
-                        if (kid.id) {
-                            const kidStatus = getActivityStatus(kid.id, activity.id);
-                            if (kidStatus === 'approved' || kidStatus === 'pending') {
-                                status = kidStatus;
-                                assignedKidId = kid.id;
-                            }
-                        }
+                        if (kid.id) kidsToCheck.push(kid);
                     });
                 } else {
-                    status = getActivityStatus(activity.kidId, activity.id);
+                    // Individual activity: only check the assigned kid
+                    const assignedKid = Object.values(CONFIG).find(k => k.id === activity.kidId);
+                    if (assignedKid) kidsToCheck.push(assignedKid);
                 }
 
-                const statusClass = status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'incomplete';
-                const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '⭐';
+                kidsToCheck.forEach(kid => {
+                    const kidStatus = getActivityStatus(kid.id, activity.id);
+                    if (kidStatus === 'pending') {
+                        pendingKids.push(kid);
+                    } else if (kidStatus === 'approved') {
+                        approvedKids.push(kid);
+                    }
+                });
+
+                // Determine overall status
+                let overallStatus = 'incomplete';
+                if (approvedKids.length > 0) {
+                    overallStatus = 'approved';
+                } else if (pendingKids.length > 0) {
+                    overallStatus = 'pending';
+                }
+
+                const statusClass = overallStatus === 'approved' ? 'approved' : overallStatus === 'pending' ? 'pending' : 'incomplete';
+                const statusIcon = overallStatus === 'approved' ? '✅' : overallStatus === 'pending' ? '⏳' : '⭐';
                 const totalBP = activity.bp * (activity.multiplier || 1);
                 const bpDisplay = activity.multiplier > 1 ? `+${activity.bp}×${activity.multiplier} (${totalBP} BP)` : `+${activity.bp} BP`;
 
                 html += `
-                    <div class="chore-item ${statusClass}">
-                        <div class="chore-info">
-                            <span class="chore-status-icon">${statusIcon}</span>
-                            <span class="chore-name">${activity.displayName}</span>
-                            <span class="chore-bp">${bpDisplay}</span>
-                        </div>
-                        <div class="chore-actions">`;
+                    <div class="chore-item ${statusClass}" style="flex-direction: column; align-items: stretch;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="chore-info">
+                                <span class="chore-status-icon">${statusIcon}</span>
+                                <span class="chore-name">${activity.displayName}</span>
+                                <span class="chore-bp">${bpDisplay}</span>
+                            </div>
+                            <div class="chore-actions">`;
 
-                if (status === 'incomplete') {
-                    // Always show kid selector for activities (even individual ones)
-                    html += `<button class="chore-btn complete-btn" onclick="showActivityKidSelector('${activity.id}', '${activity.name}', ${activity.bp}, ${activity.multiplier || 1})">Complete</button>`;
-                } else if (status === 'pending') {
-                    html += `
-                        <button class="chore-btn approve-btn" onclick="approveActivity('${assignedKidId}', '${activity.id}', '${activity.name}', ${activity.bp}, ${activity.multiplier || 1})">Approve</button>
-                        <button class="chore-btn reject-btn" onclick="rejectActivity('${assignedKidId}', '${activity.id}')">Reject</button>`;
+                if (overallStatus === 'incomplete') {
+                    // Show checkmark button for kids to mark complete
+                    html += `<button class="chore-btn complete-btn" data-activity='${JSON.stringify({id: activity.id, name: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="showActivityKidSelectorFromButton(this)">✓</button>`;
+                } else if (overallStatus === 'pending') {
+                    // Show + button to add more kids
+                    html += `<button class="chore-btn complete-btn" data-activity='${JSON.stringify({id: activity.id, name: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="showActivityKidSelectorFromButton(this)">+</button>`;
                 } else {
-                    html += `<span class="approved-text">Completed!</span>`;
+                    // Show who completed it
+                    const names = approvedKids.map(k => k.name).join(', ');
+                    html += `<span class="approved-text">${names}!</span>`;
                 }
 
-                html += `</div></div>`;
+                html += `</div>
+                        </div>`;
+
+                // Show pending kids on separate lines below
+                if (overallStatus === 'pending') {
+                    html += `<div style="padding-left: 30px; margin-top: 8px;">`;
+                    pendingKids.forEach(kid => {
+                        html += `
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span style="font-size: 11px; color: #666; min-width: 60px;">${kid.name}</span>
+                                <button class="chore-btn approve-btn" style="padding: 4px 8px; font-size: 14px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="approveActivityFromButton(this)">✓</button>
+                                <button class="chore-btn reject-btn" style="padding: 4px 8px; font-size: 14px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id})}' onclick="rejectActivityFromButton(this)">✗</button>
+                            </div>`;
+                    });
+                    html += `</div>`;
+                }
+
+                html += `</div>`;
             });
 
             html += '</div>';
@@ -1478,6 +1514,22 @@
                     ext: '.svg'
                 });
             }
+        }
+
+        // Helper functions to safely call activity functions from button data attributes
+        function showActivityKidSelectorFromButton(button) {
+            const data = JSON.parse(button.getAttribute('data-activity'));
+            showActivityKidSelector(data.id, data.name, data.bp, data.multiplier);
+        }
+
+        function approveActivityFromButton(button) {
+            const data = JSON.parse(button.getAttribute('data-activity'));
+            approveActivity(data.kidId, data.activityId, data.activityName, data.bp, data.multiplier);
+        }
+
+        function rejectActivityFromButton(button) {
+            const data = JSON.parse(button.getAttribute('data-activity'));
+            rejectActivity(data.kidId, data.activityId);
         }
 
         // ====== REWARDS FUNCTIONALITY ======

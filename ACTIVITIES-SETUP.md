@@ -48,16 +48,20 @@ There are two types of activities:
 ### How Activities Work:
 
 1. **Kid clicks "Complete"** - Kid selector popup appears (always shows, even for individual activities)
-2. **Kid selects themselves** - Activity shows as "pending" (⏳)
-3. **Parent approves** - Kid earns BP, activity marked "approved" (✅)
-4. **Parent rejects** - Activity goes back to incomplete (⭐)
-5. **Daily reset** - All activities reset automatically at midnight
+2. **Kid selects themselves** - Activity shows as "pending" (⏳) for that kid
+3. **Other kids can also complete** - Multiple kids can mark the same activity pending (great for group activities!)
+4. **Parent approves each kid individually** - Each kid gets their own approve (✓) and reject (✗) button
+5. **More kids can join** - Even after some kids are pending, others can still mark complete using the "+" button
+6. **Daily reset** - All activities reset automatically at midnight
+
+**Example:** "Outdoor Play 30 min" - Clara marks complete, then Champ marks complete. Parent sees both kids pending and can approve/reject them separately. Both earn BP!
 
 ### Key Differences from Chores:
 
 ✅ **Encouragement** - Optional positive behaviors vs required tasks
-✅ **Once per day** - Each activity can only be done once daily
+✅ **Once per day** - Each activity can only be done once daily per kid
 ✅ **Kid selector always shows** - Makes it clear who completed the activity
+✅ **Multiple kids can complete** - Perfect for activities kids do together
 ✅ **Requires approval** - Parent verifies the activity was actually done
 
 ---
