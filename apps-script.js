@@ -62,11 +62,13 @@ function doGet(e) {
     return getRecentActivities();
   } else if (action === 'getRecentPointsLog') {
     return getRecentPointsLog();
+  } else if (action === 'getHouseRules') {
+    return getHouseRules();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
 
-  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, ?action=getChores, ?action=getRewards, ?action=getActivities, ?action=saveRecentActivity, ?action=getRecentActivities, or ?action=test' }, 400);
+  return jsonResponse({ error: 'Invalid action. Use ?action=getCurrentPoints, ?action=getCalendarEvents, ?action=getConfig, ?action=getChores, ?action=getRewards, ?action=getActivities, ?action=saveRecentActivity, ?action=getRecentActivities, ?action=getRecentPointsLog, ?action=getHouseRules, or ?action=test' }, 400);
 }
 
 function doPost(e) {
@@ -565,6 +567,81 @@ function getRecentActivities() {
   } catch (error) {
     Logger.log('Error loading recent activities: ' + error);
     return jsonResponse({ success: false, error: error.toString(), activities: [] });
+  }
+}
+
+// ====== GET HOUSE RULES ======
+// Returns house rules from the House Rules sheet (3-column format: Kid | Rule | Consequence)
+function getHouseRules() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('House Rules');
+
+    if (!sheet) {
+      return jsonResponse({ error: 'House Rules sheet not found' }, 404);
+    }
+
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow < 2) {
+      return jsonResponse({
+        success: true,
+        rules: {
+          general: [],
+          kidSpecific: {},
+          spendingRequirements: [],
+          grounding: [],
+          consequenceScale: []
+        }
+      });
+    }
+
+    // Read all data (columns A-C: Kid, Rule, Consequence)
+    const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+
+    const rules = {
+      general: [],
+      kidSpecific: {},
+      spendingRequirements: [],
+      grounding: [],
+      consequenceScale: []
+    };
+
+    // Process each row
+    data.forEach(row => {
+      const kid = row[0] ? row[0].toString().trim() : '';
+      const rule = row[1] ? row[1].toString().trim() : '';
+      const consequence = row[2] ? row[2].toString().trim() : '';
+
+      // Skip empty rows
+      if (!rule) return;
+
+      // Special categories based on Kid column
+      if (kid === 'SPENDING') {
+        rules.spendingRequirements.push({ rule: rule, consequence: consequence });
+      } else if (kid === 'GROUNDED') {
+        rules.grounding.push({ rule: rule, consequence: consequence });
+      } else if (kid === 'BP SCALE') {
+        rules.consequenceScale.push({ rule: rule, consequence: consequence });
+      } else if (kid === '') {
+        // General rules (no kid specified)
+        rules.general.push({ rule: rule, consequence: consequence });
+      } else {
+        // Kid-specific rules
+        if (!rules.kidSpecific[kid]) {
+          rules.kidSpecific[kid] = [];
+        }
+        rules.kidSpecific[kid].push({ rule: rule, consequence: consequence });
+      }
+    });
+
+    return jsonResponse({
+      success: true,
+      rules: rules
+    });
+
+  } catch (error) {
+    Logger.log('Error loading house rules: ' + error);
+    return jsonResponse({ success: false, error: error.toString() });
   }
 }
 

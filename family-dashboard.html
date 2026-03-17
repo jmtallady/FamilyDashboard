@@ -34,6 +34,7 @@
             <div class="header">
                 <h1>Family Dashboard</h1>
                 <div class="color-scheme-selector">
+                    <button onclick="showHouseRules()" style="background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 6px 12px; font-size: 18px; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px); margin-right: 8px;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'" title="View House Rules">📋</button>
                     <label for="colorScheme">🎨</label>
                     <select id="colorScheme" onchange="changeColorScheme(this.value)">
                         <option value="purple">Purple</option>
@@ -141,6 +142,19 @@
             </div>
             <div class="pin-buttons">
                 <button class="pin-btn reset-btn" onclick="closeKidSelector()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- House Rules Modal -->
+    <div class="pin-modal" id="houseRulesModal">
+        <div class="pin-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <h2 style="text-align: center; margin-bottom: 20px;">📋 House Rules</h2>
+            <div id="houseRulesContent" style="text-align: left;">
+                <!-- Content will be dynamically generated -->
+            </div>
+            <div class="pin-buttons">
+                <button class="pin-btn reset-btn" onclick="closeHouseRules()">Close</button>
             </div>
         </div>
     </div>
@@ -1186,6 +1200,149 @@
             applyColorScheme();
 
             console.log(`Changed color scheme to ${scheme} and saved to localStorage`);
+        }
+
+        // ====== HOUSE RULES ======
+
+        // Fetch house rules from Google Sheets
+        async function fetchHouseRules() {
+            if (!useGoogleSheets || !SHEETS_API_URL) {
+                return null;
+            }
+
+            try {
+                const url = `${SHEETS_API_URL}?action=getHouseRules&t=${Date.now()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.rules) {
+                    console.log('Loaded house rules from Google Sheets');
+                    return data.rules;
+                }
+
+                return null;
+            } catch (error) {
+                console.error('Error fetching house rules:', error);
+                return null;
+            }
+        }
+
+        // Show the house rules modal
+        async function showHouseRules() {
+            const container = document.getElementById('houseRulesContent');
+            container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Loading rules...</div>';
+            document.getElementById('houseRulesModal').classList.add('active');
+
+            const rules = await fetchHouseRules();
+
+            if (!rules) {
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">No house rules configured.<br><small>Create a "House Rules" sheet in your Google Sheet to add rules.</small></div>';
+                return;
+            }
+
+            let html = '';
+
+            // General Rules
+            if (rules.general && rules.general.length > 0) {
+                html += '<div style="margin-bottom: 25px;">';
+                html += '<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">General Rules</h3>';
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                rules.general.forEach(rule => {
+                    const consequence = rule.consequence ? ` <span style="color: #e03131; font-weight: bold;">(${rule.consequence})</span>` : '';
+                    html += `<div style="padding: 8px 12px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid var(--primary-color);">
+                        <span style="font-size: 13px; color: #333;">${rule.rule}${consequence}</span>
+                    </div>`;
+                });
+                html += '</div></div>';
+            }
+
+            // Kid-Specific Rules
+            if (rules.kidSpecific && Object.keys(rules.kidSpecific).length > 0) {
+                Object.keys(rules.kidSpecific).forEach(section => {
+                    const sectionRules = rules.kidSpecific[section];
+                    if (sectionRules && sectionRules.length > 0) {
+                        html += '<div style="margin-bottom: 25px;">';
+                        html += `<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">${section}</h3>`;
+                        html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                        sectionRules.forEach(rule => {
+                            const consequence = rule.consequence ? ` <span style="color: #e03131; font-weight: bold;">(${rule.consequence})</span>` : '';
+                            html += `<div style="padding: 8px 12px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid var(--accent-color);">
+                                <span style="font-size: 13px; color: #333;">${rule.rule}${consequence}</span>
+                            </div>`;
+                        });
+                        html += '</div></div>';
+                    }
+                });
+            }
+
+            // Spending Requirements
+            if (rules.spendingRequirements && rules.spendingRequirements.length > 0) {
+                html += '<div style="margin-bottom: 25px;">';
+                html += '<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">Before Spending Prize Coins</h3>';
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                rules.spendingRequirements.forEach(req => {
+                    html += `<div style="padding: 8px 12px; background: #fff9db; border-radius: 6px; border-left: 3px solid #f59f00;">
+                        <span style="font-size: 13px; color: #333;">✓ ${req.rule}</span>
+                    </div>`;
+                });
+                html += '</div></div>';
+            }
+
+            // Grounding Conditions
+            if (rules.grounding && rules.grounding.length > 0) {
+                html += '<div style="margin-bottom: 25px;">';
+                html += '<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">What "Grounded" Means</h3>';
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                rules.grounding.forEach(condition => {
+                    html += `<div style="padding: 8px 12px; background: #ffe9e9; border-radius: 6px; border-left: 3px solid #e03131;">
+                        <span style="font-size: 13px; color: #333;">⛔ ${condition.rule}</span>
+                    </div>`;
+                });
+                html += '</div></div>';
+            }
+
+            // Consequence Scale
+            if (rules.consequenceScale && rules.consequenceScale.length > 0) {
+                html += '<div style="margin-bottom: 25px;">';
+                html += '<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">Daily BP Consequences</h3>';
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                rules.consequenceScale.forEach(scale => {
+                    // Parse the rule text (e.g., "5 Daily BP: Prize basket + treat")
+                    const match = scale.rule.match(/^(\d+)\s+Daily BP:\s*(.+)$/);
+                    if (match) {
+                        const level = match[1];
+                        const description = match[2];
+                        const isGood = parseInt(level) >= 3;
+                        const bgColor = isGood ? '#d3f9d8' : '#ffe9e9';
+                        const borderColor = isGood ? '#51cf66' : '#e03131';
+                        const emoji = isGood ? '😊' : '😞';
+                        html += `<div style="padding: 8px 12px; background: ${bgColor}; border-radius: 6px; border-left: 3px solid ${borderColor};">
+                            <span style="font-size: 13px; color: #333;"><strong>${level} Daily BP:</strong> ${emoji} ${description}</span>
+                        </div>`;
+                    }
+                });
+                html += '</div></div>';
+            }
+
+            container.innerHTML = html;
+
+            // Parse emojis with Twemoji
+            if (typeof twemoji !== 'undefined') {
+                twemoji.parse(container, {
+                    folder: 'svg',
+                    ext: '.svg'
+                });
+            }
+        }
+
+        // Close the house rules modal
+        function closeHouseRules() {
+            document.getElementById('houseRulesModal').classList.remove('active');
         }
 
         // ====== FETCH CHORES AND REWARDS ======
