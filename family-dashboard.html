@@ -963,6 +963,21 @@
             }
         }
 
+        // Load and apply color scheme from config
+        function applyColorScheme() {
+            if (!CONFIG || !CONFIG.colorScheme) {
+                return; // Use default purple theme
+            }
+
+            const scheme = CONFIG.colorScheme.toLowerCase();
+            const validSchemes = ['purple', 'pink', 'blue', 'green', 'teal', 'orange'];
+
+            if (validSchemes.includes(scheme) && scheme !== 'purple') {
+                document.body.classList.add(`theme-${scheme}`);
+                console.log(`Applied ${scheme} color scheme`);
+            }
+        }
+
         // ====== FETCH CHORES AND REWARDS ======
 
         // Fetch chores from Google Sheets
@@ -1340,8 +1355,8 @@
                     }
                 } else if (status === 'pending') {
                     html += `
-                        <button class="chore-btn approve-btn" onclick="approveChore('${assignedKidId}', '${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">Approve</button>
-                        <button class="chore-btn reject-btn" onclick="rejectChore('${assignedKidId}', '${chore.id}', '${chore.name}')">Reject</button>`;
+                        <button class="chore-btn approve-btn" onclick="approveChore('${assignedKidId}', '${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>
+                        <button class="chore-btn reject-btn" onclick="rejectChore('${assignedKidId}', '${chore.id}', '${chore.name}')">✗</button>`;
                 } else {
                     html += `<span class="approved-text">Completed!</span>`;
                 }
@@ -1663,8 +1678,8 @@
                         html += `
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                                 <span style="font-size: 11px; color: #666; min-width: 60px;">${kid.name}</span>
-                                <button class="chore-btn approve-btn" style="padding: 4px 8px; font-size: 14px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="approveActivityFromButton(this)">✓</button>
-                                <button class="chore-btn reject-btn" style="padding: 4px 8px; font-size: 14px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name})}' onclick="rejectActivityFromButton(this)">✗</button>
+                                <button class="chore-btn approve-btn" style="padding: 4px 8px; font-size: 16px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="approveActivityFromButton(this)">✓</button>
+                                <button class="chore-btn reject-btn" style="padding: 4px 8px; font-size: 16px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name})}' onclick="rejectActivityFromButton(this)">✗</button>
                             </div>`;
                     });
                     html += `</div>`;
@@ -1938,6 +1953,9 @@
                 document.body.innerHTML = '<div style="color: white; text-align: center; padding: 50px; font-size: 20px;">⚠️ Failed to load configuration from Google Sheets.<br><br>Please check your Config sheet setup.</div>';
                 return;
             }
+
+            // Apply color scheme from config
+            applyColorScheme();
 
             // Load chores, rewards, and activities from separate sheets
             CHORES = await fetchChores();

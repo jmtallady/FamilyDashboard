@@ -26,6 +26,7 @@ Copy and paste this structure into your Config sheet:
 | pin | 1220 |
 | requirePinForEdits | true |
 | conversionRate | {"bp":50,"pc":100} |
+| colorScheme | pink |
 | weather | {"latitude":42.87035582295225,"longitude":-85.61757137488162,"timezone":"America/New_York"} |
 | calendar | {"enabled":true,"daysAhead":7} |
 | chores | {"individual":{"clara":[{"id":"bed","name":"Make Bed","bp":1}],"champ":[{"id":"bed","name":"Make Bed","bp":1}]},"shared":[{"id":"dishes","name":"Help with Dishes","bp":1}]} |
@@ -46,6 +47,13 @@ Copy and paste this structure into your Config sheet:
 **Parent PIN:**
 - Change the `pin` value to your desired 4-digit parent PIN
 - The parent PIN is used for: approving/rejecting chores, adjusting daily BP, end of day operations
+
+**Color Scheme:**
+- Choose from: `purple` (default), `pink`, `blue`, `green`, `teal`, or `orange`
+- Changes the gradient background and all accent colors throughout the dashboard
+- Great for personalizing the look to your teenager's preferences!
+- Simply add a row: `colorScheme` with value `pink` (or any other color)
+- If not set, uses the default purple theme
 
 **Weather:**
 - Get your coordinates from Google Maps (right-click → copy coordinates)
@@ -81,10 +89,11 @@ Row 4:  kid3                 {"name":"Charlie","id":"charlie","defaultDailyBP":5
 Row 5:  pin                  4567
 Row 6:  requirePinForEdits   true
 Row 7:  conversionRate       {"bp":50,"pc":100}
-Row 8:  weather              {"latitude":40.7128,"longitude":-74.0060,"timezone":"America/New_York"}
-Row 9:  calendar             {"enabled":true,"daysAhead":7}
-Row 10: chores               {"individual":{"alice":[{"id":"bed","name":"Make Bed","bp":1},{"id":"homework","name":"Homework","bp":2}],"bob":[{"id":"bed","name":"Make Bed","bp":1},{"id":"toys","name":"Clean Room","bp":2}]},"shared":[{"id":"dishes","name":"Help with Dishes","bp":1},{"id":"trash","name":"Take Out Trash","bp":2}]}
-Row 11: rewards              [{"id":"candy","name":"Candy Bar","cost":50,"icon":"🍫"},{"id":"ice-cream","name":"Ice Cream","cost":75,"icon":"🍦"},{"id":"toy","name":"Small Toy","cost":200,"icon":"🧸"},{"id":"movie","name":"Movie Night","cost":150,"icon":"🎬"}]
+Row 8:  colorScheme          blue
+Row 9:  weather              {"latitude":40.7128,"longitude":-74.0060,"timezone":"America/New_York"}
+Row 10: calendar             {"enabled":true,"daysAhead":7}
+Row 11: chores               {"individual":{"alice":[{"id":"bed","name":"Make Bed","bp":1},{"id":"homework","name":"Homework","bp":2}],"bob":[{"id":"bed","name":"Make Bed","bp":1},{"id":"toys","name":"Clean Room","bp":2}]},"shared":[{"id":"dishes","name":"Help with Dishes","bp":1},{"id":"trash","name":"Take Out Trash","bp":2}]}
+Row 12: rewards              [{"id":"candy","name":"Candy Bar","cost":50,"icon":"🍫"},{"id":"ice-cream","name":"Ice Cream","cost":75,"icon":"🍦"},{"id":"toy","name":"Small Toy","cost":200,"icon":"🧸"},{"id":"movie","name":"Movie Night","cost":150,"icon":"🎬"}]
 ```
 
 ## Benefits of This Approach
