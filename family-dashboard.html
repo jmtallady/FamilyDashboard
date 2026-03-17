@@ -161,7 +161,6 @@
         let CHORES = null;
         let REWARDS = null;
         let ACTIVITIES = null;
-        let recentActivities = [];
 
         // PIN context for kid-specific authentication
         let pinContext = {
@@ -1264,9 +1263,16 @@
         }
 
         // Fetch recent activities from Google Sheets
-        async function fetchRecentActivities() {
+        // ====== RECENT ACTIVITY FROM POINTS LOG ======
+
+        // Fetch recent entries from Points Log
+        async function fetchRecentPointsLog() {
+            if (!useGoogleSheets || !SHEETS_API_URL) {
+                return [];
+            }
+
             try {
-                const url = `${SHEETS_API_URL}?action=getRecentActivities&t=${Date.now()}`;
+                const url = `${SHEETS_API_URL}?action=getRecentPointsLog&t=${Date.now()}`;
                 const response = await fetch(url);
 
                 if (!response.ok) {
@@ -1275,102 +1281,94 @@
 
                 const data = await response.json();
 
-                if (data.success && data.activities) {
-                    console.log('Loaded recent activities from Google Sheets');
-                    return data.activities;
+                if (data.success && data.entries) {
+                    console.log(`Loaded ${data.count} recent entries from Points Log`);
+                    return data.entries;
                 }
 
                 return [];
             } catch (error) {
-                console.error('Error fetching recent activities:', error);
+                console.error('Error fetching recent Points Log:', error);
                 return [];
             }
         }
 
-        // Save a recent activity to Google Sheets
-        async function saveRecentActivityToSheets(type, kidName, itemName, icon = '') {
-            if (!useGoogleSheets || !SHEETS_API_URL) {
-                return;
-            }
-
-            try {
-                const url = `${SHEETS_API_URL}?action=saveRecentActivity&type=${encodeURIComponent(type)}&kidName=${encodeURIComponent(kidName)}&itemName=${encodeURIComponent(itemName)}&icon=${encodeURIComponent(icon)}&t=${Date.now()}`;
-                await fetch(url);
-            } catch (error) {
-                console.error('Error saving recent activity to Google Sheets:', error);
-            }
-        }
-
-        // ====== RECENT ACTIVITY FUNCTIONALITY ======
-
-        // Add an activity to the recent activities log
-        function addRecentActivity(type, kidName, itemName, icon = '') {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-
-            recentActivities.unshift({
-                type,       // 'chore-approved', 'chore-rejected', 'activity-approved', 'activity-rejected', 'purchase'
-                kidName,
-                itemName,
-                icon,
-                time: timeStr,
-                timestamp: now.getTime()
-            });
-
-            // Keep only last 20 activities in memory
-            if (recentActivities.length > 20) {
-                recentActivities = recentActivities.slice(0, 20);
-            }
-
-            // Save to Google Sheets
-            saveRecentActivityToSheets(type, kidName, itemName, icon);
-
-            renderRecentActivity();
-        }
-
-        // Render the recent activity list
-        function renderRecentActivity() {
+        // Render the recent activity list from Points Log entries
+        async function renderRecentActivity() {
             const container = document.getElementById('recentActivityContainer');
 
-            if (recentActivities.length === 0) {
+            // Fetch latest entries from Points Log
+            const entries = await fetchRecentPointsLog();
+
+            if (entries.length === 0) {
                 container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px; font-size: 11px;">No recent activity</div>';
                 return;
             }
 
             let html = '<div style="display: flex; flex-direction: column; gap: 4px;">';
 
-            recentActivities.forEach(activity => {
+            entries.forEach(entry => {
                 let activityIcon = '';
                 let activityText = '';
                 let activityColor = '#666';
 
-                switch(activity.type) {
+                // Parse the entry based on type
+                // Always include kid's name at the beginning for clarity
+                const kidName = entry.kid || 'Someone';
+
+                switch(entry.type) {
                     case 'chore-approved':
                         activityIcon = '✅';
-                        activityText = `${activity.kidName} completed chore: ${activity.itemName}`;
+                        // Extract chore name from note if possible
+                        const choreMatch = entry.note?.match(/Completed chore: (.+?) \(/);
+                        const choreName = choreMatch ? choreMatch[1] : 'a chore';
+                        activityText = `${kidName} completed: ${choreName}`;
                         activityColor = '#51cf66';
-                        break;
-                    case 'chore-rejected':
-                        activityIcon = '❌';
-                        activityText = `${activity.kidName}'s chore rejected: ${activity.itemName}`;
-                        activityColor = '#ff6b6b';
                         break;
                     case 'activity-approved':
                         activityIcon = '⭐';
-                        activityText = `${activity.kidName} completed activity: ${activity.itemName}`;
+                        // Extract activity name from note if possible
+                        const activityMatch = entry.note?.match(/Completed activity: (.+?) \(/);
+                        const activityName = activityMatch ? activityMatch[1] : 'an activity';
+                        activityText = `${kidName} completed: ${activityName}`;
                         activityColor = '#f59f00';
                         break;
-                    case 'activity-rejected':
-                        activityIcon = '❌';
-                        activityText = `${activity.kidName}'s activity rejected: ${activity.itemName}`;
-                        activityColor = '#ff6b6b';
-                        break;
-                    case 'purchase':
-                        activityIcon = activity.icon || '🎁';
-                        activityText = `${activity.kidName} purchased: ${activity.itemName}`;
+                    case 'reward-purchase':
+                        activityIcon = '🎁';
+                        // Extract reward name from note if possible
+                        const rewardMatch = entry.note?.match(/Purchased: (.+?) [🎁-🧸]/);
+                        const rewardName = rewardMatch ? rewardMatch[1] : 'a reward';
+                        activityText = `${kidName} purchased: ${rewardName}`;
                         activityColor = '#a78bfa';
                         break;
+                    case 'cash-in':
+                        activityIcon = '💰';
+                        activityText = `${kidName} cashed in BP`;
+                        activityColor = '#4c6ef5';
+                        break;
+                    case 'end-of-day-auto':
+                        activityIcon = '🌙';
+                        activityText = `${kidName}: End of day`;
+                        activityColor = '#868e96';
+                        break;
+                    case 'daily-adjust':
+                        activityIcon = '📊';
+                        activityText = `${kidName}: Points adjusted`;
+                        activityColor = '#339af0';
+                        break;
+                    default:
+                        activityIcon = '📝';
+                        activityText = `${kidName}: ${entry.type}`;
+                        activityColor = '#666';
                 }
+
+                // Format the time
+                const entryDate = new Date(entry.date);
+                const now = new Date();
+                const isToday = entryDate.toDateString() === now.toDateString();
+                const timeStr = isToday
+                    ? entryDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                    : entryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
                 html += `
                     <div style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid ${activityColor};">
@@ -1378,7 +1376,7 @@
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-size: 10px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${activityText}</div>
                         </div>
-                        <span style="font-size: 9px; color: #999; white-space: nowrap;">${activity.time}</span>
+                        <span style="font-size: 9px; color: #999; white-space: nowrap;">${timeStr}</span>
                     </div>`;
             });
 
@@ -1441,7 +1439,7 @@
             }
 
             renderChores();
-            addRecentActivity('chore-approved', kid.name, choreName);
+            renderRecentActivity(); // Refresh activity feed from Points Log
             const bpMessage = multiplier > 1 ? `${bp}×${multiplier} = ${totalBP} BP` : `${totalBP} BP`;
             showMessage(`✅ Approved! ${kid.name} earned ${bpMessage} (added to bank) for: ${choreName}`);
         }
@@ -1460,7 +1458,6 @@
             // Reset to incomplete
             setChoreStatus(kidId, choreId, 'incomplete');
             renderChores();
-            addRecentActivity('chore-rejected', kid.name, choreName);
             showMessage(`❌ Rejected chore for ${kid.name}`);
         }
 
@@ -1755,7 +1752,7 @@
             }
 
             renderActivities();
-            addRecentActivity('activity-approved', kid.name, activityName);
+            renderRecentActivity(); // Refresh activity feed from Points Log
 
             const bpMessage = multiplier > 1 ? `${bp}×${multiplier} = ${totalBP} BP` : `${totalBP} BP`;
             showMessage(`✅ ${kid.name} earned ${bpMessage} (added to bank) for "${activityName}"!`);
@@ -1774,7 +1771,6 @@
             renderActivities();
 
             const kid = getKidByID(kidId);
-            addRecentActivity('activity-rejected', kid.name, activityName);
             showMessage(`❌ ${kid.name}'s activity was rejected.`);
         }
 
@@ -2026,7 +2022,7 @@
                 await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${reward.name} ${reward.icon} (-${reward.cost} PC)`);
             }
 
-            addRecentActivity('purchase', kid.name, reward.name, reward.icon);
+            renderRecentActivity(); // Refresh activity feed from Points Log
             showMessage(`🎉 ${kid.name} purchased ${reward.icon} ${reward.name} for ${reward.cost} PC! Remaining: ${newPC} PC`);
         }
 
@@ -2173,12 +2169,6 @@
             REWARDS = await fetchRewards();
             ACTIVITIES = await fetchActivities();
 
-            // Load recent activities from Google Sheets
-            const loadedActivities = await fetchRecentActivities();
-            if (loadedActivities && loadedActivities.length > 0) {
-                recentActivities = loadedActivities;
-            }
-
             // Initialize dashboard
             generateKidCards();
             await initializePoints();
@@ -2188,7 +2178,7 @@
             renderChores();
             renderRewards();
             renderActivities();
-            renderRecentActivity();
+            await renderRecentActivity(); // Load and display from Points Log
 
             // Parse emojis with Twemoji (converts emoji to images)
             if (typeof twemoji !== 'undefined') {

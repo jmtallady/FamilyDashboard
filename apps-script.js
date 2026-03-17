@@ -60,6 +60,8 @@ function doGet(e) {
     return saveRecentActivity(e.parameter.type, e.parameter.kidName, e.parameter.itemName, e.parameter.icon);
   } else if (action === 'getRecentActivities') {
     return getRecentActivities();
+  } else if (action === 'getRecentPointsLog') {
+    return getRecentPointsLog();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
@@ -128,6 +130,69 @@ function getCurrentPoints() {
     return jsonResponse({
       success: true,
       points: latestPoints,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== GET RECENT POINTS LOG ======
+// Returns the most recent N entries from the Points Log for activity feed
+function getRecentPointsLog() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.pointsLogSheet);
+
+    if (!sheet) {
+      return jsonResponse({ error: `Sheet "${CONFIG.pointsLogSheet}" not found` }, 404);
+    }
+
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow < CONFIG.startRow) {
+      // No data yet
+      return jsonResponse({
+        success: true,
+        entries: [],
+        message: 'No data found'
+      });
+    }
+
+    // Get the last 50 entries (or all if less than 50)
+    const numEntries = Math.min(50, lastRow - CONFIG.startRow + 1);
+    const startRow = lastRow - numEntries + 1;
+
+    const data = sheet.getRange(startRow, 1, numEntries, 7).getValues();
+
+    // Build array of entries (most recent first)
+    const entries = [];
+
+    for (let i = data.length - 1; i >= 0; i--) {
+      const [date, kid, dailyBP, totalBP, prizeCoins, type, note] = data[i];
+
+      // Skip entries without a type (invalid/incomplete rows)
+      if (!type) continue;
+
+      // Only include certain types in the activity feed
+      const validTypes = ['chore-approved', 'activity-approved', 'reward-purchase', 'end-of-day-auto', 'cash-in', 'daily-adjust'];
+      if (!validTypes.includes(type)) continue;
+
+      entries.push({
+        date: date ? new Date(date).toISOString() : null,
+        kid: kid || '',
+        dailyBP: dailyBP || 0,
+        totalBP: totalBP || 0,
+        prizeCoins: prizeCoins || 0,
+        type: type || '',
+        note: note || ''
+      });
+    }
+
+    return jsonResponse({
+      success: true,
+      entries: entries,
+      count: entries.length,
       timestamp: new Date().toISOString()
     });
 
