@@ -33,6 +33,17 @@
         <div class="main-content">
             <div class="header">
                 <h1>Family Dashboard</h1>
+                <div class="color-scheme-selector">
+                    <label for="colorScheme">🎨</label>
+                    <select id="colorScheme" onchange="changeColorScheme(this.value)">
+                        <option value="purple">Purple</option>
+                        <option value="pink">Pink</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="teal">Teal</option>
+                        <option value="orange">Orange</option>
+                    </select>
+                </div>
             </div>
 
             <div class="kids-container" id="kidsContainer">
@@ -1117,19 +1128,65 @@
             }
         }
 
-        // Load and apply color scheme from config
+        // Load and apply color scheme from localStorage or config
         function applyColorScheme() {
-            if (!CONFIG || !CONFIG.colorScheme) {
-                return; // Use default purple theme
-            }
-
-            const scheme = CONFIG.colorScheme.toLowerCase();
             const validSchemes = ['purple', 'pink', 'blue', 'green', 'teal', 'orange'];
 
-            if (validSchemes.includes(scheme) && scheme !== 'purple') {
-                document.body.classList.add(`theme-${scheme}`);
-                console.log(`Applied ${scheme} color scheme`);
+            // Check localStorage first (per-device preference)
+            let scheme = localStorage.getItem('colorScheme');
+
+            // Fall back to config if no localStorage value
+            if (!scheme && CONFIG && CONFIG.colorScheme) {
+                scheme = CONFIG.colorScheme.toLowerCase();
             }
+
+            // Default to purple if nothing set
+            if (!scheme) {
+                scheme = 'purple';
+            }
+
+            // Validate scheme
+            if (!validSchemes.includes(scheme)) {
+                scheme = 'purple';
+            }
+
+            // Remove all theme classes first
+            validSchemes.forEach(s => {
+                if (s !== 'purple') {
+                    document.body.classList.remove(`theme-${s}`);
+                }
+            });
+
+            // Apply new theme (purple is default, no class needed)
+            if (scheme !== 'purple') {
+                document.body.classList.add(`theme-${scheme}`);
+            }
+
+            // Update dropdown to match current scheme
+            const dropdown = document.getElementById('colorScheme');
+            if (dropdown) {
+                dropdown.value = scheme;
+            }
+
+            console.log(`Applied ${scheme} color scheme`);
+        }
+
+        // Change color scheme and save to localStorage
+        function changeColorScheme(scheme) {
+            const validSchemes = ['purple', 'pink', 'blue', 'green', 'teal', 'orange'];
+
+            if (!validSchemes.includes(scheme)) {
+                console.error('Invalid color scheme:', scheme);
+                return;
+            }
+
+            // Save to localStorage (per-device preference)
+            localStorage.setItem('colorScheme', scheme);
+
+            // Apply the new color scheme
+            applyColorScheme();
+
+            console.log(`Changed color scheme to ${scheme} and saved to localStorage`);
         }
 
         // ====== FETCH CHORES AND REWARDS ======

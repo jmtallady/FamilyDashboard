@@ -346,7 +346,10 @@ img.emoji {
 }
 
 .header {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
     color: white;
     margin-bottom: 10px;
 }
@@ -354,6 +357,48 @@ img.emoji {
 .header h1 {
     font-size: 22px;
     margin-bottom: 5px;
+}
+
+.color-scheme-selector {
+    position: absolute;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-scheme-selector label {
+    font-size: 18px;
+    cursor: default;
+}
+
+.color-scheme-selector select {
+    padding: 6px 10px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.color-scheme-selector select:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.color-scheme-selector select:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.color-scheme-selector select option {
+    background: #2d1b4e;
+    color: white;
 }
 
 .date-time {
