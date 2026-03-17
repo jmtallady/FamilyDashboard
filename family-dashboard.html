@@ -811,8 +811,29 @@
             const kid = getKidByID(kidId);
             if (!kid) return;
 
-            const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
-            let currentDailyBP = parseInt(dailyBPElement.textContent);
+            // Fetch latest points from Google Sheets FIRST to ensure we have fresh data
+            let currentDailyBP, currentTotalBP, currentPC;
+
+            if (useGoogleSheets && SHEETS_API_URL) {
+                const sheetPoints = await fetchPointsFromSheets();
+                if (sheetPoints && sheetPoints[kidId.toLowerCase()]) {
+                    const kidData = sheetPoints[kidId.toLowerCase()];
+                    currentDailyBP = kidData.dailyBP;
+                    currentTotalBP = kidData.totalBP;
+                    currentPC = kidData.prizeCoins;
+                } else {
+                    // Fallback to UI values if fetch fails
+                    currentDailyBP = parseInt(document.getElementById(`${kidId}-daily-bp`).textContent);
+                    currentTotalBP = parseInt(document.getElementById(`${kidId}-total-bp`).textContent);
+                    currentPC = parseInt(document.getElementById(`${kidId}-pc`).textContent);
+                }
+            } else {
+                // Use UI values if not using Google Sheets
+                currentDailyBP = parseInt(document.getElementById(`${kidId}-daily-bp`).textContent);
+                currentTotalBP = parseInt(document.getElementById(`${kidId}-total-bp`).textContent);
+                currentPC = parseInt(document.getElementById(`${kidId}-pc`).textContent);
+            }
+
             let newDailyBP = currentDailyBP + change;
 
             // Don't go below 0
@@ -821,21 +842,25 @@
                 return;
             }
 
-            // Update UI immediately
+            // Update UI
+            const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
+            const totalBPElement = document.getElementById(`${kidId}-total-bp`);
+            const pcElement = document.getElementById(`${kidId}-pc`);
+
             dailyBPElement.textContent = newDailyBP;
+            totalBPElement.textContent = currentTotalBP;
+            pcElement.textContent = currentPC;
 
             // Save to localStorage (always, as backup)
             localStorage.setItem(`${kidId}-daily-bp`, newDailyBP.toString());
+            localStorage.setItem(`${kidId}-total-bp`, currentTotalBP.toString());
+            localStorage.setItem(`${kidId}-pc`, currentPC.toString());
 
             const actionPast = change > 0 ? 'earned' : 'lost';
             showMessage(`${kid.name} ${actionPast} a daily point! Now at ${newDailyBP} today`);
 
-            // Save to Google Sheets if configured
+            // Save to Google Sheets with fresh data
             if (useGoogleSheets && SHEETS_API_URL) {
-                const totalBPElement = document.getElementById(`${kidId}-total-bp`);
-                const pcElement = document.getElementById(`${kidId}-pc`);
-                const currentTotalBP = parseInt(totalBPElement.textContent);
-                const currentPC = parseInt(pcElement.textContent);
                 const note = `${actionPast} daily BP via dashboard`;
                 await savePointsToSheets(kidId, newDailyBP, currentTotalBP, currentPC, 'daily-adjust', note);
             }
