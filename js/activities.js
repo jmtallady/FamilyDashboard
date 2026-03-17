@@ -27,7 +27,6 @@ export function setActivityStatus(kidId, activityId, status) {
 let selectedActivity = null;
 
 // Show kid selector for activity completion (always show for both shared and individual)
-let selectedActivity = null;
 
 export function showActivityKidSelector(activityId, activityName, bp, multiplier) {
     const CONFIG = getConfig();
@@ -300,9 +299,3 @@ export function rejectActivityFromButton(button) {
     const data = JSON.parse(button.getAttribute('data-activity'));
     rejectActivity(data.kidId, data.activityId, data.activityName);
 }
-
-// ====== REWARDS FUNCTIONALITY ======
-
-let selectedReward = null;
-
-// Show kid selector modal for purchasing a reward

@@ -215,7 +215,6 @@ export function renderChores() {
 let selectedChore = null;
 
 // Show kid selector for shared chore completion
-let selectedChore = null;
 
 export function showChoreKidSelector(choreId, choreName, bp, multiplier) {
     const CONFIG = getConfig();
