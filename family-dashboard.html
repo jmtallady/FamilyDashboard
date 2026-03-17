@@ -255,6 +255,7 @@
         // ====== WEATHER INTEGRATION ======
 
         // Fetch weather data from Open-Meteo API (free, no API key needed)
+        // Now fetches 7-day forecast for the calendar integration
         async function fetchWeatherData() {
             if (!CONFIG.weather || !CONFIG.weather.latitude || !CONFIG.weather.longitude) {
                 console.log('Weather location not configured');
@@ -263,7 +264,7 @@
 
             try {
                 const { latitude, longitude, timezone } = CONFIG.weather;
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,weather_code&timezone=${timezone}&temperature_unit=fahrenheit&forecast_days=1`;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=${timezone}&temperature_unit=fahrenheit&forecast_days=7`;
 
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -292,7 +293,7 @@
             return weatherCodes[code] || '🌤️';
         }
 
-        // Update weather widget display
+        // Update weather widget display (current conditions)
         async function updateWeather() {
             const weatherData = await fetchWeatherData();
             if (!weatherData) {
@@ -301,32 +302,13 @@
             }
 
             const current = weatherData.current;
-            const hourly = weatherData.hourly;
-            const currentHour = new Date().getHours();
-
-            // Get next 6 hours of forecast
-            const forecastHtml = [];
-            for (let i = 0; i < 6; i++) {
-                const hour = (currentHour + i) % 24;
-                const temp = Math.round(hourly.temperature_2m[currentHour + i]);
-                const emoji = getWeatherEmoji(hourly.weather_code[currentHour + i]);
-                forecastHtml.push(`
-                    <div class="hourly-forecast-item">
-                        <div class="forecast-hour">${hour}:00</div>
-                        <div class="forecast-emoji">${emoji}</div>
-                        <div class="forecast-temp">${temp}°</div>
-                    </div>
-                `);
-            }
 
             const html = `
                 <div class="weather-current">
                     <div class="weather-emoji-large">${getWeatherEmoji(current.weather_code)}</div>
                     <div class="weather-temp-large">${Math.round(current.temperature_2m)}°</div>
                     <div class="weather-humidity">${current.relative_humidity_2m}% humidity</div>
-                </div>
-                <div class="hourly-forecast">
-                    ${forecastHtml.join('')}
+                    <div class="weather-label">Right Now</div>
                 </div>
             `;
 
@@ -398,46 +380,104 @@
             return `${dateStr} ${timeStr}`;
         }
 
-        // Update calendar widget display
+        // Update calendar widget display - 7-day view with weather and events
         async function updateCalendar() {
             const calendarWidget = document.getElementById('calendarWidget');
 
-            if (!CONFIG.calendar || !CONFIG.calendar.enabled) {
-                calendarWidget.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 10px;">Calendar disabled</div>';
+            // Fetch weather and calendar data in parallel
+            const [weatherData, events] = await Promise.all([
+                fetchWeatherData(),
+                CONFIG.calendar && CONFIG.calendar.enabled ? fetchCalendarEvents() : Promise.resolve(null)
+            ]);
+
+            if (!weatherData) {
+                calendarWidget.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 10px;">Weather unavailable<br><small>Update CONFIG.weather</small></div>';
                 return;
             }
 
-            const events = await fetchCalendarEvents();
+            // Build 7-day view
+            const today = new Date();
+            const daysHtml = [];
 
-            if (!events) {
-                calendarWidget.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 10px;">Calendar unavailable<br><small>Check Google Apps Script</small></div>';
-                return;
-            }
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
 
-            if (events.length === 0) {
-                calendarWidget.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 10px;">No upcoming events</div>';
-                return;
-            }
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const dateStr = date.toDateString();
 
-            // Show next 5 events
-            const eventsHtml = events.slice(0, 5).map(event => {
-                const timeDisplay = formatEventDate(event.start, event.allDay);
-                const titleTruncated = event.title.length > 25 ? event.title.substring(0, 25) + '...' : event.title;
+                // Get weather for this day
+                const weatherCode = weatherData.daily.weather_code[i];
+                const tempMax = Math.round(weatherData.daily.temperature_2m_max[i]);
+                const tempMin = Math.round(weatherData.daily.temperature_2m_min[i]);
+                const weatherEmoji = getWeatherEmoji(weatherCode);
 
-                return `
-                    <div class="calendar-event">
-                        <div class="event-time">${timeDisplay}</div>
-                        <div class="event-title">${titleTruncated}</div>
+                // Get events for this day
+                const dayEvents = events ? events.filter(event => {
+                    const eventDate = new Date(event.start);
+                    return eventDate.toDateString() === dateStr;
+                }) : [];
+
+                // Check if any event is a holiday (contains common holiday keywords)
+                const holidayKeywords = ['holiday', 'christmas', 'thanksgiving', 'easter', 'new year', 'memorial', 'independence', 'labor day', 'veterans', 'mlk', 'presidents', 'halloween', 'valentines'];
+                const hasHoliday = dayEvents.some(event =>
+                    holidayKeywords.some(keyword => event.title.toLowerCase().includes(keyword))
+                );
+
+                // Build events HTML for this day
+                let eventsHtml = '';
+                if (dayEvents.length > 0) {
+                    const eventsList = dayEvents.slice(0, 3).map(event => {
+                        const title = event.title.length > 18 ? event.title.substring(0, 18) + '...' : event.title;
+                        const timeStr = event.allDay ? '' : new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                        return `<div class="day-event">${timeStr ? timeStr + ' ' : ''}${title}</div>`;
+                    }).join('');
+
+                    if (dayEvents.length > 3) {
+                        eventsHtml = eventsList + `<div class="day-event-more">+${dayEvents.length - 3} more</div>`;
+                    } else {
+                        eventsHtml = eventsList;
+                    }
+                }
+
+                const isToday = i === 0;
+                const dayClass = isToday ? 'calendar-day today' : 'calendar-day';
+
+                daysHtml.push(`
+                    <div class="${dayClass}">
+                        <div class="day-header">
+                            <div class="day-name">${dayName}</div>
+                            <div class="day-date">${monthDay}</div>
+                            ${hasHoliday ? '<div class="holiday-indicator">🎉</div>' : ''}
+                        </div>
+                        <div class="day-weather">
+                            <div class="day-weather-emoji">${weatherEmoji}</div>
+                            <div class="day-weather-temp">${tempMax}° / ${tempMin}°</div>
+                        </div>
+                        <div class="day-events">
+                            ${eventsHtml || '<div class="no-events">No events</div>'}
+                        </div>
                     </div>
-                `;
-            }).join('');
+                `);
+            }
 
             const html = `
-                <div class="calendar-header">Upcoming Events</div>
-                ${eventsHtml}
+                <div class="calendar-header">This Week</div>
+                <div class="calendar-week">
+                    ${daysHtml.join('')}
+                </div>
             `;
 
             calendarWidget.innerHTML = html;
+
+            // Parse emojis in calendar widget
+            if (typeof twemoji !== 'undefined') {
+                twemoji.parse(calendarWidget, {
+                    folder: 'svg',
+                    ext: '.svg'
+                });
+            }
         }
 
         // PIN Number Pad Functions
