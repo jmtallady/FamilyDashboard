@@ -33,7 +33,6 @@ async function initialize() {
     }
 
     setConfig(CONFIG);
-    setUseGoogleSheets(true);
 
     // Apply color scheme from config
     Theme.applyColorScheme();
