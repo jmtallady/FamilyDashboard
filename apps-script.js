@@ -153,107 +153,33 @@ function logPoints(params) {
     }
 
     const today = new Date();
-    const todayDateString = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
     const lastRow = sheet.getLastRow();
 
-    // For chore-approved and reward-purchase, always append a new row
-    // For other types, update today's row if it exists
-    if (type === 'chore-approved' || type === 'reward-purchase') {
-      // Always append new row for chores and rewards
-      const newRow = lastRow + 1;
-      sheet.getRange(newRow, CONFIG.columns.date).setValue(today);
-      sheet.getRange(newRow, CONFIG.columns.kid).setValue(kid);
-      sheet.getRange(newRow, CONFIG.columns.dailyBP).setValue(dailyBP);
-      sheet.getRange(newRow, CONFIG.columns.totalBP).setValue(totalBP);
-      sheet.getRange(newRow, CONFIG.columns.prizeCoins).setValue(prizeCoins);
-      sheet.getRange(newRow, CONFIG.columns.type).setValue(type);
-      if (note) {
-        sheet.getRange(newRow, CONFIG.columns.note).setValue(note);
-      }
-
-      return jsonResponse({
-        success: true,
-        kid: kid,
-        dailyBP: dailyBP,
-        totalBP: totalBP,
-        prizeCoins: prizeCoins,
-        type: type,
-        date: today.toLocaleDateString(),
-        row: newRow,
-        updated: false,
-        message: 'Points logged'
-      });
+    // ALWAYS append a new row - never update existing rows
+    // This ensures the last line is always the most accurate current state
+    const newRow = lastRow + 1;
+    sheet.getRange(newRow, CONFIG.columns.date).setValue(today);
+    sheet.getRange(newRow, CONFIG.columns.kid).setValue(kid);
+    sheet.getRange(newRow, CONFIG.columns.dailyBP).setValue(dailyBP);
+    sheet.getRange(newRow, CONFIG.columns.totalBP).setValue(totalBP);
+    sheet.getRange(newRow, CONFIG.columns.prizeCoins).setValue(prizeCoins);
+    sheet.getRange(newRow, CONFIG.columns.type).setValue(type || 'behavior');
+    if (note) {
+      sheet.getRange(newRow, CONFIG.columns.note).setValue(note);
     }
 
-    // For other types, find and update today's entry
-    let existingRow = null;
-
-    if (lastRow >= CONFIG.startRow) {
-      const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 7).getValues();
-
-      // Look for today's entry for this kid (excluding chore/reward types)
-      for (let i = data.length - 1; i >= 0; i--) {
-        const [date, rowKid, , , , rowType] = data[i];
-        const rowDateString = Utilities.formatDate(new Date(date), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-
-        if (rowDateString === todayDateString &&
-            rowKid.toLowerCase() === kid.toLowerCase() &&
-            rowType !== 'chore-approved' &&
-            rowType !== 'reward-purchase') {
-          existingRow = CONFIG.startRow + i;
-          break;
-        }
-      }
-    }
-
-    if (existingRow) {
-      // Update existing row
-      sheet.getRange(existingRow, CONFIG.columns.dailyBP).setValue(dailyBP);
-      sheet.getRange(existingRow, CONFIG.columns.totalBP).setValue(totalBP);
-      sheet.getRange(existingRow, CONFIG.columns.prizeCoins).setValue(prizeCoins);
-      sheet.getRange(existingRow, CONFIG.columns.type).setValue(type || 'behavior');
-      if (note) {
-        sheet.getRange(existingRow, CONFIG.columns.note).setValue(note);
-      }
-
-      return jsonResponse({
-        success: true,
-        kid: kid,
-        dailyBP: dailyBP,
-        totalBP: totalBP,
-        prizeCoins: prizeCoins,
-        type: type,
-        date: today.toLocaleDateString(),
-        row: existingRow,
-        updated: true,
-        message: 'Points updated for today'
-      });
-    } else {
-      // Create new row for today
-      const newRow = lastRow + 1;
-      sheet.getRange(newRow, CONFIG.columns.date).setValue(today);
-      sheet.getRange(newRow, CONFIG.columns.kid).setValue(kid);
-      sheet.getRange(newRow, CONFIG.columns.dailyBP).setValue(dailyBP);
-      sheet.getRange(newRow, CONFIG.columns.totalBP).setValue(totalBP);
-      sheet.getRange(newRow, CONFIG.columns.prizeCoins).setValue(prizeCoins);
-      sheet.getRange(newRow, CONFIG.columns.type).setValue(type || 'behavior');
-      if (note) {
-        sheet.getRange(newRow, CONFIG.columns.note).setValue(note);
-      }
-
-      return jsonResponse({
-        success: true,
-        kid: kid,
-        dailyBP: dailyBP,
-        totalBP: totalBP,
-        prizeCoins: prizeCoins,
-        type: type,
-        date: today.toLocaleDateString(),
-        row: newRow,
-        updated: false,
-        message: 'Points logged for today'
-      });
-    }
+    return jsonResponse({
+      success: true,
+      kid: kid,
+      dailyBP: dailyBP,
+      totalBP: totalBP,
+      prizeCoins: prizeCoins,
+      type: type,
+      date: today.toLocaleDateString(),
+      row: newRow,
+      updated: false,
+      message: 'Points logged'
+    });
 
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);
