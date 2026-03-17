@@ -220,12 +220,16 @@ export async function fetchActivities() {
  */
 export async function fetchRecentPointsLog() {
     const useGoogleSheets = getUseGoogleSheets();
+    console.log('fetchRecentPointsLog - useGoogleSheets:', useGoogleSheets, 'SHEETS_API_URL:', SHEETS_API_URL);
+
     if (!useGoogleSheets || !SHEETS_API_URL) {
+        console.log('fetchRecentPointsLog - returning empty array due to missing config');
         return [];
     }
 
     try {
         const url = `${SHEETS_API_URL}?action=getRecentPointsLog&t=${Date.now()}`;
+        console.log('fetchRecentPointsLog - fetching from:', url);
         const response = await fetch(url);
 
         if (!response.ok) {

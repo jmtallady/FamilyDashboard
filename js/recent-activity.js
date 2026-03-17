@@ -11,7 +11,9 @@ export async function renderRecentActivity() {
     // Fetch latest entries from Points Log
     const entries = await fetchRecentPointsLog();
 
-    if (entries.length === 0) {
+    console.log('Recent activity entries:', entries);
+
+    if (!entries || entries.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px; font-size: 11px;">No recent activity</div>';
         return;
     }
