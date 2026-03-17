@@ -600,6 +600,49 @@
             }
         }
 
+        // Refresh points from Google Sheets (for multi-device sync)
+        async function refreshPointsFromSheets() {
+            // Only refresh if using Google Sheets
+            if (!useGoogleSheets || !SHEETS_API_URL) {
+                return;
+            }
+
+            try {
+                const sheetPoints = await fetchPointsFromSheets();
+
+                if (sheetPoints) {
+                    // Update UI with latest points from sheet
+                    Object.values(CONFIG).forEach(kid => {
+                        if (kid.id) {
+                            const kidData = sheetPoints[kid.id.toLowerCase()];
+                            if (kidData) {
+                                const dailyBP = kidData.dailyBP;
+                                const totalBP = kidData.totalBP;
+                                const pc = kidData.prizeCoins;
+
+                                const dailyBPElement = document.getElementById(`${kid.id}-daily-bp`);
+                                const totalBPElement = document.getElementById(`${kid.id}-total-bp`);
+                                const pcElement = document.getElementById(`${kid.id}-pc`);
+
+                                if (dailyBPElement) dailyBPElement.textContent = dailyBP;
+                                if (totalBPElement) totalBPElement.textContent = totalBP;
+                                if (pcElement) pcElement.textContent = pc;
+
+                                // Also update localStorage as backup
+                                localStorage.setItem(`${kid.id}-daily-bp`, dailyBP.toString());
+                                localStorage.setItem(`${kid.id}-total-bp`, totalBP.toString());
+                                localStorage.setItem(`${kid.id}-pc`, pc.toString());
+                            }
+                        }
+                    });
+
+                    console.log('🔄 Synced points from Google Sheets');
+                }
+            } catch (error) {
+                console.error('Error refreshing points from Google Sheets:', error);
+            }
+        }
+
         // Get kid config by ID
         function getKidByID(kidId) {
             return Object.values(CONFIG).find(kid => kid.id === kidId);
@@ -1998,6 +2041,9 @@
 
         // Update calendar every 15 minutes
         setInterval(updateCalendar, 900000);
+
+        // Refresh points from Google Sheets every 2 minutes (for multi-device sync)
+        setInterval(refreshPointsFromSheets, 120000);
 
         // Check for midnight every minute
         setInterval(checkForMidnight, 60000);
