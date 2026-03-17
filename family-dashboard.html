@@ -308,12 +308,14 @@
             // Get next 6 hours of forecast
             const forecastHtml = [];
             for (let i = 0; i < 6; i++) {
-                const hour = (currentHour + i) % 24;
+                const hour24 = (currentHour + i) % 24;
+                const hour12 = hour24 % 12 || 12; // Convert 0 to 12
+                const ampm = hour24 < 12 ? 'AM' : 'PM';
                 const temp = Math.round(hourly.temperature_2m[currentHour + i]);
                 const emoji = getWeatherEmoji(hourly.weather_code[currentHour + i]);
                 forecastHtml.push(`
                     <div class="hourly-forecast-item">
-                        <div class="forecast-hour">${hour}:00</div>
+                        <div class="forecast-hour">${hour12} ${ampm}</div>
                         <div class="forecast-emoji">${emoji}</div>
                         <div class="forecast-temp">${temp}°</div>
                     </div>
