@@ -674,6 +674,9 @@
             }
 
             document.getElementById('pinModal').classList.add('active');
+
+            // Add keyboard event listener
+            document.addEventListener('keydown', handlePinKeyboard);
         }
 
         function closePinModal() {
@@ -686,6 +689,9 @@
                 action: null,
                 callback: null
             };
+
+            // Remove keyboard event listener
+            document.removeEventListener('keydown', handlePinKeyboard);
         }
 
         // Show error message in the PIN modal
@@ -705,6 +711,25 @@
             const errorElement = document.getElementById('pinError');
             errorElement.textContent = '';
             errorElement.style.display = 'none';
+        }
+
+        // Handle keyboard input for PIN pad
+        function handlePinKeyboard(event) {
+            // Handle number keys (0-9)
+            if (event.key >= '0' && event.key <= '9') {
+                event.preventDefault();
+                addPinDigit(event.key);
+            }
+            // Handle Enter key to submit
+            else if (event.key === 'Enter') {
+                event.preventDefault();
+                checkPin();
+            }
+            // Handle Backspace to delete last digit
+            else if (event.key === 'Backspace') {
+                event.preventDefault();
+                backspacePin();
+            }
         }
 
         function lockDashboard() {
