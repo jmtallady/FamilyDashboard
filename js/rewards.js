@@ -1,13 +1,13 @@
 // rewards.js - Rewards Management
 // Handles reward purchases and prize coin transactions
 
-import { getConfig } from './config.js';
-import { getRewards, getUseGoogleSheets } from './state.js';
+import { getConfig, SHEETS_API_URL } from './config.js';
+import { getRewards, getUseGoogleSheets, setPinContext, resetPinContext } from './state.js';
 import { savePointsToSheets } from './api.js';
 import { showPinModal } from './auth.js';
 import { getKidByID, showMessage } from './utils.js';
-// TODO: Import renderRecentActivity from ui.js when it's extracted
-// import { renderRecentActivity } from './ui.js';
+import { generateKidCards } from './ui.js';
+import { renderRecentActivity } from './recent-activity.js';
 
 
 // Module-level variables

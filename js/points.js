@@ -1,10 +1,11 @@
 // points.js - Points Management
 // Handles daily BP, total BP, prize coins, and conversions
 
-import { getConfig } from './config.js';
+import { getConfig, SHEETS_API_URL } from './config.js';
 import { fetchPointsFromSheets, savePointsToSheets } from './api.js';
 import { getKidByID, showMessage } from './utils.js';
 import { showPinModal } from './auth.js';
+import { generateKidCards } from './ui.js';
 import {
     getIsUnlocked,
     setIsUnlocked,

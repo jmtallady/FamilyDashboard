@@ -1,14 +1,14 @@
 // chores.js - Chores Management
 // Handles daily chore tracking, approval, and rewards
 
-import { getConfig } from './config.js';
+import { getConfig, SHEETS_API_URL } from './config.js';
 import { getChores, setChores, getIsUnlocked, getUseGoogleSheets } from './state.js';
 import { adjustDailyBP } from './points.js';
 import { showPinModal } from './auth.js';
 import { getKidByID, showMessage } from './utils.js';
 import { savePointsToSheets } from './api.js';
-// TODO: Import renderRecentActivity from ui.js when it's extracted
-// import { renderRecentActivity } from './ui.js';
+import { renderRecentActivity } from './recent-activity.js';
+import { closeKidSelector } from './rewards.js';
 
 export function getChoreStatus(kidId, choreId) {
     const today = new Date().toDateString();
