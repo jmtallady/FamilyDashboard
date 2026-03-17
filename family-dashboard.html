@@ -1336,7 +1336,7 @@
                     case 'reward-purchase':
                         activityIcon = '🎁';
                         // Extract reward name from note if possible
-                        const rewardMatch = entry.note?.match(/Purchased: (.+?) [🎁-🧸]/);
+                        const rewardMatch = entry.note?.match(/Purchased: (.+?) \(/);
                         const rewardName = rewardMatch ? rewardMatch[1] : 'a reward';
                         activityText = `${kidName} purchased: ${rewardName}`;
                         activityColor = '#a78bfa';
