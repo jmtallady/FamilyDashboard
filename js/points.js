@@ -21,7 +21,7 @@ export async function initializePoints() {
     const lastReset = localStorage.getItem('lastReset');
 
     // Try to fetch from Google Sheets first
-    if (CONFIG.SHEETS_API_URL) {
+    if (SHEETS_API_URL) {
         const sheetPoints = await fetchPointsFromSheets();
 
         if (sheetPoints) {
@@ -166,7 +166,7 @@ export async function adjustDailyBP(kidId, change) {
     // Fetch latest points from Google Sheets FIRST to ensure we have fresh data
     let currentDailyBP, currentTotalBP, currentPC;
 
-    if (getUseGoogleSheets() && CONFIG.SHEETS_API_URL) {
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
         const sheetPoints = await fetchPointsFromSheets();
         if (sheetPoints && sheetPoints[kidId.toLowerCase()]) {
             const kidData = sheetPoints[kidId.toLowerCase()];
@@ -212,7 +212,7 @@ export async function adjustDailyBP(kidId, change) {
     showMessage(`${kid.name} ${actionPast} a daily point! Now at ${newDailyBP} today`);
 
     // Save to Google Sheets with fresh data
-    if (getUseGoogleSheets() && CONFIG.SHEETS_API_URL) {
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
         const note = `${actionPast} daily BP via dashboard`;
         await savePointsToSheets(kidId, newDailyBP, currentTotalBP, currentPC, 'daily-adjust', note);
     }
@@ -260,7 +260,7 @@ export async function endOfDay(kidId) {
     showMessage(`${kid.name}: Added ${currentDailyBP} to bank! Total BP: ${newTotalBP}, Daily reset to ${newDailyBP}`);
 
     // Save to Google Sheets if configured
-    if (getUseGoogleSheets() && CONFIG.SHEETS_API_URL) {
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
         const pcElement = document.getElementById(`${kidId}-pc`);
         const currentPC = parseInt(pcElement.textContent);
         await savePointsToSheets(kidId, newDailyBP, newTotalBP, currentPC, 'end-of-day', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
@@ -317,7 +317,7 @@ export async function performCashIn(kidId) {
     showMessage(`${kid.name} cashed in ${CONFIG.conversionRate.bp} Total BP for ${CONFIG.conversionRate.pc} PC! Bank: ${newTotalBP} BP, PC: ${newPC}`);
 
     // Save to Google Sheets if configured
-    if (getUseGoogleSheets() && CONFIG.SHEETS_API_URL) {
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
         await savePointsToSheets(kidId, currentDailyBP, newTotalBP, newPC, 'cash-in', `Converted ${CONFIG.conversionRate.bp} Total BP to ${CONFIG.conversionRate.pc} PC`);
     }
 }
@@ -356,7 +356,7 @@ export async function endOfDayAll() {
             summary.push(`${kid.name}: +${currentDailyBP} → ${newTotalBP} total`);
 
             // Save to Google Sheets if configured
-            if (getUseGoogleSheets() && CONFIG.SHEETS_API_URL) {
+            if (getUseGoogleSheets() && SHEETS_API_URL) {
                 const pcElement = document.getElementById(`${kid.id}-pc`);
                 const currentPC = parseInt(pcElement.textContent);
                 await savePointsToSheets(kid.id, newDailyBP, newTotalBP, currentPC, 'end-of-day-all', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
