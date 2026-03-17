@@ -933,7 +933,16 @@
             document.body.classList.toggle('dark-mode');
             const isDark = document.body.classList.contains('dark-mode');
             localStorage.setItem('darkMode', isDark);
-            document.getElementById('darkModeIcon').textContent = isDark ? '☀️' : '🌙';
+            const iconElement = document.getElementById('darkModeIcon');
+            iconElement.textContent = isDark ? '☀️' : '🌙';
+
+            // Re-parse the emoji with Twemoji after changing it
+            if (typeof twemoji !== 'undefined') {
+                twemoji.parse(iconElement, {
+                    folder: 'svg',
+                    ext: '.svg'
+                });
+            }
         }
 
         // Load dark mode preference
@@ -941,7 +950,16 @@
             const isDark = localStorage.getItem('darkMode') === 'true';
             if (isDark) {
                 document.body.classList.add('dark-mode');
-                document.getElementById('darkModeIcon').textContent = '☀️';
+                const iconElement = document.getElementById('darkModeIcon');
+                iconElement.textContent = '☀️';
+
+                // Parse the emoji with Twemoji
+                if (typeof twemoji !== 'undefined') {
+                    twemoji.parse(iconElement, {
+                        folder: 'svg',
+                        ext: '.svg'
+                    });
+                }
             }
         }
 
@@ -1177,29 +1195,29 @@
             // Calculate total BP with multiplier
             const totalBP = bp * multiplier;
 
-            // Award BP
-            const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
-            let currentDailyBP = parseInt(dailyBPElement.textContent);
-            let newDailyBP = currentDailyBP + totalBP;
+            // Award BP directly to Total BP (the bank)
+            const totalBPElement = document.getElementById(`${kidId}-total-bp`);
+            let currentTotalBP = parseInt(totalBPElement.textContent);
+            let newTotalBP = currentTotalBP + totalBP;
 
             // Update UI
-            dailyBPElement.textContent = newDailyBP;
-            localStorage.setItem(`${kidId}-daily-bp`, newDailyBP.toString());
+            totalBPElement.textContent = newTotalBP;
+            localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
 
             // Save to Google Sheets if configured
             if (useGoogleSheets && SHEETS_API_URL) {
-                const totalBPElement = document.getElementById(`${kidId}-total-bp`);
+                const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
                 const pcElement = document.getElementById(`${kidId}-pc`);
-                const currentTotalBP = parseInt(totalBPElement.textContent);
+                const currentDailyBP = parseInt(dailyBPElement.textContent);
                 const currentPC = parseInt(pcElement.textContent);
-                const note = multiplier > 1 ? `Completed chore: ${choreName} (+${bp}×${multiplier} = ${totalBP} BP)` : `Completed chore: ${choreName} (+${totalBP} BP)`;
-                await savePointsToSheets(kidId, newDailyBP, currentTotalBP, currentPC, 'chore-approved', note);
+                const note = multiplier > 1 ? `Completed chore: ${choreName} (+${bp}×${multiplier} = ${totalBP} BP to bank)` : `Completed chore: ${choreName} (+${totalBP} BP to bank)`;
+                await savePointsToSheets(kidId, currentDailyBP, newTotalBP, currentPC, 'chore-approved', note);
             }
 
             renderChores();
             addRecentActivity('chore-approved', kid.name, choreName);
             const bpMessage = multiplier > 1 ? `${bp}×${multiplier} = ${totalBP} BP` : `${totalBP} BP`;
-            showMessage(`✅ Approved! ${kid.name} earned ${bpMessage} for: ${choreName}`);
+            showMessage(`✅ Approved! ${kid.name} earned ${bpMessage} (added to bank) for: ${choreName}`);
         }
 
         // Reject chore completion
@@ -1316,9 +1334,9 @@
 
                 if (status === 'incomplete') {
                     if (chore.isShared) {
-                        html += `<button class="chore-btn complete-btn" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">Mark Done</button>`;
+                        html += `<button class="chore-btn complete-btn" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>`;
                     } else {
-                        html += `<button class="chore-btn complete-btn" onclick="markChoreCompleteForKid('${chore.kidId}', '${chore.id}')">Mark Done</button>`;
+                        html += `<button class="chore-btn complete-btn" onclick="markChoreCompleteForKid('${chore.kidId}', '${chore.id}')">✓</button>`;
                     }
                 } else if (status === 'pending') {
                     html += `
@@ -1491,20 +1509,30 @@
             // Calculate total BP with multiplier
             const totalBP = bp * multiplier;
 
-            // Award BP
-            kid.dailyBP += totalBP;
-
-            // Save to Google Sheets
-            if (useGoogleSheets) {
-                await savePointsToSheets(kid.id, kid.dailyBP, kid.totalBP, kid.prizeCoins, 'activity', `Completed activity: ${activityName} (+${totalBP} BP)`);
-            }
+            // Award BP directly to Total BP (the bank)
+            const totalBPElement = document.getElementById(`${kidId}-total-bp`);
+            let currentTotalBP = parseInt(totalBPElement.textContent);
+            let newTotalBP = currentTotalBP + totalBP;
 
             // Update UI
-            updateKidDisplay(kid.id);
+            totalBPElement.textContent = newTotalBP;
+            localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
+
+            // Save to Google Sheets if configured
+            if (useGoogleSheets && SHEETS_API_URL) {
+                const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
+                const pcElement = document.getElementById(`${kidId}-pc`);
+                const currentDailyBP = parseInt(dailyBPElement.textContent);
+                const currentPC = parseInt(pcElement.textContent);
+                const note = multiplier > 1 ? `Completed activity: ${activityName} (+${bp}×${multiplier} = ${totalBP} BP to bank)` : `Completed activity: ${activityName} (+${totalBP} BP to bank)`;
+                await savePointsToSheets(kidId, currentDailyBP, newTotalBP, currentPC, 'activity-approved', note);
+            }
+
             renderActivities();
             addRecentActivity('activity-approved', kid.name, activityName);
 
-            showMessage(`✅ ${kid.name} earned ${totalBP} BP for "${activityName}"!`);
+            const bpMessage = multiplier > 1 ? `${bp}×${multiplier} = ${totalBP} BP` : `${totalBP} BP`;
+            showMessage(`✅ ${kid.name} earned ${bpMessage} (added to bank) for "${activityName}"!`);
         }
 
         // Reject activity completion

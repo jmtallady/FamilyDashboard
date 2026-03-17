@@ -776,6 +776,11 @@ body.dark-mode .reset-btn:hover {
     transition: all 0.2s ease;
 }
 
+/* Make shopping cart icon bigger on reward buttons */
+.chore-btn.complete-btn {
+    font-size: 18px;
+}
+
 .complete-btn {
     background: #5c7cfa;
     color: white;
@@ -1173,6 +1178,11 @@ button {
 .chore-btn {
     padding: 4px 8px;
     font-size: 9px;
+}
+
+/* Keep shopping cart icon bigger even in compact mode */
+.chore-btn.complete-btn {
+    font-size: 16px;
 }
 
 .shared-chore-item {

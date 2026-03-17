@@ -577,6 +577,158 @@ function getRecentActivities() {
   }
 }
 
+// ====== END OF DAY AUTOMATION ======
+
+/**
+ * End of Day for All Kids
+ * - Adds Daily BP to Total BP for each kid
+ * - Resets Daily BP to default (from config)
+ * - Logs transactions to Points Log
+ *
+ * This function should be triggered automatically at midnight via a time-based trigger.
+ */
+function endOfDayAll() {
+  try {
+    // Get config to know all kids and their defaults
+    const configResult = getConfig();
+    const configData = JSON.parse(configResult.getContent());
+
+    if (!configData.success) {
+      Logger.log('ERROR: Failed to load config');
+      return { success: false, error: 'Failed to load config' };
+    }
+
+    const config = configData.config;
+
+    // Get current points for all kids
+    const pointsResult = getCurrentPoints();
+    const pointsData = JSON.parse(pointsResult.getContent());
+
+    if (!pointsData.success) {
+      Logger.log('ERROR: Failed to load current points');
+      return { success: false, error: 'Failed to load current points' };
+    }
+
+    const currentPoints = pointsData.points;
+    const summary = [];
+
+    // Process each kid
+    Object.keys(config).forEach(key => {
+      if (key.startsWith('kid') && config[key].id) {
+        const kid = config[key];
+        const kidId = kid.id.toLowerCase();
+        const kidName = kid.name;
+        const defaultDailyBP = kid.defaultDailyBP || 5;
+
+        // Get current points or use defaults
+        const current = currentPoints[kidId] || {
+          dailyBP: defaultDailyBP,
+          totalBP: kid.defaultTotalBP || 0,
+          prizeCoins: kid.defaultPrizeCoins || 0
+        };
+
+        // Calculate new values
+        const newTotalBP = current.totalBP + current.dailyBP;
+        const newDailyBP = defaultDailyBP;
+
+        // Log the transaction
+        const params = {
+          kid: kidName,
+          dailyBP: newDailyBP,
+          totalBP: newTotalBP,
+          prizeCoins: current.prizeCoins,
+          type: 'end-of-day-auto',
+          note: `Auto end-of-day: Added ${current.dailyBP} Daily BP to Total BP, reset Daily BP to ${newDailyBP}`
+        };
+
+        logPoints(params);
+
+        summary.push(`${kidName}: +${current.dailyBP} → ${newTotalBP} Total BP`);
+        Logger.log(`End of day for ${kidName}: Daily BP ${current.dailyBP} added to Total BP (now ${newTotalBP}), Daily BP reset to ${newDailyBP}`);
+      }
+    });
+
+    Logger.log('✅ End of day complete! ' + summary.join(' | '));
+    return { success: true, summary: summary, timestamp: new Date().toISOString() };
+
+  } catch (error) {
+    Logger.log('ERROR in endOfDayAll: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Auto-Save All Points (9pm)
+ * - Saves current state of all kids' points to Points Log
+ * - Acts as a backup/snapshot before end of day
+ *
+ * This function should be triggered automatically at 9pm via a time-based trigger.
+ */
+function autoSaveAllPoints() {
+  try {
+    // Get config to know all kids
+    const configResult = getConfig();
+    const configData = JSON.parse(configResult.getContent());
+
+    if (!configData.success) {
+      Logger.log('ERROR: Failed to load config');
+      return { success: false, error: 'Failed to load config' };
+    }
+
+    const config = configData.config;
+
+    // Get current points for all kids
+    const pointsResult = getCurrentPoints();
+    const pointsData = JSON.parse(pointsResult.getContent());
+
+    if (!pointsData.success) {
+      Logger.log('ERROR: Failed to load current points');
+      return { success: false, error: 'Failed to load current points' };
+    }
+
+    const currentPoints = pointsData.points;
+    const summary = [];
+
+    // Save current state for each kid
+    Object.keys(config).forEach(key => {
+      if (key.startsWith('kid') && config[key].id) {
+        const kid = config[key];
+        const kidId = kid.id.toLowerCase();
+        const kidName = kid.name;
+
+        // Get current points or use defaults
+        const current = currentPoints[kidId] || {
+          dailyBP: kid.defaultDailyBP || 5,
+          totalBP: kid.defaultTotalBP || 0,
+          prizeCoins: kid.defaultPrizeCoins || 0
+        };
+
+        // Log current state
+        const params = {
+          kid: kidName,
+          dailyBP: current.dailyBP,
+          totalBP: current.totalBP,
+          prizeCoins: current.prizeCoins,
+          type: 'auto-save-9pm',
+          note: 'Automatic 9pm save before end of day'
+        };
+
+        logPoints(params);
+
+        summary.push(`${kidName}: ${current.dailyBP} Daily, ${current.totalBP} Total, ${current.prizeCoins} PC`);
+        Logger.log(`Auto-save for ${kidName}: Daily BP=${current.dailyBP}, Total BP=${current.totalBP}, Prize Coins=${current.prizeCoins}`);
+      }
+    });
+
+    Logger.log('✅ Auto-save complete (9pm)! ' + summary.join(' | '));
+    return { success: true, summary: summary, timestamp: new Date().toISOString() };
+
+  } catch (error) {
+    Logger.log('ERROR in autoSaveAllPoints: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
 // ====== HELPER FUNCTIONS ======
 
 // Helper to return JSON response with CORS headers
@@ -616,6 +768,18 @@ function testSaveRecentActivity() {
 function testGetRecentActivities() {
   const result = getRecentActivities();
   Logger.log(result.getContent());
+}
+
+function testEndOfDayAll() {
+  Logger.log('Running endOfDayAll test...');
+  const result = endOfDayAll();
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function testAutoSaveAllPoints() {
+  Logger.log('Running autoSaveAllPoints test...');
+  const result = autoSaveAllPoints();
+  Logger.log(JSON.stringify(result, null, 2));
 }
 
 function testAPI() {
