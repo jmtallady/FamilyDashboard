@@ -1260,82 +1260,39 @@
 
         // ====== ACTIVITIES FUNCTIONALITY ======
 
-        // Get the current week key (YYYY-WXX format, e.g., "2026-W11")
-        function getCurrentWeekKey() {
-            const now = new Date();
-            const startOfYear = new Date(now.getFullYear(), 0, 1);
-            const days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
-            const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-            return `${now.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+        // Get activity completion status from localStorage (daily tracking, like chores)
+        function getActivityStatus(kidId, activityId) {
+            const today = new Date().toDateString();
+            const key = `activity-${kidId}-${activityId}-${today}`;
+            return localStorage.getItem(key) || 'incomplete'; // 'incomplete', 'pending', 'approved'
         }
 
-        // Get activity completion count for current week
-        function getActivityCount(kidId, activityId) {
-            const weekKey = getCurrentWeekKey();
-            const key = `activity-${kidId}-${activityId}-${weekKey}`;
-            return parseInt(localStorage.getItem(key)) || 0;
+        // Set activity completion status in localStorage
+        function setActivityStatus(kidId, activityId, status) {
+            const today = new Date().toDateString();
+            const key = `activity-${kidId}-${activityId}-${today}`;
+            localStorage.setItem(key, status);
         }
 
-        // Increment activity completion count
-        function incrementActivityCount(kidId, activityId) {
-            const weekKey = getCurrentWeekKey();
-            const key = `activity-${kidId}-${activityId}-${weekKey}`;
-            const currentCount = getActivityCount(kidId, activityId);
-            localStorage.setItem(key, currentCount + 1);
-        }
-
-        // Complete activity (awards BP immediately, no approval needed)
-        async function completeActivity(kidId, activityId, activityName, bp, multiplier, maxPerWeek) {
-            const kid = getKidByID(kidId);
-            if (!kid) return;
-
-            // Check if under the limit
-            const currentCount = getActivityCount(kidId, activityId);
-            if (currentCount >= maxPerWeek) {
-                showMessage(`${kid.name} has already completed this activity ${maxPerWeek} times this week!`);
-                return;
-            }
-
-            // Increment count
-            incrementActivityCount(kidId, activityId);
-
-            // Calculate total BP with multiplier
-            const totalBP = bp * multiplier;
-
-            // Award BP immediately
-            kid.dailyBP += totalBP;
-
-            // Save to Google Sheets
-            if (useGoogleSheets) {
-                await savePointsToSheets(kid.id, kid.dailyBP, kid.totalBP, kid.prizeCoins, 'activity', `Completed activity: ${activityName} (+${totalBP} BP)`);
-            }
-
-            // Update UI
-            updateKidDisplay(kid.id);
-            renderActivities();
-
-            const newCount = getActivityCount(kidId, activityId);
-            showMessage(`🌟 ${kid.name} completed "${activityName}"! Earned ${totalBP} BP (${newCount}/${maxPerWeek} this week)`);
-        }
-
-        // Show kid selector for shared activity completion
+        // Show kid selector for activity completion (always show for both shared and individual)
         let selectedActivity = null;
 
-        function showActivityKidSelector(activityId, activityName, bp, multiplier, maxPerWeek) {
-            selectedActivity = { id: activityId, name: activityName, bp, multiplier, maxPerWeek };
+        function showActivityKidSelector(activityId, activityName, bp, multiplier) {
+            selectedActivity = { id: activityId, name: activityName, bp, multiplier };
 
             let html = '<h2>Who completed this activity?</h2>';
             html += '<div class="kid-selector-grid">';
 
             Object.values(CONFIG).forEach(kid => {
                 if (kid.id) {
-                    const currentCount = getActivityCount(kid.id, activityId);
-                    const canComplete = currentCount < maxPerWeek;
+                    const status = getActivityStatus(kid.id, activityId);
+                    const canComplete = status === 'incomplete';
+                    const statusText = status === 'approved' ? '✅ Done' : status === 'pending' ? '⏳ Pending' : 'Available';
 
                     html += `
                         <div class="kid-selector-card ${!canComplete ? 'disabled' : ''}" ${canComplete ? `onclick="selectKidForActivity('${kid.id}')"` : ''}>
                             <div class="kid-selector-name">${kid.name}</div>
-                            <div class="kid-selector-count" style="font-size: 11px; color: ${canComplete ? '#666' : '#999'};">${currentCount}/${maxPerWeek} this week</div>
+                            <div class="kid-selector-count" style="font-size: 11px; color: ${canComplete ? '#666' : '#999'};">${statusText}</div>
                         </div>
                     `;
                 }
@@ -1351,11 +1308,81 @@
             if (!selectedActivity) return;
 
             closeKidSelector();
-            completeActivity(kidId, selectedActivity.id, selectedActivity.name, selectedActivity.bp, selectedActivity.multiplier, selectedActivity.maxPerWeek);
+            markActivityCompleteForKid(kidId, selectedActivity.id);
             selectedActivity = null;
         }
 
-        // Render activities section (compact view)
+        // Mark activity as complete (pending approval)
+        function markActivityCompleteForKid(kidId, activityId) {
+            const currentStatus = getActivityStatus(kidId, activityId);
+
+            if (currentStatus === 'approved') {
+                showMessage('This activity is already approved!');
+                return;
+            }
+
+            if (currentStatus === 'pending') {
+                showMessage('This activity is waiting for approval!');
+                return;
+            }
+
+            // Mark as pending
+            setActivityStatus(kidId, activityId, 'pending');
+            renderActivities();
+
+            const kid = getKidByID(kidId);
+            showMessage(`${kid.name} marked activity complete! Waiting for parent approval.`);
+        }
+
+        // Approve activity completion (awards BP)
+        async function approveActivity(kidId, activityId, activityName, bp, multiplier = 1) {
+            // Check if PIN is required and user is not unlocked
+            if (CONFIG.requirePinForEdits && !isUnlocked) {
+                showPinModal();
+                return;
+            }
+
+            const kid = getKidByID(kidId);
+            if (!kid) return;
+
+            // Mark as approved
+            setActivityStatus(kidId, activityId, 'approved');
+
+            // Calculate total BP with multiplier
+            const totalBP = bp * multiplier;
+
+            // Award BP
+            kid.dailyBP += totalBP;
+
+            // Save to Google Sheets
+            if (useGoogleSheets) {
+                await savePointsToSheets(kid.id, kid.dailyBP, kid.totalBP, kid.prizeCoins, 'activity', `Completed activity: ${activityName} (+${totalBP} BP)`);
+            }
+
+            // Update UI
+            updateKidDisplay(kid.id);
+            renderActivities();
+
+            showMessage(`✅ ${kid.name} earned ${totalBP} BP for "${activityName}"!`);
+        }
+
+        // Reject activity completion
+        function rejectActivity(kidId, activityId) {
+            // Check if PIN is required and user is not unlocked
+            if (CONFIG.requirePinForEdits && !isUnlocked) {
+                showPinModal();
+                return;
+            }
+
+            // Reset to incomplete
+            setActivityStatus(kidId, activityId, 'incomplete');
+            renderActivities();
+
+            const kid = getKidByID(kidId);
+            showMessage(`❌ ${kid.name}'s activity was rejected.`);
+        }
+
+        // Render activities section (compact view - works like chores with approval)
         function renderActivities() {
             if (!ACTIVITIES) {
                 document.getElementById('activitiesContainer').innerHTML = '<div style="text-align: center; color: #999;">No activities configured</div>';
@@ -1395,50 +1422,50 @@
 
             // Render all activities in one compact list
             allActivities.forEach(activity => {
-                // For shared activities, we'll show a combined view
-                // For individual activities, show that kid's count
+                let status = 'incomplete';
+                let assignedKidId = activity.kidId;
+
+                // For shared activities, check if any kid completed it
                 if (activity.isShared) {
-                    // Show shared activity with button that opens kid selector
-                    const totalBP = activity.bp * (activity.multiplier || 1);
-                    const bpDisplay = activity.multiplier > 1 ? `+${activity.bp}×${activity.multiplier} (${totalBP} BP)` : `+${activity.bp} BP`;
-
-                    html += `
-                        <div class="chore-item">
-                            <div class="chore-info">
-                                <span class="chore-status-icon">⭐</span>
-                                <span class="chore-name">${activity.displayName}</span>
-                                <span class="chore-bp">${bpDisplay}</span>
-                            </div>
-                            <div class="chore-actions">
-                                <button class="chore-btn complete-btn" onclick="showActivityKidSelector('${activity.id}', '${activity.name}', ${activity.bp}, ${activity.multiplier || 1}, ${activity.maxPerWeek})">Complete</button>
-                            </div>
-                        </div>`;
+                    Object.values(CONFIG).forEach(kid => {
+                        if (kid.id) {
+                            const kidStatus = getActivityStatus(kid.id, activity.id);
+                            if (kidStatus === 'approved' || kidStatus === 'pending') {
+                                status = kidStatus;
+                                assignedKidId = kid.id;
+                            }
+                        }
+                    });
                 } else {
-                    // Individual activity - show that kid's count
-                    const count = getActivityCount(activity.kidId, activity.id);
-                    const maxReached = count >= activity.maxPerWeek;
-                    const totalBP = activity.bp * (activity.multiplier || 1);
-                    const bpDisplay = activity.multiplier > 1 ? `+${activity.bp}×${activity.multiplier} (${totalBP} BP)` : `+${activity.bp} BP`;
-
-                    html += `
-                        <div class="chore-item ${maxReached ? 'approved' : ''}">
-                            <div class="chore-info">
-                                <span class="chore-status-icon">${maxReached ? '✅' : '⭐'}</span>
-                                <span class="chore-name">${activity.displayName}</span>
-                                <span class="chore-bp">${bpDisplay}</span>
-                            </div>
-                            <div class="chore-actions">`;
-
-                    if (maxReached) {
-                        html += `<span class="approved-text" style="font-size: 10px;">${count}/${activity.maxPerWeek}</span>`;
-                    } else {
-                        html += `
-                            <span style="font-size: 10px; color: #666; margin-right: 6px;">${count}/${activity.maxPerWeek}</span>
-                            <button class="chore-btn complete-btn" onclick="completeActivity('${activity.kidId}', '${activity.id}', '${activity.name}', ${activity.bp}, ${activity.multiplier || 1}, ${activity.maxPerWeek})">Complete</button>`;
-                    }
-
-                    html += `</div></div>`;
+                    status = getActivityStatus(activity.kidId, activity.id);
                 }
+
+                const statusClass = status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'incomplete';
+                const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '⭐';
+                const totalBP = activity.bp * (activity.multiplier || 1);
+                const bpDisplay = activity.multiplier > 1 ? `+${activity.bp}×${activity.multiplier} (${totalBP} BP)` : `+${activity.bp} BP`;
+
+                html += `
+                    <div class="chore-item ${statusClass}">
+                        <div class="chore-info">
+                            <span class="chore-status-icon">${statusIcon}</span>
+                            <span class="chore-name">${activity.displayName}</span>
+                            <span class="chore-bp">${bpDisplay}</span>
+                        </div>
+                        <div class="chore-actions">`;
+
+                if (status === 'incomplete') {
+                    // Always show kid selector for activities (even individual ones)
+                    html += `<button class="chore-btn complete-btn" onclick="showActivityKidSelector('${activity.id}', '${activity.name}', ${activity.bp}, ${activity.multiplier || 1})">Complete</button>`;
+                } else if (status === 'pending') {
+                    html += `
+                        <button class="chore-btn approve-btn" onclick="approveActivity('${assignedKidId}', '${activity.id}', '${activity.name}', ${activity.bp}, ${activity.multiplier || 1})">Approve</button>
+                        <button class="chore-btn reject-btn" onclick="rejectActivity('${assignedKidId}', '${activity.id}')">Reject</button>`;
+                } else {
+                    html += `<span class="approved-text">Completed!</span>`;
+                }
+
+                html += `</div></div>`;
             });
 
             html += '</div>';

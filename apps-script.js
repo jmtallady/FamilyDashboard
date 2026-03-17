@@ -443,9 +443,9 @@ function getActivities() {
     };
 
     // Skip header row, read activity data
-    // Expected columns: Kid | Activity ID | Activity Name | BP | Max Per Week | Multiplier
+    // Expected columns: Kid | Activity ID | Activity Name | BP | Multiplier
     for (let i = 1; i < data.length; i++) {
-      const [kid, activityId, activityName, bp, maxPerWeek, multiplier] = data[i];
+      const [kid, activityId, activityName, bp, multiplier] = data[i];
 
       if (!activityId || !activityName) continue; // Skip empty rows
 
@@ -458,7 +458,6 @@ function getActivities() {
         id: activityId.toString().toLowerCase(),
         name: activityName,
         bp: parseInt(bp) || 1,
-        maxPerWeek: parseInt(maxPerWeek) || 7,
         multiplier: isNaN(rawMultiplier) ? 1 : rawMultiplier
       };
 
