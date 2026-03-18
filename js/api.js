@@ -216,6 +216,82 @@ export async function fetchActivities() {
 }
 
 /**
+ * Fetch today's chore/activity statuses from Google Sheets (for cross-device sync)
+ */
+export async function fetchDailyStatuses() {
+    if (!SHEETS_API_URL) return null;
+
+    try {
+        const url = `${SHEETS_API_URL}?action=getDailyStatuses&t=${Date.now()}`;
+        const response = await fetch(url);
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        if (data.success) {
+            return data.statuses || [];
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching daily statuses:', error);
+        return null;
+    }
+}
+
+/**
+ * Save a chore/activity status to Google Sheets (cross-device sync)
+ */
+export async function saveDailyStatusToSheets(type, kidId, itemId, status) {
+    if (!SHEETS_API_URL) return false;
+
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'setDailyStatus',
+                type: type,
+                kidId: kidId || '',
+                itemId: itemId,
+                status: status
+            })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error saving daily status:', error);
+        return false;
+    }
+}
+
+/**
+ * Update a chore's multiplier in Google Sheets (set to 0 to remove from list)
+ */
+export async function setChoreMultiplier(choreId, kidId, multiplier) {
+    if (!SHEETS_API_URL) return false;
+
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'updateChoreMultiplier',
+                choreId: choreId,
+                kidId: kidId || '',
+                multiplier: multiplier
+            })
+        });
+        console.log('Updated chore multiplier:', choreId, '→', multiplier);
+        return true;
+    } catch (error) {
+        console.error('Error updating chore multiplier:', error);
+        return false;
+    }
+}
+
+/**
  * Fetch recent activity log entries from Google Sheets
  */
 export async function fetchRecentPointsLog() {

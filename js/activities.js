@@ -6,7 +6,7 @@ import { getActivities, setActivities, getIsUnlocked, getUseGoogleSheets } from 
 import { adjustDailyBP } from './points.js';
 import { showPinModal } from './auth.js';
 import { getKidByID, showMessage } from './utils.js';
-import { savePointsToSheets } from './api.js';
+import { savePointsToSheets, saveDailyStatusToSheets } from './api.js';
 import { renderRecentActivity } from './recent-activity.js';
 import { closeKidSelector } from './rewards.js';
 
@@ -16,11 +16,16 @@ export function getActivityStatus(kidId, activityId) {
     return localStorage.getItem(key) || 'incomplete'; // 'incomplete', 'pending', 'approved'
 }
 
-// Set activity completion status in localStorage
+// Set activity completion status in localStorage and sync to Google Sheets
 export function setActivityStatus(kidId, activityId, status) {
     const today = new Date().toDateString();
     const key = `activity-${kidId}-${activityId}-${today}`;
     localStorage.setItem(key, status);
+
+    // Fire-and-forget sync to Sheets for cross-device visibility
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
+        saveDailyStatusToSheets('activity', kidId, activityId, status).catch(console.error);
+    }
 }
 
 // Module-level variables
@@ -217,14 +222,11 @@ export function renderActivities() {
             }
         });
 
-        // Determine overall status
-        let overallStatus = 'incomplete';
-        if (approvedKids.length > 0) {
-            overallStatus = 'approved';
-        } else if (pendingKids.length > 0) {
-            overallStatus = 'pending';
-        }
+        // Determine incomplete kids (those who haven't started yet)
+        const incompleteKids = kidsToCheck.filter(k => getActivityStatus(k.id, activity.id) === 'incomplete');
 
+        // Overall status is for display styling only
+        const overallStatus = approvedKids.length > 0 ? 'approved' : pendingKids.length > 0 ? 'pending' : 'incomplete';
         const statusClass = overallStatus === 'approved' ? 'approved' : overallStatus === 'pending' ? 'pending' : 'incomplete';
         const statusIcon = overallStatus === 'approved' ? '✅' : overallStatus === 'pending' ? '⏳' : '⭐';
         const totalBP = activity.bp * (activity.multiplier || 1);
@@ -238,18 +240,18 @@ export function renderActivities() {
                         <span class="chore-name">${activity.displayName}</span>
                         <span class="chore-bp">${bpDisplay}</span>
                     </div>
-                    <div class="chore-actions">`;
+                    <div class="chore-actions" style="display: flex; align-items: center; gap: 4px;">`;
 
-        if (overallStatus === 'incomplete') {
-            // Show checkmark button for kids to mark complete
-            html += `<button class="chore-btn complete-btn" data-activity='${JSON.stringify({id: activity.id, name: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="showActivityKidSelectorFromButton(this)">✓</button>`;
-        } else if (overallStatus === 'pending') {
-            // Show + button to add more kids
-            html += `<button class="chore-btn complete-btn" data-activity='${JSON.stringify({id: activity.id, name: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="showActivityKidSelectorFromButton(this)">+</button>`;
-        } else {
-            // Show who completed it
+        // Show approved kids as text
+        if (approvedKids.length > 0) {
             const names = approvedKids.map(k => k.name).join(', ');
-            html += `<span class="approved-text">${names}!</span>`;
+            html += `<span class="approved-text" style="font-size: 11px; margin-right: 4px;">✅ ${names}</span>`;
+        }
+
+        // Always show + button if any kids are still incomplete
+        if (incompleteKids.length > 0) {
+            const btnLabel = overallStatus === 'incomplete' ? '✓' : '+';
+            html += `<button class="chore-btn complete-btn" data-activity='${JSON.stringify({id: activity.id, name: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="showActivityKidSelectorFromButton(this)">${btnLabel}</button>`;
         }
 
         html += `</div>

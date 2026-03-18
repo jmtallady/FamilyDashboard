@@ -2,6 +2,31 @@
 
 import { fetchHouseRules } from './api.js';
 
+// ── Type → visual style mapping ──────────────────────────────────────────────
+// Recognised type values (set in column D of the House Rules sheet):
+//   good    → green
+//   warning → yellow
+//   bad     → red
+//   info    → blue (neutral / informational)
+// Any unrecognised or empty type falls back to the section default.
+
+const TYPE_STYLES = {
+    good:    { bg: '#d3f9d8', border: '#51cf66', emoji: '😊' },
+    warning: { bg: '#fff9db', border: '#f59f00', emoji: '⚠️' },
+    bad:     { bg: '#ffe9e9', border: '#e03131', emoji: '😞' },
+    info:    { bg: '#e7f5ff', border: '#4dabf7', emoji: 'ℹ️' },
+};
+
+function getTypeStyle(type, defaultStyle) {
+    return TYPE_STYLES[type] || defaultStyle;
+}
+
+function ruleBox(text, style) {
+    return `<div style="padding: 8px 12px; background: ${style.bg}; border-radius: 6px; border-left: 3px solid ${style.border}; word-break: break-word;">
+        <span style="font-size: 13px; color: #333;">${text}</span>
+    </div>`;
+}
+
 /**
  * Show the house rules modal with rules from Google Sheets
  */
@@ -17,86 +42,73 @@ export async function showHouseRules() {
         return;
     }
 
+    const sectionHeader = (title) =>
+        `<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">${title}</h3>`;
+
     let html = '';
 
-    // General Rules
+    // General Rules — default: primary color border, light grey bg
     if (rules.general && rules.general.length > 0) {
-        html += '<div style="margin-bottom: 25px;">';
-        html += '<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">General Rules</h3>';
-        html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+        const defaultStyle = { bg: '#f8f9fa', border: 'var(--primary-color)', emoji: '' };
+        html += `<div style="margin-bottom: 25px;">${sectionHeader('General Rules')}<div style="display: flex; flex-direction: column; gap: 8px;">`;
         rules.general.forEach(rule => {
+            const style = getTypeStyle(rule.type, defaultStyle);
+            const prefix = style.emoji ? `${style.emoji} ` : '✓ ';
             const consequence = rule.consequence ? ` <span style="color: #e03131; font-weight: bold;">(${rule.consequence})</span>` : '';
-            html += `<div style="padding: 8px 12px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid var(--primary-color);">
-                <span style="font-size: 13px; color: #333;">${rule.rule}${consequence}</span>
-            </div>`;
+            html += ruleBox(`${prefix}${rule.rule}${consequence}`, style);
         });
         html += '</div></div>';
     }
 
-    // Kid-Specific Rules
+    // Kid-Specific Rules — default: accent color border
     if (rules.kidSpecific && Object.keys(rules.kidSpecific).length > 0) {
         Object.keys(rules.kidSpecific).forEach(section => {
             const sectionRules = rules.kidSpecific[section];
-            if (sectionRules && sectionRules.length > 0) {
-                html += '<div style="margin-bottom: 25px;">';
-                html += `<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">${section}</h3>`;
-                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
-                sectionRules.forEach(rule => {
-                    const consequence = rule.consequence ? ` <span style="color: #e03131; font-weight: bold;">(${rule.consequence})</span>` : '';
-                    html += `<div style="padding: 8px 12px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid var(--accent-color);">
-                        <span style="font-size: 13px; color: #333;">${rule.rule}${consequence}</span>
-                    </div>`;
-                });
-                html += '</div></div>';
-            }
+            if (!sectionRules || sectionRules.length === 0) return;
+            const defaultStyle = { bg: '#f8f9fa', border: 'var(--accent-color)', emoji: '' };
+            html += `<div style="margin-bottom: 25px;">${sectionHeader(section)}<div style="display: flex; flex-direction: column; gap: 8px;">`;
+            sectionRules.forEach(rule => {
+                const style = getTypeStyle(rule.type, defaultStyle);
+                const prefix = style.emoji ? `${style.emoji} ` : '• ';
+                const consequence = rule.consequence ? ` <span style="color: #e03131; font-weight: bold;">(${rule.consequence})</span>` : '';
+                html += ruleBox(`${prefix}${rule.rule}${consequence}`, style);
+            });
+            html += '</div></div>';
         });
     }
 
-    // Spending Requirements
+    // Spending Requirements — default: yellow
     if (rules.spendingRequirements && rules.spendingRequirements.length > 0) {
-        html += '<div style="margin-bottom: 25px;">';
-        html += '<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">Before Spending Prize Coins</h3>';
-        html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+        const defaultStyle = { bg: '#fff9db', border: '#f59f00', emoji: '' };
+        html += `<div style="margin-bottom: 25px;">${sectionHeader('Before Spending Prize Coins')}<div style="display: flex; flex-direction: column; gap: 8px;">`;
         rules.spendingRequirements.forEach(req => {
-            html += `<div style="padding: 8px 12px; background: #fff9db; border-radius: 6px; border-left: 3px solid #f59f00;">
-                <span style="font-size: 13px; color: #333;">✓ ${req.rule}</span>
-            </div>`;
+            const style = getTypeStyle(req.type, defaultStyle);
+            html += ruleBox(`✓ ${req.rule}`, style);
         });
         html += '</div></div>';
     }
 
-    // Grounding Conditions
+    // Grounding Conditions — default: red
     if (rules.grounding && rules.grounding.length > 0) {
-        html += '<div style="margin-bottom: 25px;">';
-        html += '<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">What "Grounded" Means</h3>';
-        html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+        const defaultStyle = { bg: '#ffe9e9', border: '#e03131', emoji: '' };
+        html += `<div style="margin-bottom: 25px;">${sectionHeader('What "Grounded" Means')}<div style="display: flex; flex-direction: column; gap: 8px;">`;
         rules.grounding.forEach(condition => {
-            html += `<div style="padding: 8px 12px; background: #ffe9e9; border-radius: 6px; border-left: 3px solid #e03131;">
-                <span style="font-size: 13px; color: #333;">⛔ ${condition.rule}</span>
-            </div>`;
+            const style = getTypeStyle(condition.type, defaultStyle);
+            html += ruleBox(`⛔ ${condition.rule}`, style);
         });
         html += '</div></div>';
     }
 
-    // Consequence Scale
+    // BP Consequence Scale — color driven entirely by the Type column (column D)
     if (rules.consequenceScale && rules.consequenceScale.length > 0) {
-        html += '<div style="margin-bottom: 25px;">';
-        html += '<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">Daily BP Consequences</h3>';
-        html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+        const defaultStyle = { bg: '#f8f9fa', border: '#ccc', emoji: '•' };
+        html += `<div style="margin-bottom: 25px;">${sectionHeader('Daily BP Consequences')}<div style="display: flex; flex-direction: column; gap: 8px;">`;
         rules.consequenceScale.forEach(scale => {
-            // Parse the rule text (e.g., "5 Daily BP: Prize basket + treat")
-            const match = scale.rule.match(/^(\d+)\s+Daily BP:\s*(.+)$/);
-            if (match) {
-                const level = match[1];
-                const description = match[2];
-                const isGood = parseInt(level) >= 3;
-                const bgColor = isGood ? '#d3f9d8' : '#ffe9e9';
-                const borderColor = isGood ? '#51cf66' : '#e03131';
-                const emoji = isGood ? '😊' : '😞';
-                html += `<div style="padding: 8px 12px; background: ${bgColor}; border-radius: 6px; border-left: 3px solid ${borderColor};">
-                    <span style="font-size: 13px; color: #333;"><strong>${level} Daily BP:</strong> ${emoji} ${description}</span>
-                </div>`;
-            }
+            const style = getTypeStyle(scale.type, defaultStyle);
+            const consequence = scale.consequence
+                ? ` <span style="color: ${style.border}; font-weight: bold;">(${scale.consequence})</span>`
+                : '';
+            html += ruleBox(`${style.emoji} ${scale.rule}${consequence}`, style);
         });
         html += '</div></div>';
     }

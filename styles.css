@@ -264,6 +264,14 @@ img.emoji {
     font-size: 14px;
 }
 
+.holiday-name {
+    font-size: 9px;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+    text-align: center;
+}
+
 .day-weather {
     display: flex;
     align-items: center;
@@ -1480,4 +1488,132 @@ button {
 .reward-btn {
     padding: 5px;
     font-size: 9px;
+}
+
+/* ==========================================
+   MOBILE RESPONSIVE LAYOUT
+   ========================================== */
+
+@media (max-width: 768px) {
+    body {
+        padding: 6px;
+    }
+
+    /* Stack 3 columns into 1 */
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+        gap: 8px;
+    }
+
+    /* Reorder sections: Kids/Points first, Chores/Activities second, Sidebar last */
+    .main-content {
+        order: 1;
+        height: auto;
+        overflow: visible;
+    }
+
+    .right-column {
+        order: 2;
+        height: auto;
+        overflow: visible;
+        gap: 8px;
+    }
+
+    .sidebar {
+        order: 3;
+        height: auto;
+        overflow: visible;
+    }
+
+    /* Chores section - no longer needs flex:1 height fill */
+    .chores-section {
+        flex: none;
+    }
+
+    /* Rewards/Recent Activity: single column on mobile */
+    .rewards-activity-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Header */
+    .header h1 {
+        font-size: 18px;
+    }
+
+    .color-scheme-selector select {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+
+    /* Kids cards - 2 per row minimum on mobile */
+    .kids-container {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .kid-name {
+        font-size: 14px;
+    }
+
+    .points-display {
+        font-size: 26px;
+    }
+
+    /* Touch-friendly + and - buttons */
+    .minus-btn, .plus-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+
+    /* Touch-friendly chore buttons */
+    .chore-btn {
+        padding: 8px 14px;
+        font-size: 14px;
+        min-height: 40px;
+    }
+
+    .chore-btn.complete-btn {
+        font-size: 20px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    /* More readable chore text */
+    .chore-name {
+        font-size: 13px;
+    }
+
+    .chore-bp {
+        font-size: 11px;
+    }
+
+    /* Clock widget */
+    .clock-time {
+        font-size: 36px;
+    }
+
+    /* Rewards grid - wider items */
+    .rewards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    /* PIN modal fits mobile screen */
+    .pin-content {
+        padding: 20px;
+        max-width: 95vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .num-btn {
+        width: 65px;
+        height: 65px;
+        font-size: 26px;
+    }
+
+    .numpad {
+        gap: 8px;
+    }
 }

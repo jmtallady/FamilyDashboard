@@ -6,7 +6,7 @@ import { getChores, setChores, getIsUnlocked, getUseGoogleSheets } from './state
 import { adjustDailyBP } from './points.js';
 import { showPinModal } from './auth.js';
 import { getKidByID, showMessage } from './utils.js';
-import { savePointsToSheets } from './api.js';
+import { savePointsToSheets, setChoreMultiplier, fetchChores, saveDailyStatusToSheets } from './api.js';
 import { renderRecentActivity } from './recent-activity.js';
 import { closeKidSelector } from './rewards.js';
 
@@ -16,11 +16,16 @@ export function getChoreStatus(kidId, choreId) {
     return localStorage.getItem(key) || 'incomplete'; // 'incomplete', 'pending', 'approved'
 }
 
-// Set chore completion status in localStorage
+// Set chore completion status in localStorage and sync to Google Sheets
 export function setChoreStatus(kidId, choreId, status) {
     const today = new Date().toDateString();
     const key = `chore-${kidId}-${choreId}-${today}`;
     localStorage.setItem(key, status);
+
+    // Fire-and-forget sync to Sheets for cross-device visibility
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
+        saveDailyStatusToSheets('chore', kidId, choreId, status).catch(console.error);
+    }
 }
 
 // Approve chore completion (awards BP)
@@ -59,6 +64,17 @@ export async function approveChore(kidId, choreId, choreName, bp, multiplier = 1
         const currentPC = parseInt(pcElement.textContent);
         const note = multiplier > 1 ? `Completed chore: ${choreName} (+${bp}×${multiplier} = ${totalBP} BP to bank)` : `Completed chore: ${choreName} (+${totalBP} BP to bank)`;
         await savePointsToSheets(kidId, currentDailyBP, newTotalBP, currentPC, 'chore-approved', note);
+    }
+
+    // Set multiplier to 0 in Sheets to remove chore from the list
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
+        const CHORES = getChores();
+        const isShared = CHORES && CHORES.shared && CHORES.shared.some(c => c.id === choreId);
+        const sheetKidId = isShared ? '' : kidId;
+        await setChoreMultiplier(choreId, sheetKidId, 0);
+        // Refresh chores from Sheets so other devices see the removal too
+        const updatedChores = await fetchChores();
+        if (updatedChores) setChores(updatedChores);
     }
 
     renderChores();

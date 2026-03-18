@@ -64,6 +64,8 @@ function doGet(e) {
     return getRecentPointsLog();
   } else if (action === 'getHouseRules') {
     return getHouseRules();
+  } else if (action === 'getDailyStatuses') {
+    return getDailyStatuses();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
@@ -78,9 +80,13 @@ function doPost(e) {
 
     if (action === 'logPoints') {
       return logPoints(params);
+    } else if (action === 'updateChoreMultiplier') {
+      return updateChoreMultiplier(params);
+    } else if (action === 'setDailyStatus') {
+      return setDailyStatus(params);
     }
 
-    return jsonResponse({ error: 'Invalid action. Use action=logPoints' }, 400);
+    return jsonResponse({ error: 'Invalid action' }, 400);
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);
   }
@@ -595,8 +601,9 @@ function getHouseRules() {
       });
     }
 
-    // Read all data (columns A-C: Kid, Rule, Consequence)
-    const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    // Read all data (columns A-D: Kid, Rule, Consequence, Type)
+    const numCols = sheet.getLastColumn();
+    const data = sheet.getRange(2, 1, lastRow - 1, Math.max(numCols, 4)).getValues();
 
     const rules = {
       general: [],
@@ -611,26 +618,27 @@ function getHouseRules() {
       const kid = row[0] ? row[0].toString().trim() : '';
       const rule = row[1] ? row[1].toString().trim() : '';
       const consequence = row[2] ? row[2].toString().trim() : '';
+      const type = row[3] ? row[3].toString().trim().toLowerCase() : '';
 
       // Skip empty rows
       if (!rule) return;
 
+      const entry = { rule, consequence, type };
+
       // Special categories based on Kid column
       if (kid === 'SPENDING') {
-        rules.spendingRequirements.push({ rule: rule, consequence: consequence });
+        rules.spendingRequirements.push(entry);
       } else if (kid === 'GROUNDED') {
-        rules.grounding.push({ rule: rule, consequence: consequence });
+        rules.grounding.push(entry);
       } else if (kid === 'BP SCALE') {
-        rules.consequenceScale.push({ rule: rule, consequence: consequence });
+        rules.consequenceScale.push(entry);
       } else if (kid === '') {
-        // General rules (no kid specified)
-        rules.general.push({ rule: rule, consequence: consequence });
+        rules.general.push(entry);
       } else {
-        // Kid-specific rules
         if (!rules.kidSpecific[kid]) {
           rules.kidSpecific[kid] = [];
         }
-        rules.kidSpecific[kid].push({ rule: rule, consequence: consequence });
+        rules.kidSpecific[kid].push(entry);
       }
     });
 
@@ -642,6 +650,100 @@ function getHouseRules() {
   } catch (error) {
     Logger.log('Error loading house rules: ' + error);
     return jsonResponse({ success: false, error: error.toString() });
+  }
+}
+
+// ====== UPDATE CHORE MULTIPLIER ======
+// Sets a chore's multiplier (use 0 to remove it from the list)
+function updateChoreMultiplier(params) {
+  try {
+    const { choreId, kidId, multiplier } = params;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chores');
+    if (!sheet) return jsonResponse({ error: 'Chores sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rowKid = data[i][0] ? data[i][0].toString().toLowerCase().trim() : '';
+      const rowChoreId = data[i][1] ? data[i][1].toString().toLowerCase().trim() : '';
+
+      const choreMatch = rowChoreId === choreId.toString().toLowerCase().trim();
+      // For shared chores kidId is empty string; for individual, match the kid
+      const kidMatch = (!kidId || kidId === '') ? rowKid === '' : rowKid === kidId.toString().toLowerCase().trim();
+
+      if (choreMatch && kidMatch) {
+        sheet.getRange(i + 1, 5).setValue(multiplier);
+        return jsonResponse({ success: true, row: i + 1 });
+      }
+    }
+    return jsonResponse({ error: 'Chore not found', choreId: choreId, kidId: kidId }, 404);
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== DAILY STATUS (Chore/Activity completion across devices) ======
+// Sheet: "Daily Status" - columns: Date | Type | KidId | ItemId | Status
+
+function getDailyStatuses() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Daily Status');
+    if (!sheet) {
+      // Sheet doesn't exist yet - return empty (will be created on first write)
+      return jsonResponse({ success: true, statuses: [] });
+    }
+
+    const today = new Date();
+    const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return jsonResponse({ success: true, statuses: [] });
+
+    const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+
+    // Build map of most recent status per (type, kidId, itemId) for today
+    const statusMap = {};
+    data.forEach(row => {
+      const rowDate = row[0] ? Utilities.formatDate(new Date(row[0]), Session.getScriptTimeZone(), 'yyyy-MM-dd') : '';
+      if (rowDate !== todayStr) return;
+
+      const type = row[1] ? row[1].toString() : '';
+      const kidId = row[2] ? row[2].toString() : '';
+      const itemId = row[3] ? row[3].toString() : '';
+      const status = row[4] ? row[4].toString() : '';
+
+      const key = `${type}-${kidId}-${itemId}`;
+      statusMap[key] = { type, kidId, itemId, status }; // last write wins
+    });
+
+    return jsonResponse({ success: true, statuses: Object.values(statusMap) });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+function setDailyStatus(params) {
+  try {
+    const { type, kidId, itemId, status } = params;
+    if (!type || !itemId || !status) {
+      return jsonResponse({ error: 'Missing required fields: type, itemId, status' }, 400);
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Daily Status');
+
+    // Create sheet if it doesn't exist
+    if (!sheet) {
+      sheet = ss.insertSheet('Daily Status');
+      sheet.getRange(1, 1, 1, 5).setValues([['Date', 'Type', 'KidId', 'ItemId', 'Status']]);
+    }
+
+    const today = new Date();
+    const newRow = sheet.getLastRow() + 1;
+    sheet.getRange(newRow, 1, 1, 5).setValues([[today, type, kidId || '', itemId, status]]);
+
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
   }
 }
 

@@ -2,7 +2,7 @@
 
 // Import all modules
 import { fetchConfig, setConfig } from './config.js';
-import {  setUseGoogleSheets, setChores, setRewards, setActivities } from './state.js';
+import {  setUseGoogleSheets, setChores, setRewards, setActivities, getUseGoogleSheets } from './state.js';
 import * as Theme from './theme.js';
 import * as Weather from './weather.js';
 import * as Calendar from './calendar.js';
@@ -15,7 +15,35 @@ import * as Rewards from './rewards.js';
 import * as HouseRules from './house-rules.js';
 import * as RecentActivity from './recent-activity.js';
 import * as Automation from './automation.js';
-import { fetchChores, fetchRewards, fetchActivities } from './api.js';
+import { fetchChores, fetchRewards, fetchActivities, fetchDailyStatuses } from './api.js';
+
+/**
+ * Load today's chore/activity statuses from Google Sheets into localStorage
+ * This enables cross-device sync: approvals on one device appear on others
+ */
+async function loadDailyStatusesFromSheets() {
+    if (!getUseGoogleSheets()) return;
+
+    const statuses = await fetchDailyStatuses();
+    if (!statuses || statuses.length === 0) return;
+
+    const today = new Date().toDateString();
+    statuses.forEach(s => {
+        const key = `${s.type}-${s.kidId}-${s.itemId}-${today}`;
+        localStorage.setItem(key, s.status);
+    });
+    console.log(`Synced ${statuses.length} daily statuses from Sheets`);
+}
+
+/**
+ * Periodic refresh of chore/activity statuses from Sheets + re-render
+ */
+async function refreshDailyStatuses() {
+    if (!getUseGoogleSheets()) return;
+    await loadDailyStatusesFromSheets();
+    Chores.renderChores();
+    Activities.renderActivities();
+}
 
 /**
  * Main initialization function
@@ -52,6 +80,10 @@ async function initialize() {
     UI.updateDateTime();
     Weather.updateWeather();
     Calendar.updateCalendar();
+
+    // Load today's chore/activity statuses from Sheets for cross-device sync
+    await loadDailyStatusesFromSheets();
+
     Chores.renderChores();
     Rewards.renderRewards();
     Activities.renderActivities();
@@ -116,6 +148,7 @@ setInterval(UI.updateDateTime, 1000);               // Update time every second
 setInterval(Weather.updateWeather, 600000);          // Update weather every 10 minutes
 setInterval(Calendar.updateCalendar, 900000);        // Update calendar every 15 minutes
 setInterval(Points.refreshPointsFromSheets, 120000); // Refresh points every 2 minutes
+setInterval(refreshDailyStatuses, 120000);           // Refresh chore/activity statuses every 2 minutes
 setInterval(Automation.checkForMidnight, 60000);     // Check for midnight every minute
 setInterval(Automation.checkFor9pmSave, 60000);      // Check for 9pm save every minute
 
