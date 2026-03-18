@@ -380,6 +380,109 @@ img.emoji {
     cursor: default;
 }
 
+/* House Rules button in header */
+.house-rules-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 18px;
+    width: auto;
+    height: 35px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.house-rules-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* House Rules modal — wider, scrollable, with X button */
+.house-rules-modal-content {
+    position: relative;
+    max-width: min(95vw, 1100px);
+    width: 95vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 30px 30px 20px;
+    text-align: left;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
+}
+
+.modal-close-btn:hover {
+    background: #e03131;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Two-row grid layout for house rules sections */
+.rules-row {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Row 1: auto-fit for general + kid-specific (1 or more kids) */
+.rules-row:first-child {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* Row 2: always 3 equal columns */
+.rules-row:last-child {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.rules-section {
+    min-width: 0; /* prevent overflow in grid */
+}
+
+/* Dark mode for modal close button */
+body.dark-mode .modal-close-btn {
+    background: #4a5568;
+    color: #e2e8f0;
+}
+
+body.dark-mode .modal-close-btn:hover {
+    background: #e03131;
+    color: white;
+}
+
+/* Mobile: stack rules rows */
+@media (max-width: 768px) {
+    .house-rules-modal-content {
+        padding: 20px 15px;
+    }
+
+    .rules-row:last-child {
+        grid-template-columns: 1fr;
+    }
+}
+
 .color-scheme-selector select {
     padding: 6px 10px;
     border: 2px solid rgba(255, 255, 255, 0.3);

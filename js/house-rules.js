@@ -45,73 +45,67 @@ export async function showHouseRules() {
     const sectionHeader = (title) =>
         `<h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-bottom: 15px;">${title}</h3>`;
 
-    let html = '';
+    // ── Helper: build a section block ────────────────────────────────────────
+    const section = (title, items, defaultStyle, renderItem) => {
+        if (!items || items.length === 0) return '';
+        let s = `<div class="rules-section">${sectionHeader(title)}<div style="display:flex;flex-direction:column;gap:8px;">`;
+        items.forEach(item => { s += renderItem(item, getTypeStyle(item.type, defaultStyle)); });
+        s += '</div></div>';
+        return s;
+    };
 
-    // General Rules — default: primary color border, light grey bg
-    if (rules.general && rules.general.length > 0) {
-        const defaultStyle = { bg: '#f8f9fa', border: 'var(--primary-color)', emoji: '' };
-        html += `<div style="margin-bottom: 25px;">${sectionHeader('General Rules')}<div style="display: flex; flex-direction: column; gap: 8px;">`;
-        rules.general.forEach(rule => {
-            const style = getTypeStyle(rule.type, defaultStyle);
+    // ── Row 1: General Rules | Kid-Specific Rules ─────────────────────────────
+    let row1 = '';
+
+    row1 += section('General Rules', rules.general,
+        { bg: '#f8f9fa', border: 'var(--primary-color)', emoji: '' },
+        (rule, style) => {
             const prefix = style.emoji ? `${style.emoji} ` : '✓ ';
-            const consequence = rule.consequence ? ` <span style="color: #e03131; font-weight: bold;">(${rule.consequence})</span>` : '';
-            html += ruleBox(`${prefix}${rule.rule}${consequence}`, style);
-        });
-        html += '</div></div>';
-    }
+            const consequence = rule.consequence ? ` <span style="color:#e03131;font-weight:bold;">(${rule.consequence})</span>` : '';
+            return ruleBox(`${prefix}${rule.rule}${consequence}`, style);
+        }
+    );
 
-    // Kid-Specific Rules — default: accent color border
-    if (rules.kidSpecific && Object.keys(rules.kidSpecific).length > 0) {
-        Object.keys(rules.kidSpecific).forEach(section => {
-            const sectionRules = rules.kidSpecific[section];
-            if (!sectionRules || sectionRules.length === 0) return;
-            const defaultStyle = { bg: '#f8f9fa', border: 'var(--accent-color)', emoji: '' };
-            html += `<div style="margin-bottom: 25px;">${sectionHeader(section)}<div style="display: flex; flex-direction: column; gap: 8px;">`;
-            sectionRules.forEach(rule => {
-                const style = getTypeStyle(rule.type, defaultStyle);
-                const prefix = style.emoji ? `${style.emoji} ` : '• ';
-                const consequence = rule.consequence ? ` <span style="color: #e03131; font-weight: bold;">(${rule.consequence})</span>` : '';
-                html += ruleBox(`${prefix}${rule.rule}${consequence}`, style);
-            });
-            html += '</div></div>';
+    if (rules.kidSpecific) {
+        Object.keys(rules.kidSpecific).forEach(name => {
+            row1 += section(name, rules.kidSpecific[name],
+                { bg: '#f8f9fa', border: 'var(--accent-color)', emoji: '' },
+                (rule, style) => {
+                    const prefix = style.emoji ? `${style.emoji} ` : '• ';
+                    const consequence = rule.consequence ? ` <span style="color:#e03131;font-weight:bold;">(${rule.consequence})</span>` : '';
+                    return ruleBox(`${prefix}${rule.rule}${consequence}`, style);
+                }
+            );
         });
     }
 
-    // Spending Requirements — default: yellow
-    if (rules.spendingRequirements && rules.spendingRequirements.length > 0) {
-        const defaultStyle = { bg: '#fff9db', border: '#f59f00', emoji: '' };
-        html += `<div style="margin-bottom: 25px;">${sectionHeader('Before Spending Prize Coins')}<div style="display: flex; flex-direction: column; gap: 8px;">`;
-        rules.spendingRequirements.forEach(req => {
-            const style = getTypeStyle(req.type, defaultStyle);
-            html += ruleBox(`✓ ${req.rule}`, style);
-        });
-        html += '</div></div>';
-    }
+    // ── Row 2: Spending | BP Scale | Grounding ────────────────────────────────
+    let row2 = '';
 
-    // Grounding Conditions — default: red
-    if (rules.grounding && rules.grounding.length > 0) {
-        const defaultStyle = { bg: '#ffe9e9', border: '#e03131', emoji: '' };
-        html += `<div style="margin-bottom: 25px;">${sectionHeader('What "Grounded" Means')}<div style="display: flex; flex-direction: column; gap: 8px;">`;
-        rules.grounding.forEach(condition => {
-            const style = getTypeStyle(condition.type, defaultStyle);
-            html += ruleBox(`⛔ ${condition.rule}`, style);
-        });
-        html += '</div></div>';
-    }
+    row2 += section('Before Spending Prize Coins', rules.spendingRequirements,
+        { bg: '#fff9db', border: '#f59f00', emoji: '' },
+        (req, style) => ruleBox(`✓ ${req.rule}`, style)
+    );
 
-    // BP Consequence Scale — color driven entirely by the Type column (column D)
-    if (rules.consequenceScale && rules.consequenceScale.length > 0) {
-        const defaultStyle = { bg: '#f8f9fa', border: '#ccc', emoji: '•' };
-        html += `<div style="margin-bottom: 25px;">${sectionHeader('Daily BP Consequences')}<div style="display: flex; flex-direction: column; gap: 8px;">`;
-        rules.consequenceScale.forEach(scale => {
-            const style = getTypeStyle(scale.type, defaultStyle);
+    row2 += section('Daily BP Consequences', rules.consequenceScale,
+        { bg: '#f8f9fa', border: '#ccc', emoji: '•' },
+        (scale, style) => {
             const consequence = scale.consequence
-                ? ` <span style="color: ${style.border}; font-weight: bold;">(${scale.consequence})</span>`
+                ? ` <span style="color:${style.border};font-weight:bold;">(${scale.consequence})</span>`
                 : '';
-            html += ruleBox(`${style.emoji} ${scale.rule}${consequence}`, style);
-        });
-        html += '</div></div>';
-    }
+            return ruleBox(`${style.emoji} ${scale.rule}${consequence}`, style);
+        }
+    );
+
+    row2 += section('What "Grounded" Means', rules.grounding,
+        { bg: '#ffe9e9', border: '#e03131', emoji: '' },
+        (condition, style) => ruleBox(`⛔ ${condition.rule}`, style)
+    );
+
+    const html = `
+        ${row1 ? `<div class="rules-row">${row1}</div>` : ''}
+        ${row2 ? `<div class="rules-row">${row2}</div>` : ''}
+    `;
 
     container.innerHTML = html;
 
