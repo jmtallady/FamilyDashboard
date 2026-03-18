@@ -403,15 +403,21 @@ img.emoji {
     border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* House Rules modal — wider, scrollable, with X button */
+/* House Rules modal — wider, border-radius preserved, scrollable inner div */
 .house-rules-modal-content {
     position: relative;
-    max-width: min(95vw, 1100px);
-    width: 95vw;
+    width: min(95vw, 1100px);
     max-height: 88vh;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden; /* clips scroll content to border-radius */
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+.house-rules-scroll {
     overflow-y: auto;
-    padding: 30px 30px 20px;
-    text-align: left;
+    max-height: 88vh;
+    padding: 30px 30px 24px;
 }
 
 .modal-close-btn {
@@ -432,6 +438,7 @@ img.emoji {
     transition: all 0.2s ease;
     line-height: 1;
     padding: 0;
+    z-index: 1;
 }
 
 .modal-close-btn:hover {
@@ -447,21 +454,26 @@ img.emoji {
     margin-bottom: 20px;
 }
 
-/* Row 1: auto-fit for general + kid-specific (1 or more kids) */
+/* Row 1: auto-fit for general + kid-specific columns */
 .rules-row:first-child {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
-/* Row 2: always 3 equal columns */
+/* Row 2: three equal columns */
 .rules-row:last-child {
     grid-template-columns: repeat(3, 1fr);
 }
 
 .rules-section {
-    min-width: 0; /* prevent overflow in grid */
+    min-width: 0;
 }
 
-/* Dark mode for modal close button */
+/* Dark mode */
+body.dark-mode .house-rules-modal-content {
+    background: #2d3748;
+    color: #e2e8f0;
+}
+
 body.dark-mode .modal-close-btn {
     background: #4a5568;
     color: #e2e8f0;
@@ -472,12 +484,14 @@ body.dark-mode .modal-close-btn:hover {
     color: white;
 }
 
-/* Mobile: stack rules rows */
+/* Mobile: stack both rows */
 @media (max-width: 768px) {
-    .house-rules-modal-content {
+    .house-rules-scroll {
         padding: 20px 15px;
     }
 
+    .rules-row,
+    .rules-row:first-child,
     .rules-row:last-child {
         grid-template-columns: 1fr;
     }
