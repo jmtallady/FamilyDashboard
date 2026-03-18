@@ -54,10 +54,8 @@ export async function showHouseRules() {
         return s;
     };
 
-    // ── Row 1: General Rules | Kid-Specific Rules ─────────────────────────────
-    let row1 = '';
-
-    row1 += section('General Rules', rules.general,
+    // ── Row 1: General Rules (left) | Kid-Specific Rules stacked (right) ────────
+    const generalSection = section('General Rules', rules.general,
         { bg: '#f8f9fa', border: 'var(--primary-color)', emoji: '' },
         (rule, style) => {
             const prefix = style.emoji ? `${style.emoji} ` : '✓ ';
@@ -66,9 +64,10 @@ export async function showHouseRules() {
         }
     );
 
+    let kidSections = '';
     if (rules.kidSpecific) {
         Object.keys(rules.kidSpecific).forEach(name => {
-            row1 += section(name, rules.kidSpecific[name],
+            kidSections += section(name, rules.kidSpecific[name],
                 { bg: '#f8f9fa', border: 'var(--accent-color)', emoji: '' },
                 (rule, style) => {
                     const prefix = style.emoji ? `${style.emoji} ` : '• ';
@@ -79,15 +78,8 @@ export async function showHouseRules() {
         });
     }
 
-    // ── Row 2: Spending | BP Scale | Grounding ────────────────────────────────
-    let row2 = '';
-
-    row2 += section('Before Spending Prize Coins', rules.spendingRequirements,
-        { bg: '#fff9db', border: '#f59f00', emoji: '' },
-        (req, style) => ruleBox(`✓ ${req.rule}`, style)
-    );
-
-    row2 += section('Daily BP Consequences', rules.consequenceScale,
+    // ── Row 2: BP Consequences (left) | Spending + Grounding stacked (right) ──
+    const bpSection = section('Daily BP Consequences', rules.consequenceScale,
         { bg: '#f8f9fa', border: '#ccc', emoji: '•' },
         (scale, style) => {
             const consequence = scale.consequence
@@ -97,14 +89,28 @@ export async function showHouseRules() {
         }
     );
 
-    row2 += section('What "Grounded" Means', rules.grounding,
+    const spendingSection = section('Before Spending Prize Coins', rules.spendingRequirements,
+        { bg: '#fff9db', border: '#f59f00', emoji: '' },
+        (req, style) => ruleBox(`✓ ${req.rule}`, style)
+    );
+
+    const groundingSection = section('What "Grounded" Means', rules.grounding,
         { bg: '#ffe9e9', border: '#e03131', emoji: '' },
         (condition, style) => ruleBox(`⛔ ${condition.rule}`, style)
     );
 
+    const row1 = generalSection || kidSections;
+    const row2 = bpSection || spendingSection || groundingSection;
+
     const html = `
-        ${row1 ? `<div class="rules-row">${row1}</div>` : ''}
-        ${row2 ? `<div class="rules-row">${row2}</div>` : ''}
+        ${row1 ? `<div class="rules-row">
+            <div>${generalSection}</div>
+            <div class="rules-col">${kidSections}</div>
+        </div>` : ''}
+        ${row2 ? `<div class="rules-row">
+            <div>${bpSection}</div>
+            <div class="rules-col">${spendingSection}${groundingSection}</div>
+        </div>` : ''}
     `;
 
     container.innerHTML = html;

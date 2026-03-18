@@ -450,18 +450,16 @@ img.emoji {
 /* Two-row grid layout for house rules sections */
 .rules-row {
     display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
     margin-bottom: 20px;
 }
 
-/* Row 1: auto-fit for general + kid-specific columns */
-.rules-row:first-child {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-}
-
-/* Row 2: three equal columns */
-.rules-row:last-child {
-    grid-template-columns: repeat(3, 1fr);
+/* Right column: stack multiple sections vertically */
+.rules-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .rules-section {
@@ -490,9 +488,7 @@ body.dark-mode .modal-close-btn:hover {
         padding: 20px 15px;
     }
 
-    .rules-row,
-    .rules-row:first-child,
-    .rules-row:last-child {
+    .rules-row {
         grid-template-columns: 1fr;
     }
 }
