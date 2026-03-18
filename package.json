@@ -1,0 +1,12 @@
+{
+  "name": "family-dashboard",
+  "version": "1.0.0",
+  "description": "Family behavior tracking dashboard with points, chores, and rewards",
+  "scripts": {
+    "start": "npx http-server -p 8000 -c-1",
+    "dev": "npx http-server -p 8000 -c-1 -o"
+  },
+  "keywords": ["dashboard", "family", "behavior-tracking"],
+  "author": "",
+  "license": "ISC"
+}
