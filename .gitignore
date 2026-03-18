@@ -1,6 +1,3 @@
-# Personal configuration (contains sensitive data)
-config.js
-
 # Node modules (if added later)
 node_modules/
 
