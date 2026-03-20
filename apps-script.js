@@ -5,10 +5,10 @@
 //
 // SETUP INSTRUCTIONS:
 // 1. Create new Google Sheet with these tabs:
-//    - "Points Log" - Row 1 headers: Date | Kid | Daily BP | Total BP | Prize Coins | Type | Note
+//    - "Points Log" - Row 1 headers: Date | Kid | Daily BP | Total BP | Type | Note
 //    - "Config" - Row 1 headers: Key | Value
 //    - "Chores" - Row 1 headers: Kid | Chore ID | Chore Name | BP | Multiplier
-//    - "Rewards" - Row 1 headers: ID | Name | Cost | Icon | Text Fallback
+//    - "Rewards" - Row 1 headers: ID | Name | Cost (BP) | Icon | Text Fallback
 //    - "Activities" - Row 1 headers: Kid | Activity ID | Activity Name | BP | Multiplier
 //    - "Recent Activity" - Row 1 headers: Timestamp | Type | Kid Name | Item Name | Icon
 //
@@ -34,9 +34,8 @@ const CONFIG = {
     kid: 2,       // Column B
     dailyBP: 3,   // Column C
     totalBP: 4,   // Column D
-    prizeCoins: 5, // Column E
-    type: 6,      // Column F
-    note: 7       // Column G
+    type: 5,      // Column E
+    note: 6       // Column F
   }
 };
 
@@ -114,20 +113,19 @@ function getCurrentPoints() {
       });
     }
 
-    const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 7).getValues();
+    const data = sheet.getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, 6).getValues();
 
     // Find the most recent entry for each kid
     const latestPoints = {};
 
     // Process rows in reverse order (most recent first)
     for (let i = data.length - 1; i >= 0; i--) {
-      const [date, kid, dailyBP, totalBP, prizeCoins, type, note] = data[i];
+      const [date, kid, dailyBP, totalBP, type, note] = data[i];
 
       if (kid && !latestPoints[kid.toLowerCase()]) {
         latestPoints[kid.toLowerCase()] = {
           dailyBP: dailyBP || 5,
           totalBP: totalBP || 0,
-          prizeCoins: prizeCoins || 0,
           date: date ? new Date(date).toLocaleDateString() : null,
           type: type || '',
           note: note || ''
@@ -171,19 +169,19 @@ function getRecentPointsLog() {
     const numEntries = Math.min(50, lastRow - CONFIG.startRow + 1);
     const startRow = lastRow - numEntries + 1;
 
-    const data = sheet.getRange(startRow, 1, numEntries, 7).getValues();
+    const data = sheet.getRange(startRow, 1, numEntries, 6).getValues();
 
     // Build array of entries (most recent first)
     const entries = [];
 
     for (let i = data.length - 1; i >= 0; i--) {
-      const [date, kid, dailyBP, totalBP, prizeCoins, type, note] = data[i];
+      const [date, kid, dailyBP, totalBP, type, note] = data[i];
 
       // Skip entries without a type (invalid/incomplete rows)
       if (!type) continue;
 
       // Only include certain types in the activity feed
-      const validTypes = ['chore-approved', 'activity-approved', 'reward-purchase', 'end-of-day-auto', 'cash-in', 'daily-adjust'];
+      const validTypes = ['chore-approved', 'activity-approved', 'reward-purchase', 'end-of-day-auto', 'daily-adjust'];
       if (!validTypes.includes(type)) continue;
 
       entries.push({
@@ -191,7 +189,6 @@ function getRecentPointsLog() {
         kid: kid || '',
         dailyBP: dailyBP || 0,
         totalBP: totalBP || 0,
-        prizeCoins: prizeCoins || 0,
         type: type || '',
         note: note || ''
       });
@@ -210,13 +207,13 @@ function getRecentPointsLog() {
 }
 
 // ====== LOG NEW POINTS ENTRY ======
-// Updates today's row for the kid, or creates a new one if it doesn't exist
+// Appends a new row for every transaction
 function logPoints(params) {
   try {
-    const { kid, dailyBP, totalBP, prizeCoins, type, note } = params;
+    const { kid, dailyBP, totalBP, type, note } = params;
 
-    if (!kid || dailyBP === undefined || totalBP === undefined || prizeCoins === undefined) {
-      return jsonResponse({ error: 'Missing required fields: kid, dailyBP, totalBP, prizeCoins' }, 400);
+    if (!kid || dailyBP === undefined || totalBP === undefined) {
+      return jsonResponse({ error: 'Missing required fields: kid, dailyBP, totalBP' }, 400);
     }
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.pointsLogSheet);
@@ -235,7 +232,6 @@ function logPoints(params) {
     sheet.getRange(newRow, CONFIG.columns.kid).setValue(kid);
     sheet.getRange(newRow, CONFIG.columns.dailyBP).setValue(dailyBP);
     sheet.getRange(newRow, CONFIG.columns.totalBP).setValue(totalBP);
-    sheet.getRange(newRow, CONFIG.columns.prizeCoins).setValue(prizeCoins);
     sheet.getRange(newRow, CONFIG.columns.type).setValue(type || 'behavior');
     if (note) {
       sheet.getRange(newRow, CONFIG.columns.note).setValue(note);
@@ -246,7 +242,6 @@ function logPoints(params) {
       kid: kid,
       dailyBP: dailyBP,
       totalBP: totalBP,
-      prizeCoins: prizeCoins,
       type: type,
       date: today.toLocaleDateString(),
       row: newRow,
@@ -793,8 +788,7 @@ function endOfDayAll() {
         // Get current points or use defaults
         const current = currentPoints[kidId] || {
           dailyBP: defaultDailyBP,
-          totalBP: kid.defaultTotalBP || 0,
-          prizeCoins: kid.defaultPrizeCoins || 0
+          totalBP: kid.defaultTotalBP || 0
         };
 
         // Calculate new values
@@ -806,7 +800,6 @@ function endOfDayAll() {
           kid: kidName,
           dailyBP: newDailyBP,
           totalBP: newTotalBP,
-          prizeCoins: current.prizeCoins,
           type: 'end-of-day-auto',
           note: `Auto end-of-day: Added ${current.dailyBP} Daily BP to Total BP, reset Daily BP to ${newDailyBP}`
         };
@@ -869,8 +862,7 @@ function autoSaveAllPoints() {
         // Get current points or use defaults
         const current = currentPoints[kidId] || {
           dailyBP: kid.defaultDailyBP || 5,
-          totalBP: kid.defaultTotalBP || 0,
-          prizeCoins: kid.defaultPrizeCoins || 0
+          totalBP: kid.defaultTotalBP || 0
         };
 
         // Log current state
@@ -878,15 +870,14 @@ function autoSaveAllPoints() {
           kid: kidName,
           dailyBP: current.dailyBP,
           totalBP: current.totalBP,
-          prizeCoins: current.prizeCoins,
           type: 'auto-save-9pm',
           note: 'Automatic 9pm save before end of day'
         };
 
         logPoints(params);
 
-        summary.push(`${kidName}: ${current.dailyBP} Daily, ${current.totalBP} Total, ${current.prizeCoins} PC`);
-        Logger.log(`Auto-save for ${kidName}: Daily BP=${current.dailyBP}, Total BP=${current.totalBP}, Prize Coins=${current.prizeCoins}`);
+        summary.push(`${kidName}: ${current.dailyBP} Daily, ${current.totalBP} Total`);
+        Logger.log(`Auto-save for ${kidName}: Daily BP=${current.dailyBP}, Total BP=${current.totalBP}`);
       }
     });
 
@@ -921,7 +912,6 @@ function testLogPoints() {
     kid: 'Clara',
     dailyBP: 5,
     totalBP: 25,
-    prizeCoins: 50,
     type: 'test',
     note: 'Test from Apps Script'
   };

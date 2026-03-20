@@ -558,14 +558,6 @@ body.dark-mode .modal-close-btn:hover {
     color: #5c7cfa;
 }
 
-.prize-coins-section {
-    border-top: 2px solid #f0f0f0;
-    padding-top: 8px;
-}
-
-.prize-coins-display {
-    color: #f59f00;
-}
 
 .kid-name {
     font-size: 14px;
@@ -660,20 +652,6 @@ button {
     background: #4c6ef5;
 }
 
-.cash-in-btn {
-    background: #f59f00;
-    color: white;
-    padding: 6px 10px;
-    font-size: 10px;
-    border-radius: 6px;
-    width: 100%;
-    height: auto;
-    margin-top: 8px;
-}
-
-.cash-in-btn:hover {
-    background: #e67700;
-}
 
 .status-message {
     text-align: center;
@@ -977,17 +955,12 @@ body.dark-mode .points-label {
     color: #cbd5e0;
 }
 
-body.dark-mode .total-bp-section,
-body.dark-mode .prize-coins-section {
+body.dark-mode .total-bp-section {
     border-top: 2px solid #4a5568;
 }
 
 body.dark-mode .total-bp-display {
     color: #818cf8;
-}
-
-body.dark-mode .prize-coins-display {
-    color: #fbbf24;
 }
 
 /* PIN Modal */
@@ -1467,8 +1440,7 @@ body.dark-mode .kid-selector-name {
     margin-bottom: 6px;
 }
 
-.total-bp-section,
-.prize-coins-section {
+.total-bp-section {
     padding-top: 6px;
 }
 
@@ -1482,8 +1454,7 @@ button {
     gap: 6px;
 }
 
-.end-of-day-btn,
-.cash-in-btn {
+.end-of-day-btn {
     padding: 4px 6px;
     font-size: 9px;
     margin-top: 4px;

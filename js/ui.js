@@ -34,13 +34,6 @@ export function generateKidCards() {
                         </div>
                     </div>
 
-                    <div class="currency-section prize-coins-section">
-                        <div class="points-label">Prize Coins</div>
-                        <div class="points-display prize-coins-display" id="${kid.id}-pc">${kid.defaultPrizeCoins}</div>
-                        <div class="button-group">
-                            <button class="cash-in-btn" onclick="cashInPoints('${kid.id}')">Cash In (50 BP → 100 PC)</button>
-                        </div>
-                    </div>
                 </div>
             `;
             container.innerHTML += card;

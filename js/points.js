@@ -1,5 +1,5 @@
 // points.js - Points Management
-// Handles daily BP, total BP, prize coins, and conversions
+// Handles daily BP, total BP, and rewards (all in behavior points)
 
 import { getConfig, SHEETS_API_URL } from './config.js';
 import { fetchPointsFromSheets, savePointsToSheets } from './api.js';
@@ -34,20 +34,16 @@ export async function initializePoints() {
                     const kidData = sheetPoints[kid.id.toLowerCase()];
                     const dailyBP = kidData ? kidData.dailyBP : kid.defaultDailyBP;
                     const totalBP = kidData ? kidData.totalBP : kid.defaultTotalBP;
-                    const pc = kidData ? kidData.prizeCoins : kid.defaultPrizeCoins;
 
                     const dailyBPElement = document.getElementById(`${kid.id}-daily-bp`);
                     const totalBPElement = document.getElementById(`${kid.id}-total-bp`);
-                    const pcElement = document.getElementById(`${kid.id}-pc`);
 
                     if (dailyBPElement) dailyBPElement.textContent = dailyBP;
                     if (totalBPElement) totalBPElement.textContent = totalBP;
-                    if (pcElement) pcElement.textContent = pc;
 
                     // Also save to localStorage as backup
                     localStorage.setItem(`${kid.id}-daily-bp`, dailyBP.toString());
                     localStorage.setItem(`${kid.id}-total-bp`, totalBP.toString());
-                    localStorage.setItem(`${kid.id}-pc`, pc.toString());
                 }
             });
 
@@ -70,9 +66,6 @@ export async function initializePoints() {
             if (!localStorage.getItem(`${kid.id}-total-bp`)) {
                 localStorage.setItem(`${kid.id}-total-bp`, kid.defaultTotalBP.toString());
             }
-            if (!localStorage.getItem(`${kid.id}-pc`)) {
-                localStorage.setItem(`${kid.id}-pc`, kid.defaultPrizeCoins.toString());
-            }
         }
     });
 
@@ -81,15 +74,12 @@ export async function initializePoints() {
         if (kid.id) {
             const dailyBP = localStorage.getItem(`${kid.id}-daily-bp`) || kid.defaultDailyBP.toString();
             const totalBP = localStorage.getItem(`${kid.id}-total-bp`) || kid.defaultTotalBP.toString();
-            const pc = localStorage.getItem(`${kid.id}-pc`) || kid.defaultPrizeCoins.toString();
 
             const dailyBPElement = document.getElementById(`${kid.id}-daily-bp`);
             const totalBPElement = document.getElementById(`${kid.id}-total-bp`);
-            const pcElement = document.getElementById(`${kid.id}-pc`);
 
             if (dailyBPElement) dailyBPElement.textContent = dailyBP;
             if (totalBPElement) totalBPElement.textContent = totalBP;
-            if (pcElement) pcElement.textContent = pc;
         }
     });
 
@@ -117,20 +107,16 @@ export async function refreshPointsFromSheets() {
                     if (kidData) {
                         const dailyBP = kidData.dailyBP;
                         const totalBP = kidData.totalBP;
-                        const pc = kidData.prizeCoins;
 
                         const dailyBPElement = document.getElementById(`${kid.id}-daily-bp`);
                         const totalBPElement = document.getElementById(`${kid.id}-total-bp`);
-                        const pcElement = document.getElementById(`${kid.id}-pc`);
 
                         if (dailyBPElement) dailyBPElement.textContent = dailyBP;
                         if (totalBPElement) totalBPElement.textContent = totalBP;
-                        if (pcElement) pcElement.textContent = pc;
 
                         // Also update localStorage as backup
                         localStorage.setItem(`${kid.id}-daily-bp`, dailyBP.toString());
                         localStorage.setItem(`${kid.id}-total-bp`, totalBP.toString());
-                        localStorage.setItem(`${kid.id}-pc`, pc.toString());
                     }
                 }
             });
@@ -164,7 +150,7 @@ export async function adjustDailyBP(kidId, change) {
     if (!kid) return;
 
     // Fetch latest points from Google Sheets FIRST to ensure we have fresh data
-    let currentDailyBP, currentTotalBP, currentPC;
+    let currentDailyBP, currentTotalBP;
 
     if (getUseGoogleSheets() && SHEETS_API_URL) {
         const sheetPoints = await fetchPointsFromSheets();
@@ -172,18 +158,15 @@ export async function adjustDailyBP(kidId, change) {
             const kidData = sheetPoints[kidId.toLowerCase()];
             currentDailyBP = kidData.dailyBP;
             currentTotalBP = kidData.totalBP;
-            currentPC = kidData.prizeCoins;
         } else {
             // Fallback to UI values if fetch fails
             currentDailyBP = parseInt(document.getElementById(`${kidId}-daily-bp`).textContent);
             currentTotalBP = parseInt(document.getElementById(`${kidId}-total-bp`).textContent);
-            currentPC = parseInt(document.getElementById(`${kidId}-pc`).textContent);
         }
     } else {
         // Use UI values if not using Google Sheets
         currentDailyBP = parseInt(document.getElementById(`${kidId}-daily-bp`).textContent);
         currentTotalBP = parseInt(document.getElementById(`${kidId}-total-bp`).textContent);
-        currentPC = parseInt(document.getElementById(`${kidId}-pc`).textContent);
     }
 
     let newDailyBP = currentDailyBP + change;
@@ -197,16 +180,13 @@ export async function adjustDailyBP(kidId, change) {
     // Update UI
     const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
     const totalBPElement = document.getElementById(`${kidId}-total-bp`);
-    const pcElement = document.getElementById(`${kidId}-pc`);
 
     dailyBPElement.textContent = newDailyBP;
     totalBPElement.textContent = currentTotalBP;
-    pcElement.textContent = currentPC;
 
     // Save to localStorage (always, as backup)
     localStorage.setItem(`${kidId}-daily-bp`, newDailyBP.toString());
     localStorage.setItem(`${kidId}-total-bp`, currentTotalBP.toString());
-    localStorage.setItem(`${kidId}-pc`, currentPC.toString());
 
     const actionPast = change > 0 ? 'earned' : 'lost';
     showMessage(`${kid.name} ${actionPast} a daily point! Now at ${newDailyBP} today`);
@@ -214,7 +194,7 @@ export async function adjustDailyBP(kidId, change) {
     // Save to Google Sheets with fresh data
     if (getUseGoogleSheets() && SHEETS_API_URL) {
         const note = `${actionPast} daily BP via dashboard`;
-        await savePointsToSheets(kidId, newDailyBP, currentTotalBP, currentPC, 'daily-adjust', note);
+        await savePointsToSheets(kidId, newDailyBP, currentTotalBP, 'daily-adjust', note);
     }
 }
 
@@ -261,64 +241,7 @@ export async function endOfDay(kidId) {
 
     // Save to Google Sheets if configured
     if (getUseGoogleSheets() && SHEETS_API_URL) {
-        const pcElement = document.getElementById(`${kidId}-pc`);
-        const currentPC = parseInt(pcElement.textContent);
-        await savePointsToSheets(kidId, newDailyBP, newTotalBP, currentPC, 'end-of-day', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
-    }
-}
-
-// Cash in total behavior points for prize coins
-export async function cashInPoints(kidId) {
-    const kid = getKidByID(kidId);
-    if (!kid) return;
-
-    // If kid has a PIN, require kid PIN. Otherwise, allow without authentication.
-    if (kid.pin) {
-        // Request kid PIN
-        showPinModal('kid', kidId, 'cash-in', () => performCashIn(kidId));
-        return;
-    }
-
-    // No kid PIN, proceed with cash-in
-    await performCashIn(kidId);
-}
-
-// Perform the actual cash-in operation
-export async function performCashIn(kidId) {
-    const CONFIG = getConfig();
-    const kid = getKidByID(kidId);
-    if (!kid) return;
-
-    const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
-    const totalBPElement = document.getElementById(`${kidId}-total-bp`);
-    const pcElement = document.getElementById(`${kidId}-pc`);
-    let currentDailyBP = parseInt(dailyBPElement.textContent);
-    let currentTotalBP = parseInt(totalBPElement.textContent);
-    let currentPC = parseInt(pcElement.textContent);
-
-    // Check if they have enough Total BP to cash in
-    if (currentTotalBP < CONFIG.conversionRate.bp) {
-        showMessage(`${kid.name} needs ${CONFIG.conversionRate.bp} Total BP to cash in! Currently has ${currentTotalBP} in bank.`);
-        return;
-    }
-
-    // Perform conversion (subtract from Total BP, add to PC)
-    const newTotalBP = currentTotalBP - CONFIG.conversionRate.bp;
-    const newPC = currentPC + CONFIG.conversionRate.pc;
-
-    // Update UI
-    totalBPElement.textContent = newTotalBP;
-    pcElement.textContent = newPC;
-
-    // Save to localStorage
-    localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
-    localStorage.setItem(`${kidId}-pc`, newPC.toString());
-
-    showMessage(`${kid.name} cashed in ${CONFIG.conversionRate.bp} Total BP for ${CONFIG.conversionRate.pc} PC! Bank: ${newTotalBP} BP, PC: ${newPC}`);
-
-    // Save to Google Sheets if configured
-    if (getUseGoogleSheets() && SHEETS_API_URL) {
-        await savePointsToSheets(kidId, currentDailyBP, newTotalBP, newPC, 'cash-in', `Converted ${CONFIG.conversionRate.bp} Total BP to ${CONFIG.conversionRate.pc} PC`);
+        await savePointsToSheets(kidId, newDailyBP, newTotalBP, 'end-of-day', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
     }
 }
 
@@ -357,9 +280,7 @@ export async function endOfDayAll() {
 
             // Save to Google Sheets if configured
             if (getUseGoogleSheets() && SHEETS_API_URL) {
-                const pcElement = document.getElementById(`${kid.id}-pc`);
-                const currentPC = parseInt(pcElement.textContent);
-                await savePointsToSheets(kid.id, newDailyBP, newTotalBP, currentPC, 'end-of-day-all', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
+                await savePointsToSheets(kid.id, newDailyBP, newTotalBP, 'end-of-day-all', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
             }
         }
     }

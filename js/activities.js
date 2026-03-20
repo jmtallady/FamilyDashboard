@@ -123,11 +123,9 @@ export async function approveActivity(kidId, activityId, activityName, bp, multi
     // Save to Google Sheets if configured
     if (getUseGoogleSheets() && SHEETS_API_URL) {
         const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
-        const pcElement = document.getElementById(`${kidId}-pc`);
         const currentDailyBP = parseInt(dailyBPElement.textContent);
-        const currentPC = parseInt(pcElement.textContent);
         const note = multiplier > 1 ? `Completed activity: ${activityName} (+${bp}×${multiplier} = ${totalBP} BP to bank)` : `Completed activity: ${activityName} (+${totalBP} BP to bank)`;
-        await savePointsToSheets(kidId, currentDailyBP, newTotalBP, currentPC, 'activity-approved', note);
+        await savePointsToSheets(kidId, currentDailyBP, newTotalBP, 'activity-approved', note);
     }
 
     renderActivities();
