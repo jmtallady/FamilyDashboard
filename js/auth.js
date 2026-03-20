@@ -18,7 +18,7 @@ import {
  * Show PIN modal dialog
  * @param {string} type - 'parent' or 'kid'
  * @param {string|null} kidId - Kid ID if type is 'kid'
- * @param {string|null} action - Action being performed ('cash-in', 'purchase', etc.)
+ * @param {string|null} action - Action being performed ('purchase', etc.)
  * @param {Function|null} callback - Callback function to execute after successful PIN entry
  */
 export function showPinModal(type = 'parent', kidId = null, action = null, callback = null) {
@@ -40,9 +40,7 @@ export function showPinModal(type = 'parent', kidId = null, action = null, callb
         const CONFIG = getConfig();
         const kid = Object.values(CONFIG).find(k => k.id === kidId);
         if (kid) {
-            if (action === 'cash-in') {
-                titleElement.textContent = `${kid.name}, Enter Your PIN to Cash In`;
-            } else if (action === 'purchase') {
+            if (action === 'purchase') {
                 titleElement.textContent = `${kid.name}, Enter Your PIN to Purchase`;
             } else {
                 titleElement.textContent = `${kid.name}, Enter Your PIN`;

@@ -54,11 +54,6 @@ export async function renderRecentActivity() {
                 activityText = `${kidName} purchased: ${rewardName}`;
                 activityColor = '#a78bfa';
                 break;
-            case 'cash-in':
-                activityIcon = '💰';
-                activityText = `${kidName} cashed in BP`;
-                activityColor = '#4c6ef5';
-                break;
             case 'end-of-day-auto':
                 activityIcon = '🌙';
                 activityText = `${kidName}: End of day`;

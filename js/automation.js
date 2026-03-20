@@ -29,10 +29,8 @@ export async function checkForMidnight() {
                     // Save to Google Sheets if configured
                     if (useGoogleSheets && SHEETS_API_URL) {
                         const totalBPElement = document.getElementById(`${kid.id}-total-bp`);
-                        const pcElement = document.getElementById(`${kid.id}-pc`);
                         const currentTotalBP = parseInt(totalBPElement.textContent);
-                        const currentPC = parseInt(pcElement.textContent);
-                        savePointsToSheets(kid.id, kid.defaultDailyBP, currentTotalBP, currentPC, 'midnight-reset', 'Daily BP reset to 5');
+                        savePointsToSheets(kid.id, kid.defaultDailyBP, currentTotalBP, 'midnight-reset', 'Daily BP reset to 5');
                     }
                 }
             }
@@ -70,8 +68,7 @@ export async function checkFor9pmSave() {
                 if (kid.id) {
                     const dailyBP = parseInt(document.getElementById(`${kid.id}-daily-bp`)?.textContent || kid.defaultDailyBP);
                     const totalBP = parseInt(document.getElementById(`${kid.id}-total-bp`)?.textContent || kid.defaultTotalBP);
-                    const pc = parseInt(document.getElementById(`${kid.id}-pc`)?.textContent || kid.defaultPrizeCoins);
-                    await savePointsToSheets(kid.id, dailyBP, totalBP, pc, 'auto-save', 'End of day auto-save');
+                    await savePointsToSheets(kid.id, dailyBP, totalBP, 'auto-save', 'End of day auto-save');
                 }
             }
 

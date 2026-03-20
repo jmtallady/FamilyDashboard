@@ -111,7 +111,6 @@ window.closeHouseRules = HouseRules.closeHouseRules;
 window.adjustDailyBP = Points.adjustDailyBP;
 window.endOfDay = Points.endOfDay;
 window.endOfDayAll = Points.endOfDayAll;
-window.cashInPoints = Points.cashInPoints;
 
 // PIN/Auth functions
 window.showPinModal = Auth.showPinModal;

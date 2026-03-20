@@ -38,7 +38,7 @@ export async function fetchPointsFromSheets() {
 /**
  * Save points to Google Sheets
  */
-export async function savePointsToSheets(kidId, dailyBP, totalBP, prizeCoins, type = 'behavior', note = '') {
+export async function savePointsToSheets(kidId, dailyBP, totalBP, type = 'behavior', note = '') {
     if (!SHEETS_API_URL) {
         console.log('No Google Sheets API URL configured');
         return false;
@@ -59,13 +59,12 @@ export async function savePointsToSheets(kidId, dailyBP, totalBP, prizeCoins, ty
                 kid: kid.name,
                 dailyBP: dailyBP,
                 totalBP: totalBP,
-                prizeCoins: prizeCoins,
                 type: type,
                 note: note
             })
         });
 
-        console.log('Saved points to Google Sheets:', kidId, dailyBP, 'Daily BP,', totalBP, 'Total BP,', prizeCoins, 'PC');
+        console.log('Saved points to Google Sheets:', kidId, dailyBP, 'Daily BP,', totalBP, 'Total BP');
         return true;
     } catch (error) {
         console.error('Error saving to Google Sheets:', error);
