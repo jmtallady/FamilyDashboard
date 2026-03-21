@@ -1,5 +1,5 @@
 // rewards.js - Rewards Management
-// Handles reward purchases and prize coin transactions
+// Handles reward purchases using behavior points (Total BP)
 
 import { getConfig, SHEETS_API_URL } from './config.js';
 import { getRewards, getUseGoogleSheets, setPinContext, resetPinContext } from './state.js';
@@ -23,15 +23,15 @@ export function showKidSelector(rewardId, rewardName, cost, icon) {
 
     Object.values(CONFIG).forEach(kid => {
         if (kid.id) {
-            const pcElement = document.getElementById(`${kid.id}-pc`);
-            const currentPC = parseInt(pcElement.textContent);
-            const canAfford = currentPC >= cost;
+            const totalBPElement = document.getElementById(`${kid.id}-total-bp`);
+            const currentTotalBP = parseInt(totalBPElement.textContent);
+            const canAfford = currentTotalBP >= cost;
             const disabledClass = canAfford ? '' : 'disabled';
 
             html += `
                 <div class="kid-selector-card ${disabledClass}" onclick="confirmPurchase('${kid.id}')">
                     <div class="kid-selector-name">${kid.name}</div>
-                    <div class="kid-selector-pc">${currentPC} PC</div>
+                    <div class="kid-selector-pc">${currentTotalBP} BP</div>
                     ${canAfford ? '<div class="kid-selector-status">✓</div>' : '<div class="kid-selector-status">Not enough</div>'}
                 </div>
             `;
@@ -55,11 +55,11 @@ export async function confirmPurchase(kidId) {
     const kid = getKidByID(kidId);
     if (!kid || !selectedReward) return;
 
-    const pcElement = document.getElementById(`${kidId}-pc`);
-    const currentPC = parseInt(pcElement.textContent);
+    const totalBPElement = document.getElementById(`${kidId}-total-bp`);
+    const currentTotalBP = parseInt(totalBPElement.textContent);
 
-    if (currentPC < selectedReward.cost) {
-        showMessage(`${kid.name} needs ${selectedReward.cost} PC but only has ${currentPC} PC!`);
+    if (currentTotalBP < selectedReward.cost) {
+        showMessage(`${kid.name} needs ${selectedReward.cost} BP but only has ${currentTotalBP} BP!`);
         return;
     }
 
@@ -87,31 +87,29 @@ export async function performPurchase(kidId, reward) {
     const kid = getKidByID(kidId);
     if (!kid || !reward) return;
 
-    const pcElement = document.getElementById(`${kidId}-pc`);
-    const currentPC = parseInt(pcElement.textContent);
+    const totalBPElement = document.getElementById(`${kidId}-total-bp`);
+    const currentTotalBP = parseInt(totalBPElement.textContent);
 
     // Double-check they can still afford it
-    if (currentPC < reward.cost) {
-        showMessage(`${kid.name} needs ${reward.cost} PC but only has ${currentPC} PC!`);
+    if (currentTotalBP < reward.cost) {
+        showMessage(`${kid.name} needs ${reward.cost} BP but only has ${currentTotalBP} BP!`);
         return;
     }
 
-    // Deduct Prize Coins
-    const newPC = currentPC - reward.cost;
-    pcElement.textContent = newPC;
-    localStorage.setItem(`${kidId}-pc`, newPC.toString());
+    // Deduct from Total BP
+    const newTotalBP = currentTotalBP - reward.cost;
+    totalBPElement.textContent = newTotalBP;
+    localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
 
     // Save to Google Sheets if configured
     if (getUseGoogleSheets() && SHEETS_API_URL) {
         const dailyBPElement = document.getElementById(`${kidId}-daily-bp`);
-        const totalBPElement = document.getElementById(`${kidId}-total-bp`);
         const currentDailyBP = parseInt(dailyBPElement.textContent);
-        const currentTotalBP = parseInt(totalBPElement.textContent);
-        await savePointsToSheets(kidId, currentDailyBP, currentTotalBP, newPC, 'reward-purchase', `Purchased: ${reward.name} ${reward.icon} (-${reward.cost} PC)`);
+        await savePointsToSheets(kidId, currentDailyBP, newTotalBP, 'reward-purchase', `Purchased: ${reward.name} ${reward.icon} (-${reward.cost} BP)`);
     }
 
     renderRecentActivity(); // Refresh activity feed from Points Log
-    showMessage(`🎉 ${kid.name} purchased ${reward.icon} ${reward.name} for ${reward.cost} PC! Remaining: ${newPC} PC`);
+    showMessage(`🎉 ${kid.name} purchased ${reward.icon} ${reward.name} for ${reward.cost} BP! Remaining: ${newTotalBP} BP`);
 }
 
 // Render rewards section (list format like chores)
@@ -130,7 +128,7 @@ export function renderRewards() {
             <div class="chore-item">
                 <div class="chore-info">
                     <span class="chore-name">${reward.name}</span>
-                    <span class="chore-bp" style="color: #f59f00;">${reward.cost} PC</span>
+                    <span class="chore-bp" style="color: #f59f00;">${reward.cost} BP</span>
                 </div>
                 <div class="chore-actions">
                     <button class="chore-btn complete-btn" onclick="showKidSelector('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}')">🛒</button>
