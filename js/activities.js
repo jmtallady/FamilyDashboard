@@ -31,29 +31,134 @@ export function setActivityStatus(kidId, activityId, status) {
 // Module-level variables
 let selectedActivity = null;
 
-// Show kid selector for activity completion (always show for both shared and individual)
-
-export function showActivityKidSelector(activityId, activityName, bp, multiplier) {
+/**
+ * Build a grouped activity list from the ACTIVITIES data structure.
+ * Activities with the same name are merged into a single entry.
+ * Each group tracks per-kid BP/activityId for individual activities,
+ * or a shared BP for open-to-all activities.
+ */
+function buildActivityGroups() {
     const CONFIG = getConfig();
-    selectedActivity = { id: activityId, name: activityName, bp, multiplier };
+    const ACTIVITIES = getActivities();
+    const groupsByName = new Map(); // lowercased name -> group
+
+    // Shared activities first (no kid assigned = open to all, same BP)
+    if (ACTIVITIES.shared) {
+        ACTIVITIES.shared.forEach(activity => {
+            const key = activity.name.toLowerCase();
+            groupsByName.set(key, {
+                name: activity.name,
+                isOpenToAll: true,
+                activityId: activity.id,
+                bp: activity.bp,
+                multiplier: activity.multiplier || 1,
+                kidEntries: null
+            });
+        });
+    }
+
+    // Individual activities — group by name, collect per-kid BP entries
+    Object.values(CONFIG).forEach(kid => {
+        if (kid.id && ACTIVITIES.individual && ACTIVITIES.individual[kid.id]) {
+            ACTIVITIES.individual[kid.id].forEach(activity => {
+                const key = activity.name.toLowerCase();
+                if (groupsByName.has(key)) {
+                    const group = groupsByName.get(key);
+                    // Shared takes precedence; skip individual if shared exists
+                    if (!group.isOpenToAll) {
+                        group.kidEntries.push({
+                            kidId: kid.id,
+                            activityId: activity.id,
+                            bp: activity.bp,
+                            multiplier: activity.multiplier || 1
+                        });
+                    }
+                } else {
+                    groupsByName.set(key, {
+                        name: activity.name,
+                        isOpenToAll: false,
+                        activityId: null,
+                        bp: null,
+                        multiplier: null,
+                        kidEntries: [{
+                            kidId: kid.id,
+                            activityId: activity.id,
+                            bp: activity.bp,
+                            multiplier: activity.multiplier || 1
+                        }]
+                    });
+                }
+            });
+        }
+    });
+
+    return groupsByName;
+}
+
+/**
+ * For a given group, return arrays of eligible kids with their status.
+ * Each entry: { kid, activityId, bp, multiplier, status }
+ */
+function getGroupKidStatuses(group) {
+    const CONFIG = getConfig();
+    const result = [];
+
+    if (group.isOpenToAll) {
+        Object.values(CONFIG).forEach(kid => {
+            if (kid.id) {
+                result.push({
+                    kid,
+                    activityId: group.activityId,
+                    bp: group.bp,
+                    multiplier: group.multiplier,
+                    status: getActivityStatus(kid.id, group.activityId)
+                });
+            }
+        });
+    } else {
+        group.kidEntries.forEach(entry => {
+            const kid = Object.values(CONFIG).find(k => k.id === entry.kidId);
+            if (kid) {
+                result.push({
+                    kid,
+                    activityId: entry.activityId,
+                    bp: entry.bp,
+                    multiplier: entry.multiplier,
+                    status: getActivityStatus(kid.id, entry.activityId)
+                });
+            }
+        });
+    }
+
+    return result;
+}
+
+// Show kid selector for activity completion
+// groupData: the group object from buildActivityGroups
+export function showActivityKidSelector(groupData) {
+    selectedActivity = groupData;
 
     let html = '<h2>Who completed this activity?</h2>';
     html += '<p style="font-size: 12px; color: #666; margin: -10px 0 15px 0;">Multiple kids can mark complete</p>';
     html += '<div class="kid-selector-grid">';
 
-    Object.values(CONFIG).forEach(kid => {
-        if (kid.id) {
-            const status = getActivityStatus(kid.id, activityId);
-            const canComplete = status === 'incomplete';
-            const statusText = status === 'approved' ? '✅ Done' : status === 'pending' ? '⏳ Pending' : 'Available';
+    const kidStatuses = getGroupKidStatuses(groupData);
 
-            html += `
-                <div class="kid-selector-card ${!canComplete ? 'disabled' : ''}" ${canComplete ? `onclick="selectKidForActivity('${kid.id}')"` : ''}>
-                    <div class="kid-selector-name">${kid.name}</div>
-                    <div class="kid-selector-count" style="font-size: 11px; color: ${canComplete ? '#666' : '#999'};">${statusText}</div>
-                </div>
-            `;
-        }
+    kidStatuses.forEach(({ kid, activityId, bp, multiplier, status }) => {
+        const canComplete = status === 'incomplete';
+        const totalBP = bp * multiplier;
+        const bpText = multiplier > 1 ? `+${bp}×${multiplier}=${totalBP} BP` : `+${totalBP} BP`;
+        const statusText = status === 'approved' ? '✅ Done'
+            : status === 'pending' ? '⏳ Pending'
+            : bpText;
+        const textColor = canComplete ? '#4c6ef5' : '#999';
+
+        html += `
+            <div class="kid-selector-card ${!canComplete ? 'disabled' : ''}" ${canComplete ? `onclick="selectKidForActivity('${kid.id}')"` : ''}>
+                <div class="kid-selector-name">${kid.name}</div>
+                <div class="kid-selector-count" style="font-size: 11px; color: ${textColor};">${statusText}</div>
+            </div>
+        `;
     });
 
     html += '</div>';
@@ -65,8 +170,19 @@ export function showActivityKidSelector(activityId, activityName, bp, multiplier
 export function selectKidForActivity(kidId) {
     if (!selectedActivity) return;
 
+    // Look up this kid's specific activityId from the group
+    let activityId;
+    if (selectedActivity.isOpenToAll) {
+        activityId = selectedActivity.activityId;
+    } else {
+        const entry = selectedActivity.kidEntries.find(e => e.kidId === kidId);
+        activityId = entry ? entry.activityId : null;
+    }
+
+    if (!activityId) return;
+
     closeKidSelector();
-    markActivityCompleteForKid(kidId, selectedActivity.id);
+    markActivityCompleteForKid(kidId, activityId);
     selectedActivity = null;
 }
 
@@ -154,116 +270,74 @@ export function rejectActivity(kidId, activityId, activityName = 'activity') {
 
 // Render activities section (compact view - works like chores with approval)
 export function renderActivities() {
-    const CONFIG = getConfig();
     const ACTIVITIES = getActivities();
-    if (!ACTIVITIES || !ACTIVITIES.shared && !ACTIVITIES.individual) {
+    if (!ACTIVITIES || (!ACTIVITIES.shared && !ACTIVITIES.individual)) {
         document.getElementById('activitiesContainer').innerHTML = '<div style="text-align: center; color: #999;">No activities configured</div>';
         return;
     }
 
     const container = document.getElementById('activitiesContainer');
     let html = '<div class="chore-list">';
-    let allActivities = [];
 
-    // Collect all shared activities first
-    if (ACTIVITIES.shared && ACTIVITIES.shared.length > 0) {
-        ACTIVITIES.shared.forEach(activity => {
-            allActivities.push({
-                ...activity,
-                kidId: null,
-                isShared: true,
-                displayName: activity.name
-            });
-        });
-    }
+    const groupsByName = buildActivityGroups();
 
-    // Collect all individual activities
-    Object.values(CONFIG).forEach(kid => {
-        if (kid.id && ACTIVITIES.individual && ACTIVITIES.individual[kid.id]) {
-            ACTIVITIES.individual[kid.id].forEach(activity => {
-                allActivities.push({
-                    ...activity,
-                    kidId: kid.id,
-                    kidName: kid.name,
-                    isShared: false,
-                    displayName: activity.name
-                });
-            });
-        }
-    });
+    groupsByName.forEach(group => {
+        const kidStatuses = getGroupKidStatuses(group);
 
-    // Render all activities in one compact list
-    allActivities.forEach(activity => {
-        // Check all kids to see who has this activity pending or approved
-        const pendingKids = [];
-        const approvedKids = [];
+        const pendingEntries   = kidStatuses.filter(e => e.status === 'pending');
+        const approvedEntries  = kidStatuses.filter(e => e.status === 'approved');
+        const incompleteEntries = kidStatuses.filter(e => e.status === 'incomplete');
 
-        // Determine which kids to check based on activity type
-        const kidsToCheck = [];
-        if (activity.isShared) {
-            // Shared activity: check all kids
-            Object.values(CONFIG).forEach(kid => {
-                if (kid.id) kidsToCheck.push(kid);
-            });
-        } else {
-            // Individual activity: only check the assigned kid
-            const assignedKid = Object.values(CONFIG).find(k => k.id === activity.kidId);
-            if (assignedKid) kidsToCheck.push(assignedKid);
-        }
-
-        kidsToCheck.forEach(kid => {
-            const kidStatus = getActivityStatus(kid.id, activity.id);
-            if (kidStatus === 'pending') {
-                pendingKids.push(kid);
-            } else if (kidStatus === 'approved') {
-                approvedKids.push(kid);
-            }
-        });
-
-        // Determine incomplete kids (those who haven't started yet)
-        const incompleteKids = kidsToCheck.filter(k => getActivityStatus(k.id, activity.id) === 'incomplete');
-
-        // Overall status is for display styling only
-        const overallStatus = approvedKids.length > 0 ? 'approved' : pendingKids.length > 0 ? 'pending' : 'incomplete';
+        const overallStatus = incompleteEntries.length === 0 && pendingEntries.length === 0
+            ? 'approved'
+            : pendingEntries.length > 0 ? 'pending' : 'incomplete';
         const statusClass = overallStatus === 'approved' ? 'approved' : overallStatus === 'pending' ? 'pending' : 'incomplete';
         const statusIcon = overallStatus === 'approved' ? '✅' : overallStatus === 'pending' ? '⏳' : '⭐';
-        const totalBP = activity.bp * (activity.multiplier || 1);
-        const bpDisplay = activity.multiplier > 1 ? `+${activity.bp}×${activity.multiplier} (${totalBP} BP)` : `+${activity.bp} BP`;
+
+        // Serialize group data for the button (without circular refs)
+        const groupDataForButton = {
+            name: group.name,
+            isOpenToAll: group.isOpenToAll,
+            activityId: group.activityId,
+            bp: group.bp,
+            multiplier: group.multiplier,
+            kidEntries: group.kidEntries
+        };
 
         html += `
             <div class="chore-item ${statusClass}" style="flex-direction: column; align-items: stretch;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="chore-info">
                         <span class="chore-status-icon">${statusIcon}</span>
-                        <span class="chore-name">${activity.displayName}</span>
-                        <span class="chore-bp">${bpDisplay}</span>
+                        <span class="chore-name">${group.name}</span>
                     </div>
                     <div class="chore-actions" style="display: flex; align-items: center; gap: 4px;">`;
 
-        // Show approved kids as text
-        if (approvedKids.length > 0) {
-            const names = approvedKids.map(k => k.name).join(', ');
+        // Show approved kids inline
+        if (approvedEntries.length > 0) {
+            const names = approvedEntries.map(e => e.kid.name).join(', ');
             html += `<span class="approved-text" style="font-size: 11px; margin-right: 4px;">✅ ${names}</span>`;
         }
 
-        // Always show + button if any kids are still incomplete
-        if (incompleteKids.length > 0) {
+        // Show ✓ / + button if any kids still need to complete
+        if (incompleteEntries.length > 0) {
             const btnLabel = overallStatus === 'incomplete' ? '✓' : '+';
-            html += `<button class="chore-btn complete-btn" data-activity='${JSON.stringify({id: activity.id, name: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="showActivityKidSelectorFromButton(this)">${btnLabel}</button>`;
+            html += `<button class="chore-btn complete-btn" data-activity='${JSON.stringify(groupDataForButton)}' onclick="showActivityKidSelectorFromButton(this)">${btnLabel}</button>`;
         }
 
-        html += `</div>
-                </div>`;
+        html += `</div></div>`;
 
-        // Show pending kids on separate lines below
-        if (overallStatus === 'pending') {
+        // Pending kids — show with their BP and approve/reject buttons
+        if (pendingEntries.length > 0) {
             html += `<div style="padding-left: 30px; margin-top: 8px;">`;
-            pendingKids.forEach(kid => {
+            pendingEntries.forEach(({ kid, activityId, bp, multiplier }) => {
+                const totalBP = bp * multiplier;
+                const bpDisplay = multiplier > 1 ? `${bp}×${multiplier}=${totalBP} BP` : `${bp} BP`;
                 html += `
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="font-size: 11px; color: #666; min-width: 60px;">${kid.name}</span>
-                        <button class="chore-btn approve-btn" style="padding: 4px 8px; font-size: 16px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name, bp: activity.bp, multiplier: activity.multiplier || 1})}' onclick="approveActivityFromButton(this)">✓</button>
-                        <button class="chore-btn reject-btn" style="padding: 4px 8px; font-size: 16px;" data-activity='${JSON.stringify({kidId: kid.id, activityId: activity.id, activityName: activity.name})}' onclick="rejectActivityFromButton(this)">✗</button>
+                        <span style="font-size: 11px; color: #666; min-width: 60px;">${kid.name} (+${bpDisplay})</span>
+                        <button class="chore-btn approve-btn" style="padding: 4px 8px; font-size: 16px;" data-activity='${JSON.stringify({kidId: kid.id, activityId, activityName: group.name, bp, multiplier})}' onclick="approveActivityFromButton(this)">✓</button>
+                        <button class="chore-btn reject-btn" style="padding: 4px 8px; font-size: 16px;" data-activity='${JSON.stringify({kidId: kid.id, activityId, activityName: group.name})}' onclick="rejectActivityFromButton(this)">✗</button>
                     </div>`;
             });
             html += `</div>`;
@@ -287,7 +361,7 @@ export function renderActivities() {
 // Helper functions to safely call activity functions from button data attributes
 export function showActivityKidSelectorFromButton(button) {
     const data = JSON.parse(button.getAttribute('data-activity'));
-    showActivityKidSelector(data.id, data.name, data.bp, data.multiplier);
+    showActivityKidSelector(data);
 }
 
 export function approveActivityFromButton(button) {
