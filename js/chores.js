@@ -162,6 +162,9 @@ export function renderChores() {
         }
     });
 
+    // Sort chores by total BP high to low
+    allChores.sort((a, b) => (b.bp * (b.multiplier || 1)) - (a.bp * (a.multiplier || 1)));
+
     // Render all chores in one compact list
     allChores.forEach(chore => {
         let status = 'incomplete';

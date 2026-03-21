@@ -1578,7 +1578,21 @@ button {
    MOBILE RESPONSIVE LAYOUT
    ========================================== */
 
+/* Shared mobile layout rules — applied via both portrait and landscape queries below */
+.mobile-layout .dashboard-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+    gap: 8px;
+}
+
+/* Portrait phones (≤768px wide) */
 @media (max-width: 768px) {
+    html, body {
+        overflow-y: auto;
+        height: auto;
+    }
+
     body {
         padding: 6px;
     }
@@ -1623,59 +1637,79 @@ button {
 
     /* Header */
     .header h1 {
-        font-size: 18px;
+        font-size: 20px;
     }
 
     .color-scheme-selector select {
-        font-size: 12px;
+        font-size: 13px;
         padding: 4px 8px;
     }
 
     /* Kids cards - 2 per row minimum on mobile */
     .kids-container {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
 
     .kid-name {
-        font-size: 14px;
+        font-size: 16px;
     }
 
     .points-display {
-        font-size: 26px;
+        font-size: 32px;
+    }
+
+    .points-label {
+        font-size: 12px;
     }
 
     /* Touch-friendly + and - buttons */
     .minus-btn, .plus-btn {
-        width: 44px;
-        height: 44px;
-        font-size: 20px;
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+
+    .end-of-day-btn {
+        font-size: 12px;
+        padding: 8px 10px;
+        height: auto;
+        margin-top: 6px;
     }
 
     /* Touch-friendly chore buttons */
     .chore-btn {
         padding: 8px 14px;
-        font-size: 14px;
-        min-height: 40px;
-    }
-
-    .chore-btn.complete-btn {
-        font-size: 20px;
-        min-width: 44px;
+        font-size: 16px;
         min-height: 44px;
     }
 
-    /* More readable chore text */
+    .chore-btn.complete-btn {
+        font-size: 22px;
+        min-width: 48px;
+        min-height: 48px;
+    }
+
+    /* More readable chore/activity text */
     .chore-name {
-        font-size: 13px;
+        font-size: 15px;
     }
 
     .chore-bp {
-        font-size: 11px;
+        font-size: 13px;
+    }
+
+    .chore-status-icon {
+        font-size: 18px;
+    }
+
+    /* Section headers */
+    .section-header h2 {
+        font-size: 18px;
     }
 
     /* Clock widget */
     .clock-time {
-        font-size: 36px;
+        font-size: 40px;
     }
 
     /* Rewards grid - wider items */
@@ -1692,9 +1726,128 @@ button {
     }
 
     .num-btn {
-        width: 65px;
-        height: 65px;
-        font-size: 26px;
+        width: 70px;
+        height: 70px;
+        font-size: 28px;
+    }
+
+    .numpad {
+        gap: 10px;
+    }
+}
+
+/* Landscape phones — height ≤ 500px catches phones in landscape without affecting tablets */
+@media screen and (max-height: 500px) {
+    html, body {
+        overflow-y: auto;
+        height: auto;
+    }
+
+    body {
+        padding: 6px;
+    }
+
+    /* Same single-column stacking as portrait */
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+        gap: 8px;
+    }
+
+    .main-content {
+        order: 1;
+        height: auto;
+        overflow: visible;
+    }
+
+    .right-column {
+        order: 2;
+        height: auto;
+        overflow: visible;
+        gap: 8px;
+    }
+
+    .sidebar {
+        order: 3;
+        height: auto;
+        overflow: visible;
+    }
+
+    .chores-section {
+        flex: none;
+    }
+
+    .rewards-activity-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    /* In landscape, kids can sit 2-up */
+    .kids-container {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .kid-name {
+        font-size: 15px;
+    }
+
+    .points-display {
+        font-size: 28px;
+    }
+
+    .points-label {
+        font-size: 12px;
+    }
+
+    .minus-btn, .plus-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+
+    .end-of-day-btn {
+        font-size: 11px;
+        padding: 6px 8px;
+        height: auto;
+        margin-top: 4px;
+    }
+
+    .chore-btn {
+        padding: 6px 12px;
+        font-size: 15px;
+        min-height: 40px;
+    }
+
+    .chore-btn.complete-btn {
+        font-size: 20px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .chore-name {
+        font-size: 14px;
+    }
+
+    .chore-bp {
+        font-size: 12px;
+    }
+
+    .section-header h2 {
+        font-size: 16px;
+    }
+
+    /* PIN modal fits landscape screen */
+    .pin-content {
+        padding: 15px;
+        max-width: 95vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .num-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
     }
 
     .numpad {

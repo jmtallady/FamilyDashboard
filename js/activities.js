@@ -281,7 +281,10 @@ export function renderActivities() {
 
     const groupsByName = buildActivityGroups();
 
-    groupsByName.forEach(group => {
+    // Sort groups alphabetically by activity name
+    const sortedGroups = [...groupsByName.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedGroups.forEach(group => {
         const kidStatuses = getGroupKidStatuses(group);
 
         const pendingEntries   = kidStatuses.filter(e => e.status === 'pending');
