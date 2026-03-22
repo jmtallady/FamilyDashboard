@@ -16,6 +16,25 @@ export function getActivityStatus(kidId, activityId) {
     return localStorage.getItem(key) || 'incomplete'; // 'incomplete', 'pending', 'approved'
 }
 
+// Returns the Sunday of the current week as a string key
+function getWeekStart() {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    d.setHours(0, 0, 0, 0);
+    return d.toDateString();
+}
+
+export function getWeeklyApprovalCount(kidId, activityId) {
+    const key = `activity-week-${kidId}-${activityId}-${getWeekStart()}`;
+    return parseInt(localStorage.getItem(key) || '0');
+}
+
+function incrementWeeklyApprovalCount(kidId, activityId) {
+    const key = `activity-week-${kidId}-${activityId}-${getWeekStart()}`;
+    const current = parseInt(localStorage.getItem(key) || '0');
+    localStorage.setItem(key, (current + 1).toString());
+}
+
 // Set activity completion status in localStorage and sync to Google Sheets
 export function setActivityStatus(kidId, activityId, status) {
     const today = new Date().toDateString();
@@ -52,6 +71,7 @@ function buildActivityGroups() {
                 activityId: activity.id,
                 bp: activity.bp,
                 multiplier: activity.multiplier || 1,
+                maxPerWeek: activity.maxPerWeek || null,
                 kidEntries: null
             });
         });
@@ -70,7 +90,8 @@ function buildActivityGroups() {
                             kidId: kid.id,
                             activityId: activity.id,
                             bp: activity.bp,
-                            multiplier: activity.multiplier || 1
+                            multiplier: activity.multiplier || 1,
+                            maxPerWeek: activity.maxPerWeek || null
                         });
                     }
                 } else {
@@ -80,11 +101,13 @@ function buildActivityGroups() {
                         activityId: null,
                         bp: null,
                         multiplier: null,
+                        maxPerWeek: null,
                         kidEntries: [{
                             kidId: kid.id,
                             activityId: activity.id,
                             bp: activity.bp,
-                            multiplier: activity.multiplier || 1
+                            multiplier: activity.multiplier || 1,
+                            maxPerWeek: activity.maxPerWeek || null
                         }]
                     });
                 }
@@ -106,11 +129,14 @@ function getGroupKidStatuses(group) {
     if (group.isOpenToAll) {
         Object.values(CONFIG).forEach(kid => {
             if (kid.id) {
+                const weeklyCount = getWeeklyApprovalCount(kid.id, group.activityId);
                 result.push({
                     kid,
                     activityId: group.activityId,
                     bp: group.bp,
                     multiplier: group.multiplier,
+                    maxPerWeek: group.maxPerWeek,
+                    weeklyCount,
                     status: getActivityStatus(kid.id, group.activityId)
                 });
             }
@@ -119,11 +145,14 @@ function getGroupKidStatuses(group) {
         group.kidEntries.forEach(entry => {
             const kid = Object.values(CONFIG).find(k => k.id === entry.kidId);
             if (kid) {
+                const weeklyCount = getWeeklyApprovalCount(kid.id, entry.activityId);
                 result.push({
                     kid,
                     activityId: entry.activityId,
                     bp: entry.bp,
                     multiplier: entry.multiplier,
+                    maxPerWeek: entry.maxPerWeek,
+                    weeklyCount,
                     status: getActivityStatus(kid.id, entry.activityId)
                 });
             }
@@ -144,12 +173,14 @@ export function showActivityKidSelector(groupData) {
 
     const kidStatuses = getGroupKidStatuses(groupData);
 
-    kidStatuses.forEach(({ kid, activityId, bp, multiplier, status }) => {
-        const canComplete = status === 'incomplete';
+    kidStatuses.forEach(({ kid, activityId, bp, multiplier, maxPerWeek, weeklyCount, status }) => {
+        const weeklyMaxed = maxPerWeek !== null && weeklyCount >= maxPerWeek;
+        const canComplete = status === 'incomplete' && !weeklyMaxed;
         const totalBP = bp * multiplier;
         const bpText = multiplier > 1 ? `+${bp}×${multiplier}=${totalBP} BP` : `+${totalBP} BP`;
         const statusText = status === 'approved' ? '✅ Done'
             : status === 'pending' ? '⏳ Pending'
+            : weeklyMaxed ? `🔒 Max ${maxPerWeek}×/wk`
             : bpText;
         const textColor = canComplete ? '#4c6ef5' : '#999';
 
@@ -170,24 +201,26 @@ export function showActivityKidSelector(groupData) {
 export function selectKidForActivity(kidId) {
     if (!selectedActivity) return;
 
-    // Look up this kid's specific activityId from the group
-    let activityId;
+    // Look up this kid's specific activityId and maxPerWeek from the group
+    let activityId, maxPerWeek;
     if (selectedActivity.isOpenToAll) {
         activityId = selectedActivity.activityId;
+        maxPerWeek = selectedActivity.maxPerWeek;
     } else {
         const entry = selectedActivity.kidEntries.find(e => e.kidId === kidId);
         activityId = entry ? entry.activityId : null;
+        maxPerWeek = entry ? entry.maxPerWeek : null;
     }
 
     if (!activityId) return;
 
     closeKidSelector();
-    markActivityCompleteForKid(kidId, activityId);
+    markActivityCompleteForKid(kidId, activityId, maxPerWeek);
     selectedActivity = null;
 }
 
 // Mark activity as complete (pending approval)
-export function markActivityCompleteForKid(kidId, activityId) {
+export function markActivityCompleteForKid(kidId, activityId, maxPerWeek = null) {
     const currentStatus = getActivityStatus(kidId, activityId);
 
     if (currentStatus === 'approved') {
@@ -197,6 +230,11 @@ export function markActivityCompleteForKid(kidId, activityId) {
 
     if (currentStatus === 'pending') {
         showMessage('This activity is waiting for approval!');
+        return;
+    }
+
+    if (maxPerWeek !== null && getWeeklyApprovalCount(kidId, activityId) >= maxPerWeek) {
+        showMessage('Weekly limit reached for this activity!');
         return;
     }
 
@@ -221,8 +259,9 @@ export async function approveActivity(kidId, activityId, activityName, bp, multi
     const kid = getKidByID(kidId);
     if (!kid) return;
 
-    // Mark as approved
+    // Mark as approved and increment weekly count
     setActivityStatus(kidId, activityId, 'approved');
+    incrementWeeklyApprovalCount(kidId, activityId);
 
     // Calculate total BP with multiplier
     const totalBP = bp * multiplier;
@@ -289,13 +328,24 @@ export function renderActivities() {
 
         const pendingEntries   = kidStatuses.filter(e => e.status === 'pending');
         const approvedEntries  = kidStatuses.filter(e => e.status === 'approved');
-        const incompleteEntries = kidStatuses.filter(e => e.status === 'incomplete');
+        // "incomplete" only counts kids who aren't weekly-maxed
+        const incompleteEntries = kidStatuses.filter(e => e.status === 'incomplete'
+            && !(e.maxPerWeek !== null && e.weeklyCount >= e.maxPerWeek));
+        const maxedEntries = kidStatuses.filter(e => e.status === 'incomplete'
+            && e.maxPerWeek !== null && e.weeklyCount >= e.maxPerWeek);
 
         const overallStatus = incompleteEntries.length === 0 && pendingEntries.length === 0
             ? 'approved'
             : pendingEntries.length > 0 ? 'pending' : 'incomplete';
         const statusClass = overallStatus === 'approved' ? 'approved' : overallStatus === 'pending' ? 'pending' : 'incomplete';
         const statusIcon = overallStatus === 'approved' ? '✅' : overallStatus === 'pending' ? '⏳' : '⭐';
+
+        // Weekly cap badge (show on the group if any kid has a cap)
+        const maxPerWeek = group.maxPerWeek
+            ?? (group.kidEntries ? (group.kidEntries[0]?.maxPerWeek ?? null) : null);
+        const weekCapLabel = maxPerWeek !== null
+            ? `<span style="font-size: 10px; color: #999; margin-left: 4px;">(${maxPerWeek}×/wk)</span>`
+            : '';
 
         // Serialize group data for the button (without circular refs)
         const groupDataForButton = {
@@ -304,6 +354,7 @@ export function renderActivities() {
             activityId: group.activityId,
             bp: group.bp,
             multiplier: group.multiplier,
+            maxPerWeek: group.maxPerWeek,
             kidEntries: group.kidEntries
         };
 
@@ -312,7 +363,7 @@ export function renderActivities() {
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="chore-info">
                         <span class="chore-status-icon">${statusIcon}</span>
-                        <span class="chore-name">${group.name}</span>
+                        <span class="chore-name">${group.name}${weekCapLabel}</span>
                     </div>
                     <div class="chore-actions" style="display: flex; align-items: center; gap: 4px;">`;
 
@@ -320,6 +371,12 @@ export function renderActivities() {
         if (approvedEntries.length > 0) {
             const names = approvedEntries.map(e => e.kid.name).join(', ');
             html += `<span class="approved-text" style="font-size: 11px; margin-right: 4px;">✅ ${names}</span>`;
+        }
+
+        // Show maxed-out kids inline
+        if (maxedEntries.length > 0) {
+            const names = maxedEntries.map(e => e.kid.name).join(', ');
+            html += `<span style="font-size: 11px; color: #999; margin-right: 4px;">🔒 ${names}</span>`;
         }
 
         // Show ✓ / + button if any kids still need to complete

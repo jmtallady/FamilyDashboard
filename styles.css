@@ -851,7 +851,7 @@ body.dark-mode .dark-mode-toggle {
 
 /* Clock */
 body.dark-mode .clock-time {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 body.dark-mode .clock-date {
@@ -860,7 +860,7 @@ body.dark-mode .clock-date {
 
 /* Weather */
 body.dark-mode .weather-temp-large {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 body.dark-mode .weather-humidity {
@@ -881,18 +881,18 @@ body.dark-mode .forecast-hour {
 }
 
 body.dark-mode .forecast-temp {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 /* Calendar */
 body.dark-mode .calendar-header {
-    color: #a78bfa;
+    color: var(--primary-color);
     border-bottom: 2px solid #4a5568;
 }
 
 body.dark-mode .calendar-event {
     background: #1a202c;
-    border-left: 3px solid #a78bfa;
+    border-left: 3px solid var(--primary-color);
 }
 
 body.dark-mode .event-time {
@@ -909,8 +909,8 @@ body.dark-mode .calendar-day {
 }
 
 body.dark-mode .calendar-day.today {
-    background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(192, 132, 252, 0.2));
-    border-left: 3px solid #a78bfa;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 20%, transparent), color-mix(in srgb, var(--accent-color) 20%, transparent));
+    border-left: 3px solid var(--primary-color);
 }
 
 body.dark-mode .day-header {
@@ -918,7 +918,7 @@ body.dark-mode .day-header {
 }
 
 body.dark-mode .day-name {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 body.dark-mode .day-date {
@@ -944,11 +944,11 @@ body.dark-mode .weather-label {
 
 /* Kid Cards */
 body.dark-mode .kid-name {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 body.dark-mode .points-display {
-    color: #c084fc;
+    color: var(--primary-color);
 }
 
 body.dark-mode .points-label {
@@ -960,17 +960,17 @@ body.dark-mode .total-bp-section {
 }
 
 body.dark-mode .total-bp-display {
-    color: #818cf8;
+    color: var(--primary-color);
 }
 
 /* PIN Modal */
 body.dark-mode .pin-content h2 {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 body.dark-mode .pin-display {
     background: #1a202c;
-    border-color: #a78bfa;
+    border-color: var(--primary-color);
     color: #e2e8f0;
 }
 
@@ -1280,11 +1280,11 @@ body.dark-mode .section-header {
 }
 
 body.dark-mode .section-header h2 {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 body.dark-mode .chore-kid-section h3 {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 body.dark-mode .chore-item {
@@ -1331,7 +1331,7 @@ body.dark-mode .reward-card {
 }
 
 body.dark-mode .reward-card:hover {
-    border-color: #a78bfa;
+    border-color: var(--primary-color);
 }
 
 body.dark-mode .reward-name {
@@ -1409,7 +1409,7 @@ body.dark-mode .kid-selector-card.disabled {
 }
 
 body.dark-mode .kid-selector-name {
-    color: #a78bfa;
+    color: var(--primary-color);
 }
 
 /* ==========================================

@@ -9,7 +9,7 @@
 //    - "Config" - Row 1 headers: Key | Value
 //    - "Chores" - Row 1 headers: Kid | Chore ID | Chore Name | BP | Multiplier
 //    - "Rewards" - Row 1 headers: ID | Name | Cost (BP) | Icon | Text Fallback
-//    - "Activities" - Row 1 headers: Kid | Activity ID | Activity Name | BP | Multiplier
+//    - "Activities" - Row 1 headers: Kid | Activity ID | Activity Name | BP | Multiplier | Max Per Week
 //    - "Recent Activity" - Row 1 headers: Timestamp | Type | Kid Name | Item Name | Icon
 //
 // 2. In Google Sheets, go to Extensions > Apps Script
@@ -445,9 +445,9 @@ function getActivities() {
     };
 
     // Skip header row, read activity data
-    // Expected columns: Kid | Activity ID | Activity Name | BP | Multiplier
+    // Expected columns: Kid | Activity ID | Activity Name | BP | Multiplier | Max Per Week
     for (let i = 1; i < data.length; i++) {
-      const [kid, activityId, activityName, bp, multiplier] = data[i];
+      const [kid, activityId, activityName, bp, multiplier, maxPerWeek] = data[i];
 
       if (!activityId || !activityName) continue; // Skip empty rows
 
@@ -456,11 +456,14 @@ function getActivities() {
       // Skip activities with multiplier <= 0 (disabled activities)
       if (!isNaN(rawMultiplier) && rawMultiplier <= 0) continue;
 
+      const rawMaxPerWeek = parseInt(maxPerWeek);
+
       const activity = {
         id: activityId.toString().toLowerCase(),
         name: activityName,
         bp: parseInt(bp) || 1,
-        multiplier: isNaN(rawMultiplier) ? 1 : rawMultiplier
+        multiplier: isNaN(rawMultiplier) ? 1 : rawMultiplier,
+        maxPerWeek: isNaN(rawMaxPerWeek) ? null : rawMaxPerWeek
       };
 
       // If kid column is blank, add to shared list
