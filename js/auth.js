@@ -156,8 +156,12 @@ export function checkPin() {
         if (enteredPin === CONFIG.pin.toString()) {
             pinValid = true;
             setIsUnlocked(true);
+
+            // Capture callback before closing modal (closePinModal resets pinContext)
+            const callback = pinContext.callback;
+
             closePinModal();
-            
+
             // Show message (assumes showMessage is available globally)
             if (typeof showMessage === 'function') {
                 showMessage('Unlocked! You can now edit points.');
@@ -176,6 +180,9 @@ export function checkPin() {
                 }
             }, 120000); // 2 minutes
             setUnlockTimeout(timeout);
+
+            // Execute the callback function if provided (e.g. open parent dashboard)
+            if (callback) callback();
         }
     }
     // Check if it's a kid PIN request

@@ -16,6 +16,7 @@ import * as HouseRules from './house-rules.js';
 import * as RecentActivity from './recent-activity.js';
 import * as Automation from './automation.js';
 import { fetchChores, fetchRewards, fetchActivities, fetchDailyStatuses } from './api.js';
+import * as ParentDash from './parent-dashboard.js';
 
 /**
  * Load today's chore/activity statuses from Google Sheets into localStorage
@@ -87,6 +88,7 @@ async function initialize() {
     Chores.renderChores();
     Rewards.renderRewards();
     Activities.renderActivities();
+    ParentDash.updateParentBadge();
     await RecentActivity.renderRecentActivity(); // Load and display from Points Log
 
     // Parse emojis with Twemoji (converts emoji to images)
@@ -106,6 +108,12 @@ window.changeColorScheme = Theme.changeColorScheme;
 // House Rules functions
 window.showHouseRules = HouseRules.showHouseRules;
 window.closeHouseRules = HouseRules.closeHouseRules;
+
+// Parent Dashboard functions
+window.openParentDashboard = ParentDash.openParentDashboard;
+window.closeParentDashboard = ParentDash.closeParentDashboard;
+window.parentDashApprove = ParentDash.parentDashApprove;
+window.parentDashReject = ParentDash.parentDashReject;
 
 // Points functions
 window.adjustDailyBP = Points.adjustDailyBP;

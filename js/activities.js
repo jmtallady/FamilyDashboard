@@ -7,6 +7,7 @@ import { adjustDailyBP } from './points.js';
 import { showPinModal } from './auth.js';
 import { getKidByID, showMessage } from './utils.js';
 import { savePointsToSheets, saveDailyStatusToSheets } from './api.js';
+import { addPendingApproval, removePendingApproval } from './parent-dashboard.js';
 import { renderRecentActivity } from './recent-activity.js';
 import { closeKidSelector } from './rewards.js';
 
@@ -240,9 +241,25 @@ export function markActivityCompleteForKid(kidId, activityId, maxPerWeek = null)
 
     // Mark as pending
     setActivityStatus(kidId, activityId, 'pending');
-    renderActivities();
 
+    // Add to persistent pending approvals list (survives midnight)
     const kid = getKidByID(kidId);
+    const ACTIVITIES = getActivities();
+    const activity = ACTIVITIES?.shared?.find(a => a.id === activityId)
+        ?? ACTIVITIES?.individual?.[kidId]?.find(a => a.id === activityId);
+    if (kid && activity) {
+        addPendingApproval({
+            type: 'activity',
+            kidId,
+            kidName: kid.name,
+            itemId: activityId,
+            itemName: activity.name,
+            bp: activity.bp,
+            multiplier: activity.multiplier || 1
+        });
+    }
+
+    renderActivities();
     showMessage(`${kid.name} marked activity complete! Waiting for parent approval.`);
 }
 
@@ -259,9 +276,10 @@ export async function approveActivity(kidId, activityId, activityName, bp, multi
     const kid = getKidByID(kidId);
     if (!kid) return;
 
-    // Mark as approved and increment weekly count
+    // Mark as approved, increment weekly count, remove from pending list
     setActivityStatus(kidId, activityId, 'approved');
     incrementWeeklyApprovalCount(kidId, activityId);
+    removePendingApproval(kidId, activityId, 'activity');
 
     // Calculate total BP with multiplier
     const totalBP = bp * multiplier;
@@ -299,8 +317,9 @@ export function rejectActivity(kidId, activityId, activityName = 'activity') {
         return;
     }
 
-    // Reset to incomplete
+    // Reset to incomplete and remove from pending list
     setActivityStatus(kidId, activityId, 'incomplete');
+    removePendingApproval(kidId, activityId, 'activity');
     renderActivities();
 
     const kid = getKidByID(kidId);
