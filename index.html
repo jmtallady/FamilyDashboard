@@ -35,6 +35,10 @@
                 <h1>Family Dashboard</h1>
                 <div class="color-scheme-selector">
                     <button class="house-rules-btn" onclick="showHouseRules()" title="View House Rules">📋</button>
+                    <button class="house-rules-btn parent-dash-btn" onclick="openParentDashboard()" title="Parent Dashboard">
+                        👨‍👩‍👧
+                        <span class="pending-badge" id="parentDashBadge" style="display:none;">0</span>
+                    </button>
                     <label for="colorScheme">🎨</label>
                     <select id="colorScheme" onchange="changeColorScheme(this.value)">
                         <option value="purple">Purple</option>
@@ -156,6 +160,19 @@
                     <!-- Content will be dynamically generated -->
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Parent Dashboard Slide-in Panel -->
+    <div class="parent-dash-overlay" id="parentDashOverlay" onclick="closeParentDashboard()"></div>
+    <div class="parent-dash-panel" id="parentDashPanel">
+        <div class="parent-dash-header">
+            <h2>👨‍👩‍👧 Parent Dashboard</h2>
+            <button class="modal-close-btn" onclick="closeParentDashboard()" title="Close">✕</button>
+        </div>
+        <div class="parent-dash-section-title">Pending Approvals</div>
+        <div id="parentDashContent">
+            <!-- Dynamically rendered -->
         </div>
     </div>
 

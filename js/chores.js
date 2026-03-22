@@ -7,6 +7,7 @@ import { adjustDailyBP } from './points.js';
 import { showPinModal } from './auth.js';
 import { getKidByID, showMessage } from './utils.js';
 import { savePointsToSheets, setChoreMultiplier, fetchChores, saveDailyStatusToSheets } from './api.js';
+import { addPendingApproval, removePendingApproval } from './parent-dashboard.js';
 import { renderRecentActivity } from './recent-activity.js';
 import { closeKidSelector } from './rewards.js';
 
@@ -41,8 +42,9 @@ export async function approveChore(kidId, choreId, choreName, bp, multiplier = 1
     const kid = getKidByID(kidId);
     if (!kid) return;
 
-    // Mark as approved
+    // Mark as approved and remove from pending approvals list
     setChoreStatus(kidId, choreId, 'approved');
+    removePendingApproval(kidId, choreId, 'chore');
 
     // Calculate total BP with multiplier
     const totalBP = bp * multiplier;
@@ -93,8 +95,9 @@ export function rejectChore(kidId, choreId, choreName = 'chore') {
     const kid = getKidByID(kidId);
     if (!kid) return;
 
-    // Reset to incomplete
+    // Reset to incomplete and remove from pending approvals list
     setChoreStatus(kidId, choreId, 'incomplete');
+    removePendingApproval(kidId, choreId, 'chore');
     renderChores();
     showMessage(`❌ Rejected chore for ${kid.name}`);
 }
@@ -279,9 +282,25 @@ export function markChoreCompleteForKid(kidId, choreId) {
 
     // Mark as pending
     setChoreStatus(kidId, choreId, 'pending');
-    renderChores();
 
+    // Add to persistent pending approvals list (survives midnight)
     const kid = getKidByID(kidId);
+    const CHORES = getChores();
+    const chore = CHORES?.shared?.find(c => c.id === choreId)
+        ?? CHORES?.individual?.[kidId]?.find(c => c.id === choreId);
+    if (kid && chore) {
+        addPendingApproval({
+            type: 'chore',
+            kidId,
+            kidName: kid.name,
+            itemId: choreId,
+            itemName: chore.name,
+            bp: chore.bp,
+            multiplier: chore.multiplier || 1
+        });
+    }
+
+    renderChores();
     showMessage(`${kid.name} marked chore complete! Waiting for parent approval.`);
 }
 
