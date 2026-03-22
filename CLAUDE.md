@@ -11,14 +11,11 @@ A family chore/activity tracking dashboard displayed on a shared screen (TV/tabl
 
 ## Git Workflow Rules
 1. **Always pull latest from `main` before starting any work**
+2. **Always create a branch — no exceptions. Main is protected.**
    ```bash
    git pull origin main
-   ```
-2. **Create a branch for anything other than minor/trivial changes**
-   ```bash
    git checkout -b descriptive-branch-name
    ```
-   Minor = single-line tweaks, typos, small CSS fixes. Everything else gets a branch.
 
 ## File Structure
 ```
