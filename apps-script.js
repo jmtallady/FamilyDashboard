@@ -180,7 +180,8 @@ function getRecentPointsLog() {
       if (!type) continue;
 
       // Only include certain types in the activity feed
-      const validTypes = ['chore-approved', 'activity-approved', 'reward-purchase', 'end-of-day-auto', 'daily-adjust'];
+      // undo-* types are returned so the frontend can hide the original entry
+      const validTypes = ['chore-approved', 'activity-approved', 'reward-purchase', 'end-of-day-auto', 'daily-adjust', 'undo-chore-approved', 'undo-activity-approved', 'undo-reward-purchase'];
       if (!validTypes.includes(type)) continue;
 
       entries.push({

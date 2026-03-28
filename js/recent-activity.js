@@ -31,11 +31,33 @@ function parseBPDelta(type, note) {
 export async function renderRecentActivity() {
     const container = document.getElementById('recentActivityContainer');
 
-    const entries = await fetchRecentPointsLog();
+    const allEntries = await fetchRecentPointsLog();
 
-    console.log('Recent activity entries:', entries);
+    console.log('Recent activity entries:', allEntries);
 
-    if (!entries || entries.length === 0) {
+    if (!allEntries || allEntries.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px; font-size: 11px;">No recent activity</div>';
+        return;
+    }
+
+    // Build set of original entry dates that have been undone.
+    // Undo entries store the original date in the note: "Undid X at <ISO date> ..."
+    const undoneOriginalDates = new Set(
+        allEntries
+            .filter(e => e.type.startsWith('undo-'))
+            .map(e => {
+                const m = e.note?.match(/Undid .+ at (.+?) \(/);
+                return m ? m[1] : null;
+            })
+            .filter(Boolean)
+    );
+
+    // Only display entries that are not undo records and not already undone
+    const entries = allEntries.filter(
+        e => !e.type.startsWith('undo-') && !undoneOriginalDates.has(e.date)
+    );
+
+    if (entries.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px; font-size: 11px;">No recent activity</div>';
         return;
     }
@@ -95,11 +117,11 @@ export async function renderRecentActivity() {
             ? entryDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
             : entryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-        // Undo button — only for chore-approved, activity-approved, reward-purchase
+        // Undo button — only for undoable types, entry.date used as the correlation key
         const bpDelta = parseBPDelta(entry.type, entry.note);
         const safeKidName = kidName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         const undoBtn = bpDelta !== null
-            ? `<button class="activity-undo-btn" title="Undo" onclick="undoActivity('${safeKidName}', ${bpDelta}, '${entry.type}')">↩</button>`
+            ? `<button class="activity-undo-btn" title="Undo" onclick="undoActivity('${safeKidName}', ${bpDelta}, '${entry.type}', '${entry.date}')">↩</button>`
             : '';
 
         html += `
@@ -119,12 +141,12 @@ export async function renderRecentActivity() {
 
 // ── Undo ──────────────────────────────────────────────────────────────────────
 
-export async function undoActivity(kidName, bpDelta, type) {
+export async function undoActivity(kidName, bpDelta, type, originalDate) {
     const CONFIG = getConfig();
 
     // PIN gate
     if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
-        showPinModal('parent', null, null, () => undoActivity(kidName, bpDelta, type));
+        showPinModal('parent', null, null, () => undoActivity(kidName, bpDelta, type, originalDate));
         return;
     }
 
@@ -146,11 +168,11 @@ export async function undoActivity(kidName, bpDelta, type) {
     totalBPElement.textContent = newTotalBP;
     localStorage.setItem(`${kid.id}-total-bp`, newTotalBP.toString());
 
-    // Log the reversal to Sheets
+    // Log the reversal — include originalDate so the feed can correlate and hide the original
     if (getUseGoogleSheets() && SHEETS_API_URL) {
         const dailyBPElement = document.getElementById(`${kid.id}-daily-bp`);
         const currentDailyBP = parseInt(dailyBPElement.textContent);
-        const note = `Undid ${type} (${bpDelta > 0 ? '-' : '+'}${Math.abs(bpDelta)} BP)`;
+        const note = `Undid ${type} at ${originalDate} (${bpDelta > 0 ? '-' : '+'}${Math.abs(bpDelta)} BP)`;
         await savePointsToSheets(kid.id, currentDailyBP, newTotalBP, `undo-${type}`, note);
     }
 
