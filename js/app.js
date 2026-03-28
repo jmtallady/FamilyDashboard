@@ -150,6 +150,9 @@ window.showActivityKidSelectorFromButton = Activities.showActivityKidSelectorFro
 window.approveActivityFromButton = Activities.approveActivityFromButton;
 window.rejectActivityFromButton = Activities.rejectActivityFromButton;
 
+// Recent Activity functions
+window.undoActivity = RecentActivity.undoActivity;
+
 // Rewards functions
 window.showKidSelector = Rewards.showKidSelector;
 window.closeKidSelector = Rewards.closeKidSelector;

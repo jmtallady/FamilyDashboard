@@ -1451,6 +1451,44 @@ body.dark-mode .reset-btn:hover {
     font-size: 18px;
 }
 
+/* Undo button on recent activity rows */
+.activity-undo-btn {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    font-size: 11px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background: white;
+    color: #868e96;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.activity-undo-btn:hover {
+    background: #fff3bf;
+    border-color: #f59f00;
+    color: #e67700;
+    opacity: 1 !important;
+}
+
+div:has(> .activity-undo-btn):hover .activity-undo-btn {
+    opacity: 1;
+}
+
+body.dark-mode .activity-undo-btn {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #718096;
+}
+
+body.dark-mode .activity-undo-btn:hover {
+    background: #3d2c00;
+    border-color: #f59f00;
+    color: #f59f00;
+}
+
 .complete-btn {
     background: #5c7cfa;
     color: white;
