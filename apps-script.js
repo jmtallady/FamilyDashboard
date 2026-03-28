@@ -124,8 +124,8 @@ function getCurrentPoints() {
 
       if (kid && !latestPoints[kid.toLowerCase()]) {
         latestPoints[kid.toLowerCase()] = {
-          dailyBP: dailyBP || 5,
-          totalBP: totalBP || 0,
+          dailyBP: (dailyBP !== '' && dailyBP !== null) ? Number(dailyBP) : 5,
+          totalBP: (totalBP !== '' && totalBP !== null) ? Number(totalBP) : 0,
           date: date ? new Date(date).toLocaleDateString() : null,
           type: type || '',
           note: note || ''
@@ -187,8 +187,8 @@ function getRecentPointsLog() {
       entries.push({
         date: date ? new Date(date).toISOString() : null,
         kid: kid || '',
-        dailyBP: dailyBP || 0,
-        totalBP: totalBP || 0,
+        dailyBP: (dailyBP !== '' && dailyBP !== null) ? Number(dailyBP) : 0,
+        totalBP: (totalBP !== '' && totalBP !== null) ? Number(totalBP) : 0,
         type: type || '',
         note: note || ''
       });
@@ -864,8 +864,8 @@ function autoSaveAllPoints() {
 
         // Get current points or use defaults
         const current = currentPoints[kidId] || {
-          dailyBP: kid.defaultDailyBP || 5,
-          totalBP: kid.defaultTotalBP || 0
+          dailyBP: kid.defaultDailyBP ?? 5,
+          totalBP: kid.defaultTotalBP ?? 0
         };
 
         // Log current state
