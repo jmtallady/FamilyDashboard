@@ -8,12 +8,13 @@ import { getChores, setChores } from './state.js';
 import { getConfig } from './config.js';
 import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
-import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier } from './api.js';
+import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores } from './api.js';
 
 const STORAGE_KEY = 'pending-approvals';
 
 // Module-level state
 let choresSectionOpen = false;
+let allChoresCache = null; // All chores including disabled (multiplier=0)
 
 // ── Pending approvals list ────────────────────────────────────────────────────
 
@@ -169,8 +170,12 @@ export function parentDashReject(type, kidId, itemId, itemName) {
 
 // ── Chores Admin Section ──────────────────────────────────────────────────────
 
-export function toggleChoresAdmin() {
+export async function toggleChoresAdmin() {
     choresSectionOpen = !choresSectionOpen;
+    if (choresSectionOpen) {
+        renderParentDashboard(); // show loading state immediately
+        allChoresCache = await fetchAllChores();
+    }
     renderParentDashboard();
 }
 
@@ -192,37 +197,35 @@ function renderChoresSectionHtml() {
         return html;
     }
 
-    const CHORES = getChores();
-
-    if (!CHORES) {
-        html += `<div style="padding:12px;color:#999;font-size:12px;">Chores not loaded. Refresh the page.</div></div>`;
+    if (!allChoresCache) {
+        html += `<div style="padding:12px;color:#999;font-size:12px;">Loading chores…</div></div>`;
         return html;
     }
 
-    // Kid options for dropdown
+    const CHORES = allChoresCache;
     const kidOptions = kids.map(k => `<option value="${k.id}">${k.name}</option>`).join('');
 
     html += `<div class="chores-admin-body">`;
 
+    let hasAny = false;
+
     // Shared chores
     if (CHORES.shared && CHORES.shared.length > 0) {
+        hasAny = true;
         html += `<div class="chores-admin-group-label">Shared</div>`;
-        CHORES.shared.forEach(chore => {
-            html += choreAdminRow(chore, '');
-        });
+        CHORES.shared.forEach(chore => { html += choreAdminRow(chore, ''); });
     }
 
     // Individual chores grouped by kid
     Object.entries(CHORES.individual || {}).forEach(([kidId, chores]) => {
         if (!chores || !chores.length) return;
+        hasAny = true;
         const kid = kids.find(k => k.id.toLowerCase() === kidId.toLowerCase()) || { name: kidId };
         html += `<div class="chores-admin-group-label">${kid.name}</div>`;
-        chores.forEach(chore => {
-            html += choreAdminRow(chore, kidId);
-        });
+        chores.forEach(chore => { html += choreAdminRow(chore, kidId); });
     });
 
-    if ((!CHORES.shared || CHORES.shared.length === 0) && Object.values(CHORES.individual || {}).every(c => !c.length)) {
+    if (!hasAny) {
         html += `<div style="color:#999;font-size:12px;padding:8px 0;">No chores yet.</div>`;
     }
 
@@ -235,7 +238,6 @@ function renderChoresSectionHtml() {
             </select>
             <input id="newChoreName" type="text" placeholder="Chore name" class="chores-admin-input chores-admin-input-grow">
             <input id="newChoreBP" type="number" placeholder="BP" value="1" min="1" class="chores-admin-input chores-admin-input-sm">
-            <input id="newChoreMultiplier" type="number" placeholder="×" value="1" min="1" class="chores-admin-input chores-admin-input-sm">
             <button class="chore-btn approve-btn" onclick="adminAddChore()" title="Add chore">+</button>
         </div>
     </div></div>`;
@@ -245,20 +247,60 @@ function renderChoresSectionHtml() {
 
 function choreAdminRow(chore, kidId) {
     const safeName = chore.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const isDisabled = chore.multiplier === 0;
+    const nameHtml = isDisabled
+        ? `<span class="chore-name chores-admin-disabled-name">${chore.name}</span>`
+        : `<span class="chore-name">${chore.name}</span>`;
+
     return `
-        <div class="chores-admin-row" id="chore-admin-${kidId}-${chore.id}">
+        <div class="chores-admin-row${isDisabled ? ' chores-admin-row-disabled' : ''}" id="chore-admin-${kidId}-${chore.id}">
             <div class="chores-admin-row-info">
-                <span class="chore-name">${chore.name}</span>
-                <span class="chores-admin-meta">${chore.bp} BP ×${chore.multiplier}</span>
+                ${nameHtml}
+                <span class="chores-admin-meta">${chore.bp} BP</span>
             </div>
             <div class="chores-admin-row-actions">
-                <button class="chore-btn" title="Edit" onclick="adminEditChore('${kidId}', '${chore.id}', '${safeName}', ${chore.bp})">✏️</button>
-                <button class="chore-btn reject-btn" title="Delete" onclick="adminDeleteChore('${kidId}', '${chore.id}', '${chore.name.replace(/'/g, "\\'")}')">🗑️</button>
+                <label class="chores-admin-mult-label">×</label>
+                <input type="number" value="${chore.multiplier}" min="0" max="99"
+                    class="chores-admin-input chores-admin-input-sm"
+                    title="Multiplier — set to 0 to hide from dashboard"
+                    onchange="adminSetMultiplier('${kidId}', '${chore.id}', this.value)">
+                <button class="chore-btn" title="Edit name/BP" onclick="adminEditChore('${kidId}', '${chore.id}', '${safeName}', ${chore.bp})">✏️</button>
             </div>
         </div>`;
 }
 
 // ── Chores Admin Actions ──────────────────────────────────────────────────────
+
+export function adminSetMultiplier(kidId, choreId, rawValue) {
+    const multiplier = parseInt(rawValue);
+    if (isNaN(multiplier) || multiplier < 0) return;
+
+    // Update allChoresCache
+    const cacheList = kidId === ''
+        ? (allChoresCache?.shared || [])
+        : (allChoresCache?.individual?.[kidId.toLowerCase()] || []);
+    const cachedChore = cacheList.find(c => c.id === choreId);
+    if (cachedChore) cachedChore.multiplier = multiplier;
+
+    // Rebuild active CHORES state (multiplier > 0 only) for main dashboard
+    if (allChoresCache) {
+        const active = {
+            shared: (allChoresCache.shared || []).filter(c => c.multiplier > 0),
+            individual: {}
+        };
+        Object.entries(allChoresCache.individual || {}).forEach(([kid, list]) => {
+            const enabled = list.filter(c => c.multiplier > 0);
+            if (enabled.length) active.individual[kid] = enabled;
+        });
+        setChores(active);
+    }
+
+    // Fire-and-forget to Sheets
+    setChoreMultiplier(choreId, kidId, multiplier);
+
+    // Re-render to update disabled styling
+    renderParentDashboard();
+}
 
 export function adminEditChore(kidId, choreId, currentName, currentBP) {
     const rowEl = document.getElementById(`chore-admin-${kidId}-${choreId}`);
@@ -283,17 +325,18 @@ export async function adminSaveChoreEdit(kidId, choreId) {
     const newBP = parseInt(bpEl.value) || 1;
     if (!newName) { showMessage('Chore name cannot be empty'); return; }
 
-    // Update local state
-    const CHORES = getChores();
+    // Update allChoresCache and active CHORES state
+    const updateChore = (list) => {
+        const chore = (list || []).find(c => c.id === choreId);
+        if (chore) { chore.name = newName; chore.bp = newBP; }
+    };
     if (kidId === '') {
-        const chore = (CHORES.shared || []).find(c => c.id === choreId);
-        if (chore) { chore.name = newName; chore.bp = newBP; }
+        updateChore(allChoresCache?.shared);
+        updateChore(getChores()?.shared);
     } else {
-        const list = (CHORES.individual || {})[kidId.toLowerCase()] || [];
-        const chore = list.find(c => c.id === choreId);
-        if (chore) { chore.name = newName; chore.bp = newBP; }
+        updateChore(allChoresCache?.individual?.[kidId.toLowerCase()]);
+        updateChore(getChores()?.individual?.[kidId.toLowerCase()]);
     }
-    setChores(CHORES);
 
     // Fire-and-forget to Sheets
     updateChoreInSheets(choreId, kidId, newName, newBP);
@@ -302,52 +345,37 @@ export async function adminSaveChoreEdit(kidId, choreId) {
     renderParentDashboard();
 }
 
-export async function adminDeleteChore(kidId, choreId, choreName) {
-    if (!confirm(`Delete "${choreName}"? This will hide it from the dashboard.`)) return;
-
-    // Remove from local state
-    const CHORES = getChores();
-    if (kidId === '') {
-        CHORES.shared = (CHORES.shared || []).filter(c => c.id !== choreId);
-    } else {
-        const list = (CHORES.individual || {})[kidId.toLowerCase()];
-        if (list) CHORES.individual[kidId.toLowerCase()] = list.filter(c => c.id !== choreId);
-    }
-    setChores(CHORES);
-
-    // Set multiplier to 0 in Sheets (convention for "deleted")
-    setChoreMultiplier(choreId, kidId, 0);
-
-    showMessage(`Chore deleted: ${choreName}`);
-    renderParentDashboard();
-}
-
 export async function adminAddChore() {
     const kidId = document.getElementById('newChoreKid')?.value || '';
     const choreName = document.getElementById('newChoreName')?.value.trim() || '';
     const bp = parseInt(document.getElementById('newChoreBP')?.value) || 1;
-    const multiplier = parseInt(document.getElementById('newChoreMultiplier')?.value) || 1;
 
     if (!choreName) { showMessage('Chore name is required'); return; }
 
     // Generate a unique chore ID from the name + timestamp
     const choreId = choreName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Date.now().toString(36);
 
-    const newChore = { id: choreId, name: choreName, bp, multiplier };
+    const newChore = { id: choreId, name: choreName, bp, multiplier: 1 };
 
-    // Update local state
+    // Update active CHORES state and allChoresCache
     const CHORES = getChores() || { shared: [], individual: {} };
     if (kidId === '') {
         CHORES.shared = [...(CHORES.shared || []), newChore];
+        if (allChoresCache) allChoresCache.shared = [...(allChoresCache.shared || []), { ...newChore }];
     } else {
         if (!CHORES.individual) CHORES.individual = {};
         if (!CHORES.individual[kidId.toLowerCase()]) CHORES.individual[kidId.toLowerCase()] = [];
         CHORES.individual[kidId.toLowerCase()].push(newChore);
+        if (allChoresCache) {
+            if (!allChoresCache.individual) allChoresCache.individual = {};
+            if (!allChoresCache.individual[kidId.toLowerCase()]) allChoresCache.individual[kidId.toLowerCase()] = [];
+            allChoresCache.individual[kidId.toLowerCase()].push({ ...newChore });
+        }
     }
     setChores(CHORES);
 
     // Fire-and-forget to Sheets
-    addChoreToSheets(kidId, choreId, choreName, bp, multiplier);
+    addChoreToSheets(kidId, choreId, choreName, bp, 1);
 
     showMessage(`Chore added: ${choreName}`);
     renderParentDashboard();

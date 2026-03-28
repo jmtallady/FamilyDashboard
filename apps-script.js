@@ -49,7 +49,7 @@ function doGet(e) {
   } else if (action === 'getConfig') {
     return getConfig();
   } else if (action === 'getChores') {
-    return getChores();
+    return getChores(e.parameter.includeDisabled === 'true');
   } else if (action === 'getRewards') {
     return getRewards();
   } else if (action === 'getActivities') {
@@ -330,7 +330,8 @@ function getCalendarEvents(daysParam) {
 
 // ====== GET CHORES ======
 // Returns chores configuration from the Chores sheet
-function getChores() {
+// Pass includeDisabled=true to include rows with multiplier <= 0 (for admin panel)
+function getChores(includeDisabled) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chores');
 
@@ -353,8 +354,8 @@ function getChores() {
 
       const rawMultiplier = parseInt(multiplier);
 
-      // Skip chores with multiplier <= 0 (disabled chores)
-      if (!isNaN(rawMultiplier) && rawMultiplier <= 0) continue;
+      // Skip chores with multiplier <= 0 (disabled chores) unless admin view
+      if (!includeDisabled && !isNaN(rawMultiplier) && rawMultiplier <= 0) continue;
 
       const chore = {
         id: choreId.toString().toLowerCase(),

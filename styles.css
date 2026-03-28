@@ -638,6 +638,21 @@ body.dark-mode .reward-guidelines {
     background: #f8f9fa;
 }
 
+.chores-admin-row-disabled {
+    opacity: 0.5;
+}
+
+.chores-admin-disabled-name {
+    text-decoration: line-through;
+    color: #aaa !important;
+}
+
+.chores-admin-mult-label {
+    font-size: 12px;
+    color: #868e96;
+    flex-shrink: 0;
+}
+
 .chores-admin-row-info {
     display: flex;
     flex-direction: column;

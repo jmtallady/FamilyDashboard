@@ -163,6 +163,23 @@ export async function fetchChores() {
 }
 
 /**
+ * Fetch all chores including disabled (multiplier=0) — for admin panel
+ */
+export async function fetchAllChores() {
+    try {
+        const url = `${SHEETS_API_URL}?action=getChores&includeDisabled=true&t=${Date.now()}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data.success && data.chores) return data.chores;
+        return null;
+    } catch (error) {
+        console.error('Error fetching all chores:', error);
+        return null;
+    }
+}
+
+/**
  * Fetch rewards from Google Sheets
  */
 export async function fetchRewards() {
