@@ -102,28 +102,6 @@ export function rejectChore(kidId, choreId, choreName = 'chore') {
     showMessage(`❌ Rejected chore for ${kid.name}`);
 }
 
-// Reset all chores to incomplete
-export function resetAllChores() {
-    const CONFIG = getConfig();
-    // Check if PIN is required and user is not unlocked
-    if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
-        showPinModal();
-        return;
-    }
-
-    const today = new Date().toDateString();
-    const keys = Object.keys(localStorage);
-
-    // Remove all chore status keys for today
-    keys.forEach(key => {
-        if (key.startsWith('chore-') && key.endsWith(today)) {
-            localStorage.removeItem(key);
-        }
-    });
-
-    renderChores();
-    showMessage('🔄 All chores reset!');
-}
 
 // Render chores section (compact view)
 export function renderChores() {

@@ -18,7 +18,6 @@ import {
 export async function initializePoints() {
     const CONFIG = getConfig();
     const today = new Date().toDateString();
-    const lastReset = localStorage.getItem('lastReset');
 
     // Try to fetch from Google Sheets first
     if (SHEETS_API_URL) {
