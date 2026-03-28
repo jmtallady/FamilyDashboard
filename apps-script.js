@@ -78,6 +78,10 @@ function doPost(e) {
       return updateChoreMultiplier(params);
     } else if (action === 'setDailyStatus') {
       return setDailyStatus(params);
+    } else if (action === 'addChore') {
+      return addChore(params);
+    } else if (action === 'updateChore') {
+      return updateChore(params);
     }
 
     return jsonResponse({ error: 'Invalid action' }, 400);
@@ -397,18 +401,23 @@ function getRewards() {
     const rewards = [];
 
     // Skip header row, read reward data
-    // Expected columns: ID | Name | Cost | Icon | Text Fallback
+    // Expected columns: ID | Name | Cost | Icon | Text Fallback | Limit Type | Limit Count | Guidelines
     for (let i = 1; i < data.length; i++) {
-      const [id, name, cost, icon, textFallback] = data[i];
+      const [id, name, cost, icon, textFallback, limitType, limitCount, guidelines] = data[i];
 
       if (!id || !name) continue; // Skip empty rows
+
+      const rawLimitCount = parseInt(limitCount);
 
       rewards.push({
         id: id.toString().toLowerCase(),
         name: name,
         cost: parseInt(cost) || 0,
         icon: icon || '🎁',
-        text: textFallback || name.toUpperCase()
+        text: textFallback || name.toUpperCase(),
+        limitType: limitType ? limitType.toString().trim().toLowerCase() : null,
+        limitCount: isNaN(rawLimitCount) ? null : rawLimitCount,
+        guidelines: guidelines ? guidelines.toString().trim() : null
       });
     }
 
@@ -559,6 +568,58 @@ function getHouseRules() {
   } catch (error) {
     Logger.log('Error loading house rules: ' + error);
     return jsonResponse({ success: false, error: error.toString() });
+  }
+}
+
+// ====== ADD CHORE ======
+// Appends a new row to the Chores sheet
+function addChore(params) {
+  try {
+    const { kidId, choreId, choreName, bp, multiplier } = params;
+    if (!choreId || !choreName) return jsonResponse({ error: 'Missing choreId or choreName' }, 400);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chores');
+    if (!sheet) return jsonResponse({ error: 'Chores sheet not found' }, 404);
+
+    const newRow = sheet.getLastRow() + 1;
+    sheet.getRange(newRow, 1, 1, 5).setValues([[
+      kidId || '',
+      choreId.toString().toLowerCase(),
+      choreName,
+      parseInt(bp) || 1,
+      parseInt(multiplier) || 1
+    ]]);
+
+    return jsonResponse({ success: true, row: newRow });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== UPDATE CHORE ======
+// Updates name and BP for an existing chore row
+function updateChore(params) {
+  try {
+    const { choreId, kidId, choreName, bp } = params;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chores');
+    if (!sheet) return jsonResponse({ error: 'Chores sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rowKid = data[i][0] ? data[i][0].toString().toLowerCase().trim() : '';
+      const rowChoreId = data[i][1] ? data[i][1].toString().toLowerCase().trim() : '';
+      const choreMatch = rowChoreId === choreId.toString().toLowerCase().trim();
+      const kidMatch = (!kidId || kidId === '') ? rowKid === '' : rowKid === kidId.toString().toLowerCase().trim();
+
+      if (choreMatch && kidMatch) {
+        if (choreName) sheet.getRange(i + 1, 3).setValue(choreName);
+        if (bp !== undefined) sheet.getRange(i + 1, 4).setValue(parseInt(bp) || 1);
+        return jsonResponse({ success: true, row: i + 1 });
+      }
+    }
+    return jsonResponse({ error: 'Chore not found' }, 404);
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
   }
 }
 

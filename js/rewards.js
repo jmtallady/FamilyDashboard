@@ -13,11 +13,45 @@ import { renderRecentActivity } from './recent-activity.js';
 // Module-level variables
 let selectedReward = null;
 
+// ── Reward limit helpers ──────────────────────────────────────────────────────
+
+function getPeriodKey(limitType) {
+    const now = new Date();
+    if (limitType === 'daily') return now.toDateString();
+    if (limitType === 'monthly') return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (limitType === 'weekly') {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay()); // Sunday
+        return weekStart.toDateString();
+    }
+    return null;
+}
+
+function getRewardUseCount(kidId, rewardId, limitType) {
+    const periodKey = getPeriodKey(limitType);
+    if (!periodKey) return 0;
+    return parseInt(localStorage.getItem(`reward-use-${kidId}-${rewardId}-${limitType}-${periodKey}`) || '0');
+}
+
+function incrementRewardUse(kidId, rewardId, limitType) {
+    const periodKey = getPeriodKey(limitType);
+    if (!periodKey) return;
+    const key = `reward-use-${kidId}-${rewardId}-${limitType}-${periodKey}`;
+    localStorage.setItem(key, (getRewardUseCount(kidId, rewardId, limitType) + 1).toString());
+}
+
+// ── Kid selector ──────────────────────────────────────────────────────────────
+
 export function showKidSelector(rewardId, rewardName, cost, icon) {
     const CONFIG = getConfig();
-    selectedReward = { id: rewardId, name: rewardName, cost, icon };
+    const REWARDS_LIST = getRewards();
+    const rewardData = REWARDS_LIST ? REWARDS_LIST.find(r => r.id === rewardId) : null;
+    selectedReward = {
+        id: rewardId, name: rewardName, cost, icon,
+        limitType: rewardData?.limitType || null,
+        limitCount: rewardData?.limitCount || null
+    };
 
-    // Generate kid selection buttons
     let html = '<h2>Who is purchasing?</h2>';
     html += '<div class="kid-selector-grid">';
 
@@ -26,13 +60,22 @@ export function showKidSelector(rewardId, rewardName, cost, icon) {
             const totalBPElement = document.getElementById(`${kid.id}-total-bp`);
             const currentTotalBP = parseInt(totalBPElement.textContent);
             const canAfford = currentTotalBP >= cost;
-            const disabledClass = canAfford ? '' : 'disabled';
+
+            let hitLimit = false;
+            if (rewardData?.limitType && rewardData?.limitCount) {
+                hitLimit = getRewardUseCount(kid.id, rewardId, rewardData.limitType) >= rewardData.limitCount;
+            }
+
+            const canPurchase = canAfford && !hitLimit;
+            const disabledClass = canPurchase ? '' : 'disabled';
+            const statusText = hitLimit ? '🔒 Limit reached' : canAfford ? '✓' : 'Not enough';
+            const clickHandler = canPurchase ? `confirmPurchase('${kid.id}')` : '';
 
             html += `
-                <div class="kid-selector-card ${disabledClass}" onclick="confirmPurchase('${kid.id}')">
+                <div class="kid-selector-card ${disabledClass}" ${canPurchase ? `onclick="${clickHandler}"` : ''}>
                     <div class="kid-selector-name">${kid.name}</div>
                     <div class="kid-selector-pc">${currentTotalBP} BP</div>
-                    ${canAfford ? '<div class="kid-selector-status">✓</div>' : '<div class="kid-selector-status">Not enough</div>'}
+                    <div class="kid-selector-status">${statusText}</div>
                 </div>
             `;
         }
@@ -96,10 +139,24 @@ export async function performPurchase(kidId, reward) {
         return;
     }
 
+    // Check reward limit
+    if (reward.limitType && reward.limitCount) {
+        const useCount = getRewardUseCount(kidId, reward.id, reward.limitType);
+        if (useCount >= reward.limitCount) {
+            showMessage(`${kid.name} has reached the ${reward.limitType} limit for ${reward.name}!`);
+            return;
+        }
+    }
+
     // Deduct from Total BP
     const newTotalBP = currentTotalBP - reward.cost;
     totalBPElement.textContent = newTotalBP;
     localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
+
+    // Increment limit counter
+    if (reward.limitType && reward.limitCount) {
+        incrementRewardUse(kidId, reward.id, reward.limitType);
+    }
 
     // Save to Google Sheets if configured
     if (getUseGoogleSheets() && SHEETS_API_URL) {
@@ -124,14 +181,24 @@ export function renderRewards() {
     let html = '<div class="chore-list">';
 
     REWARDS.forEach(reward => {
+        const limitBadge = reward.limitType && reward.limitCount
+            ? `<span class="reward-limit-badge">${reward.limitCount}×/${reward.limitType}</span>`
+            : '';
+        const guidelinesHtml = reward.guidelines
+            ? `<div class="reward-guidelines">${reward.guidelines}</div>`
+            : '';
+
         html += `
             <div class="chore-item">
                 <div class="chore-info">
-                    <span class="chore-name">${reward.name}</span>
-                    <span class="chore-bp" style="color: #f59f00;">${reward.cost} BP</span>
+                    <div class="reward-details">
+                        <div><span class="chore-name">${reward.name}</span>${limitBadge}</div>
+                        <div><span class="chore-bp" style="color: #f59f00;">${reward.cost} BP</span></div>
+                        ${guidelinesHtml}
+                    </div>
                 </div>
                 <div class="chore-actions">
-                    <button class="chore-btn complete-btn" onclick="showKidSelector('${reward.id}', '${reward.name}', ${reward.cost}, '${reward.icon}')">🛒</button>
+                    <button class="chore-btn complete-btn" onclick="showKidSelector('${reward.id}', '${reward.name.replace(/'/g, "\\'")}', ${reward.cost}, '${reward.icon}')">🛒</button>
                 </div>
             </div>
         `;
@@ -140,5 +207,3 @@ export function renderRewards() {
     html += '</div>';
     container.innerHTML = html;
 }
-
-// Update date and time

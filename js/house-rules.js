@@ -1,6 +1,7 @@
 // house-rules.js - House Rules Modal Management
 
 import { fetchHouseRules } from './api.js';
+import { getHouseRules, setHouseRules } from './state.js';
 
 // ── Type → visual style mapping ──────────────────────────────────────────────
 // Recognised type values (set in column D of the House Rules sheet):
@@ -35,7 +36,12 @@ export async function showHouseRules() {
     container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Loading rules...</div>';
     document.getElementById('houseRulesModal').classList.add('active');
 
-    const rules = await fetchHouseRules();
+    // Use cached rules if available, otherwise fetch from Sheets
+    let rules = getHouseRules();
+    if (!rules) {
+        rules = await fetchHouseRules();
+        if (rules) setHouseRules(rules);
+    }
 
     if (!rules) {
         container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">No house rules configured.<br><small>Create a "House Rules" sheet in your Google Sheet to add rules.</small></div>';

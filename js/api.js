@@ -291,6 +291,44 @@ export async function setChoreMultiplier(choreId, kidId, multiplier) {
 }
 
 /**
+ * Add a new chore to Google Sheets
+ */
+export async function addChoreToSheets(kidId, choreId, choreName, bp, multiplier) {
+    if (!SHEETS_API_URL) return false;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'addChore', kidId: kidId || '', choreId, choreName, bp, multiplier })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error adding chore:', error);
+        return false;
+    }
+}
+
+/**
+ * Update a chore's name and BP in Google Sheets
+ */
+export async function updateChoreInSheets(choreId, kidId, choreName, bp) {
+    if (!SHEETS_API_URL) return false;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'updateChore', choreId, kidId: kidId || '', choreName, bp })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error updating chore:', error);
+        return false;
+    }
+}
+
+/**
  * Fetch recent activity log entries from Google Sheets
  */
 export async function fetchRecentPointsLog() {

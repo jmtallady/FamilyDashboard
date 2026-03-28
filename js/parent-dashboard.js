@@ -4,10 +4,16 @@
 
 import { showPinModal } from './auth.js';
 import { getIsUnlocked } from './state.js';
+import { getChores, setChores } from './state.js';
+import { getConfig } from './config.js';
 import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
+import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier } from './api.js';
 
 const STORAGE_KEY = 'pending-approvals';
+
+// Module-level state
+let choresSectionOpen = false;
 
 // ── Pending approvals list ────────────────────────────────────────────────────
 
@@ -85,57 +91,57 @@ export function renderParentDashboard() {
     if (!container) return;
 
     const pending = getPendingApprovals();
+    let html = '';
 
     if (pending.length === 0) {
-        container.innerHTML = `
+        html += `
             <div class="parent-dash-empty">
                 <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
                 <div>All caught up! No pending approvals.</div>
             </div>`;
-        return;
-    }
-
-    // Group by kid
-    const byKid = {};
-    pending.forEach(item => {
-        if (!byKid[item.kidId]) byKid[item.kidId] = { kidName: item.kidName, items: [] };
-        byKid[item.kidId].items.push(item);
-    });
-
-    let html = '';
-    Object.values(byKid).forEach(({ kidName, items }) => {
-        html += `<div class="parent-dash-kid-group">
-            <div class="parent-dash-kid-name">${kidName}</div>`;
-
-        items.forEach(item => {
-            const totalBP = item.bp * (item.multiplier || 1);
-            const bpDisplay = item.multiplier > 1
-                ? `${item.bp}×${item.multiplier} = ${totalBP} BP`
-                : `${totalBP} BP`;
-            const typeIcon = item.type === 'chore' ? '🧹' : '⭐';
-            const age = formatAge(item.markedAt);
-
-            html += `
-                <div class="parent-dash-item" id="pending-item-${item.id}">
-                    <div class="parent-dash-item-info">
-                        <span class="parent-dash-type-icon">${typeIcon}</span>
-                        <div>
-                            <div class="parent-dash-item-name">${item.itemName}</div>
-                            <div class="parent-dash-item-meta">+${bpDisplay} · ${age}</div>
-                        </div>
-                    </div>
-                    <div class="parent-dash-item-actions">
-                        <button class="chore-btn approve-btn"
-                            onclick="parentDashApprove('${item.type}', '${item.kidId}', '${item.itemId}', '${item.itemName}', ${item.bp}, ${item.multiplier || 1})">✓</button>
-                        <button class="chore-btn reject-btn"
-                            onclick="parentDashReject('${item.type}', '${item.kidId}', '${item.itemId}', '${item.itemName}')">✗</button>
-                    </div>
-                </div>`;
+    } else {
+        // Group by kid
+        const byKid = {};
+        pending.forEach(item => {
+            if (!byKid[item.kidId]) byKid[item.kidId] = { kidName: item.kidName, items: [] };
+            byKid[item.kidId].items.push(item);
         });
 
-        html += `</div>`;
-    });
+        Object.values(byKid).forEach(({ kidName, items }) => {
+            html += `<div class="parent-dash-kid-group">
+                <div class="parent-dash-kid-name">${kidName}</div>`;
 
+            items.forEach(item => {
+                const totalBP = item.bp * (item.multiplier || 1);
+                const bpDisplay = item.multiplier > 1
+                    ? `${item.bp}×${item.multiplier} = ${totalBP} BP`
+                    : `${totalBP} BP`;
+                const typeIcon = item.type === 'chore' ? '🧹' : '⭐';
+                const age = formatAge(item.markedAt);
+
+                html += `
+                    <div class="parent-dash-item" id="pending-item-${item.id}">
+                        <div class="parent-dash-item-info">
+                            <span class="parent-dash-type-icon">${typeIcon}</span>
+                            <div>
+                                <div class="parent-dash-item-name">${item.itemName}</div>
+                                <div class="parent-dash-item-meta">+${bpDisplay} · ${age}</div>
+                            </div>
+                        </div>
+                        <div class="parent-dash-item-actions">
+                            <button class="chore-btn approve-btn"
+                                onclick="parentDashApprove('${item.type}', '${item.kidId}', '${item.itemId}', '${item.itemName}', ${item.bp}, ${item.multiplier || 1})">✓</button>
+                            <button class="chore-btn reject-btn"
+                                onclick="parentDashReject('${item.type}', '${item.kidId}', '${item.itemId}', '${item.itemName}')">✗</button>
+                        </div>
+                    </div>`;
+            });
+
+            html += `</div>`;
+        });
+    }
+
+    html += renderChoresSectionHtml();
     container.innerHTML = html;
 }
 
@@ -161,6 +167,192 @@ export function parentDashReject(type, kidId, itemId, itemName) {
     renderParentDashboard();
 }
 
+// ── Chores Admin Section ──────────────────────────────────────────────────────
+
+export function toggleChoresAdmin() {
+    choresSectionOpen = !choresSectionOpen;
+    renderParentDashboard();
+}
+
+function renderChoresSectionHtml() {
+    const CONFIG = getConfig();
+    if (!CONFIG) return '';
+    const kids = Object.values(CONFIG).filter(k => k.id);
+
+    const toggleIcon = choresSectionOpen ? '▾' : '▸';
+    let html = `
+        <div class="chores-admin-section">
+            <div class="chores-admin-header" onclick="toggleChoresAdmin()">
+                <span>📋 Manage Chores</span>
+                <span>${toggleIcon}</span>
+            </div>`;
+
+    if (!choresSectionOpen) {
+        html += `</div>`;
+        return html;
+    }
+
+    const CHORES = getChores();
+
+    if (!CHORES) {
+        html += `<div style="padding:12px;color:#999;font-size:12px;">Chores not loaded. Refresh the page.</div></div>`;
+        return html;
+    }
+
+    // Kid options for dropdown
+    const kidOptions = kids.map(k => `<option value="${k.id}">${k.name}</option>`).join('');
+
+    html += `<div class="chores-admin-body">`;
+
+    // Shared chores
+    if (CHORES.shared && CHORES.shared.length > 0) {
+        html += `<div class="chores-admin-group-label">Shared</div>`;
+        CHORES.shared.forEach(chore => {
+            html += choreAdminRow(chore, '');
+        });
+    }
+
+    // Individual chores grouped by kid
+    Object.entries(CHORES.individual || {}).forEach(([kidId, chores]) => {
+        if (!chores || !chores.length) return;
+        const kid = kids.find(k => k.id.toLowerCase() === kidId.toLowerCase()) || { name: kidId };
+        html += `<div class="chores-admin-group-label">${kid.name}</div>`;
+        chores.forEach(chore => {
+            html += choreAdminRow(chore, kidId);
+        });
+    });
+
+    if ((!CHORES.shared || CHORES.shared.length === 0) && Object.values(CHORES.individual || {}).every(c => !c.length)) {
+        html += `<div style="color:#999;font-size:12px;padding:8px 0;">No chores yet.</div>`;
+    }
+
+    // Add form
+    html += `
+        <div class="chores-admin-add-form">
+            <select id="newChoreKid" class="chores-admin-input">
+                <option value="">Shared</option>
+                ${kidOptions}
+            </select>
+            <input id="newChoreName" type="text" placeholder="Chore name" class="chores-admin-input chores-admin-input-grow">
+            <input id="newChoreBP" type="number" placeholder="BP" value="1" min="1" class="chores-admin-input chores-admin-input-sm">
+            <input id="newChoreMultiplier" type="number" placeholder="×" value="1" min="1" class="chores-admin-input chores-admin-input-sm">
+            <button class="chore-btn approve-btn" onclick="adminAddChore()" title="Add chore">+</button>
+        </div>
+    </div></div>`;
+
+    return html;
+}
+
+function choreAdminRow(chore, kidId) {
+    const safeName = chore.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `
+        <div class="chores-admin-row" id="chore-admin-${kidId}-${chore.id}">
+            <div class="chores-admin-row-info">
+                <span class="chore-name">${chore.name}</span>
+                <span class="chores-admin-meta">${chore.bp} BP ×${chore.multiplier}</span>
+            </div>
+            <div class="chores-admin-row-actions">
+                <button class="chore-btn" title="Edit" onclick="adminEditChore('${kidId}', '${chore.id}', '${safeName}', ${chore.bp})">✏️</button>
+                <button class="chore-btn reject-btn" title="Delete" onclick="adminDeleteChore('${kidId}', '${chore.id}', '${chore.name.replace(/'/g, "\\'")}')">🗑️</button>
+            </div>
+        </div>`;
+}
+
+// ── Chores Admin Actions ──────────────────────────────────────────────────────
+
+export function adminEditChore(kidId, choreId, currentName, currentBP) {
+    const rowEl = document.getElementById(`chore-admin-${kidId}-${choreId}`);
+    if (!rowEl) return;
+    rowEl.innerHTML = `
+        <input type="text" value="${currentName}" id="editChoreName-${kidId}-${choreId}" class="chores-admin-input chores-admin-input-grow">
+        <input type="number" value="${currentBP}" id="editChoreBP-${kidId}-${choreId}" class="chores-admin-input chores-admin-input-sm">
+        <button class="chore-btn approve-btn" onclick="adminSaveChoreEdit('${kidId}', '${choreId}')" title="Save">✓</button>
+        <button class="chore-btn" onclick="renderParentDashboard()" title="Cancel">✗</button>
+    `;
+    rowEl.style.display = 'flex';
+    rowEl.style.gap = '6px';
+    rowEl.style.alignItems = 'center';
+}
+
+export async function adminSaveChoreEdit(kidId, choreId) {
+    const nameEl = document.getElementById(`editChoreName-${kidId}-${choreId}`);
+    const bpEl = document.getElementById(`editChoreBP-${kidId}-${choreId}`);
+    if (!nameEl || !bpEl) return;
+
+    const newName = nameEl.value.trim();
+    const newBP = parseInt(bpEl.value) || 1;
+    if (!newName) { showMessage('Chore name cannot be empty'); return; }
+
+    // Update local state
+    const CHORES = getChores();
+    if (kidId === '') {
+        const chore = (CHORES.shared || []).find(c => c.id === choreId);
+        if (chore) { chore.name = newName; chore.bp = newBP; }
+    } else {
+        const list = (CHORES.individual || {})[kidId.toLowerCase()] || [];
+        const chore = list.find(c => c.id === choreId);
+        if (chore) { chore.name = newName; chore.bp = newBP; }
+    }
+    setChores(CHORES);
+
+    // Fire-and-forget to Sheets
+    updateChoreInSheets(choreId, kidId, newName, newBP);
+
+    showMessage(`Chore updated: ${newName}`);
+    renderParentDashboard();
+}
+
+export async function adminDeleteChore(kidId, choreId, choreName) {
+    if (!confirm(`Delete "${choreName}"? This will hide it from the dashboard.`)) return;
+
+    // Remove from local state
+    const CHORES = getChores();
+    if (kidId === '') {
+        CHORES.shared = (CHORES.shared || []).filter(c => c.id !== choreId);
+    } else {
+        const list = (CHORES.individual || {})[kidId.toLowerCase()];
+        if (list) CHORES.individual[kidId.toLowerCase()] = list.filter(c => c.id !== choreId);
+    }
+    setChores(CHORES);
+
+    // Set multiplier to 0 in Sheets (convention for "deleted")
+    setChoreMultiplier(choreId, kidId, 0);
+
+    showMessage(`Chore deleted: ${choreName}`);
+    renderParentDashboard();
+}
+
+export async function adminAddChore() {
+    const kidId = document.getElementById('newChoreKid')?.value || '';
+    const choreName = document.getElementById('newChoreName')?.value.trim() || '';
+    const bp = parseInt(document.getElementById('newChoreBP')?.value) || 1;
+    const multiplier = parseInt(document.getElementById('newChoreMultiplier')?.value) || 1;
+
+    if (!choreName) { showMessage('Chore name is required'); return; }
+
+    // Generate a unique chore ID from the name + timestamp
+    const choreId = choreName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Date.now().toString(36);
+
+    const newChore = { id: choreId, name: choreName, bp, multiplier };
+
+    // Update local state
+    const CHORES = getChores() || { shared: [], individual: {} };
+    if (kidId === '') {
+        CHORES.shared = [...(CHORES.shared || []), newChore];
+    } else {
+        if (!CHORES.individual) CHORES.individual = {};
+        if (!CHORES.individual[kidId.toLowerCase()]) CHORES.individual[kidId.toLowerCase()] = [];
+        CHORES.individual[kidId.toLowerCase()].push(newChore);
+    }
+    setChores(CHORES);
+
+    // Fire-and-forget to Sheets
+    addChoreToSheets(kidId, choreId, choreName, bp, multiplier);
+
+    showMessage(`Chore added: ${choreName}`);
+    renderParentDashboard();
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatAge(isoString) {
@@ -172,4 +364,12 @@ function formatAge(isoString) {
     if (hours > 0) return `${hours}h ago`;
     if (mins > 0) return `${mins}m ago`;
     return 'just now';
+}
+
+function showMessage(msg) {
+    const el = document.getElementById('message');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
 }
