@@ -66,10 +66,12 @@ async function initialize() {
     // Apply color scheme from config
     Theme.applyColorScheme();
 
-    // Load chores, rewards, and activities from separate sheets
-    const chores = await fetchChores();
-    const rewards = await fetchRewards();
-    const activities = await fetchActivities();
+    // Load chores, rewards, and activities in parallel (saves ~4-6s vs sequential)
+    const [chores, rewards, activities] = await Promise.all([
+        fetchChores(),
+        fetchRewards(),
+        fetchActivities()
+    ]);
 
     setChores(chores);
     setRewards(rewards);
@@ -112,8 +114,14 @@ window.closeHouseRules = HouseRules.closeHouseRules;
 // Parent Dashboard functions
 window.openParentDashboard = ParentDash.openParentDashboard;
 window.closeParentDashboard = ParentDash.closeParentDashboard;
+window.renderParentDashboard = ParentDash.renderParentDashboard;
 window.parentDashApprove = ParentDash.parentDashApprove;
 window.parentDashReject = ParentDash.parentDashReject;
+window.toggleChoresAdmin = ParentDash.toggleChoresAdmin;
+window.adminAddChore = ParentDash.adminAddChore;
+window.adminEditChore = ParentDash.adminEditChore;
+window.adminSaveChoreEdit = ParentDash.adminSaveChoreEdit;
+window.adminSetMultiplier = ParentDash.adminSetMultiplier;
 
 // Points functions
 window.adjustDailyBP = Points.adjustDailyBP;

@@ -556,6 +556,166 @@ body.dark-mode .parent-dash-item-name {
     color: #e2e8f0;
 }
 
+/* ── Reward limit badge + guidelines ──────────────────────────────────────── */
+
+.reward-details {
+    flex: 1;
+}
+
+.reward-limit-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    background: #e7f5ff;
+    border: 1px solid #4dabf7;
+    border-radius: 10px;
+    color: #1971c2;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.reward-guidelines {
+    font-size: 11px;
+    color: #868e96;
+    margin-top: 2px;
+    font-style: italic;
+}
+
+body.dark-mode .reward-limit-badge {
+    background: #1c3a5e;
+    border-color: #4dabf7;
+    color: #74c0fc;
+}
+
+body.dark-mode .reward-guidelines {
+    color: #718096;
+}
+
+/* ── Chores Admin Section ─────────────────────────────────────────────────── */
+
+.chores-admin-section {
+    margin-top: 20px;
+    border-top: 1px solid #e9ecef;
+    padding-top: 4px;
+}
+
+.chores-admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--primary-color);
+    user-select: none;
+}
+
+.chores-admin-header:hover {
+    opacity: 0.8;
+}
+
+.chores-admin-body {
+    padding-bottom: 8px;
+}
+
+.chores-admin-group-label {
+    font-size: 11px;
+    font-weight: bold;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 10px 0 4px;
+}
+
+.chores-admin-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    background: #f8f9fa;
+}
+
+.chores-admin-row-disabled {
+    opacity: 0.5;
+}
+
+.chores-admin-disabled-name {
+    text-decoration: line-through;
+    color: #aaa !important;
+}
+
+.chores-admin-mult-label {
+    font-size: 12px;
+    color: #868e96;
+    flex-shrink: 0;
+}
+
+.chores-admin-row-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.chores-admin-meta {
+    font-size: 11px;
+    color: #f59f00;
+}
+
+.chores-admin-row-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.chores-admin-add-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.chores-admin-input {
+    padding: 5px 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 12px;
+    background: white;
+    color: #333;
+}
+
+.chores-admin-input-grow {
+    flex: 1;
+    min-width: 80px;
+}
+
+.chores-admin-input-sm {
+    width: 52px;
+}
+
+body.dark-mode .chores-admin-section {
+    border-top-color: #4a5568;
+}
+
+body.dark-mode .chores-admin-row {
+    background: #1a202c;
+}
+
+body.dark-mode .chores-admin-group-label {
+    color: #718096;
+}
+
+body.dark-mode .chores-admin-input {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
 /* House Rules button in header */
 .house-rules-btn {
     background: rgba(255, 255, 255, 0.2);

@@ -163,6 +163,23 @@ export async function fetchChores() {
 }
 
 /**
+ * Fetch all chores including disabled (multiplier=0) — for admin panel
+ */
+export async function fetchAllChores() {
+    try {
+        const url = `${SHEETS_API_URL}?action=getChores&includeDisabled=true&t=${Date.now()}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data.success && data.chores) return data.chores;
+        return null;
+    } catch (error) {
+        console.error('Error fetching all chores:', error);
+        return null;
+    }
+}
+
+/**
  * Fetch rewards from Google Sheets
  */
 export async function fetchRewards() {
@@ -286,6 +303,44 @@ export async function setChoreMultiplier(choreId, kidId, multiplier) {
         return true;
     } catch (error) {
         console.error('Error updating chore multiplier:', error);
+        return false;
+    }
+}
+
+/**
+ * Add a new chore to Google Sheets
+ */
+export async function addChoreToSheets(kidId, choreId, choreName, bp, multiplier) {
+    if (!SHEETS_API_URL) return false;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'addChore', kidId: kidId || '', choreId, choreName, bp, multiplier })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error adding chore:', error);
+        return false;
+    }
+}
+
+/**
+ * Update a chore's name and BP in Google Sheets
+ */
+export async function updateChoreInSheets(choreId, kidId, choreName, bp) {
+    if (!SHEETS_API_URL) return false;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'updateChore', choreId, kidId: kidId || '', choreName, bp })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error updating chore:', error);
         return false;
     }
 }

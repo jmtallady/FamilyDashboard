@@ -9,6 +9,7 @@ const state = {
     CHORES: null,
     REWARDS: null,
     ACTIVITIES: null,
+    HOUSE_RULES: null,
     pinContext: {
         type: 'parent',  // 'parent' or 'kid'
         kidId: null,     // The kid ID when type is 'kid'
@@ -72,6 +73,14 @@ export function getActivities() {
 
 export function setActivities(value) {
     state.ACTIVITIES = value;
+}
+
+export function getHouseRules() {
+    return state.HOUSE_RULES;
+}
+
+export function setHouseRules(value) {
+    state.HOUSE_RULES = value;
 }
 
 export function getPinContext() {
