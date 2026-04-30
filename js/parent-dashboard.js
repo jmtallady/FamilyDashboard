@@ -9,6 +9,7 @@ import { getConfig } from './config.js';
 import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
 import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores } from './api.js';
+import { endOfDayAll } from './points.js';
 
 const STORAGE_KEY = 'pending-approvals';
 
@@ -142,6 +143,7 @@ export function renderParentDashboard() {
         });
     }
 
+    html += renderEndOfDaySectionHtml();
     html += renderChoresSectionHtml();
     container.innerHTML = html;
 }
@@ -166,6 +168,39 @@ export function parentDashReject(type, kidId, itemId, itemName) {
     }
     removePendingApproval(kidId, itemId, type);
     renderParentDashboard();
+}
+
+// ── End of Day Section ────────────────────────────────────────────────────────
+
+function renderEndOfDaySectionHtml() {
+    const CONFIG = getConfig();
+    if (!CONFIG) return '';
+    const kids = Object.values(CONFIG).filter(k => k.id);
+
+    let html = `
+        <div class="chores-admin-section" style="margin-top:12px;">
+            <div class="chores-admin-header" style="cursor:default;">
+                <span>🌙 End of Day</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:8px;">`;
+
+    kids.forEach(kid => {
+        html += `<button class="chore-btn end-of-day-btn" style="width:100%;font-size:13px;padding:8px 10px;height:auto;"
+            onclick="endOfDay('${kid.id}')">End Day for ${kid.name}</button>`;
+    });
+
+    html += `
+                <button class="reset-btn" style="width:100%;margin-top:4px;font-size:13px;padding:8px 10px;height:auto;border-radius:8px;"
+                    onclick="parentDashEndOfDayAll()">End Day for All Kids</button>
+            </div>
+        </div>`;
+
+    return html;
+}
+
+export async function parentDashEndOfDayAll() {
+    await endOfDayAll();
+    closeParentDashboard();
 }
 
 // ── Chores Admin Section ──────────────────────────────────────────────────────

@@ -122,6 +122,7 @@ window.adminAddChore = ParentDash.adminAddChore;
 window.adminEditChore = ParentDash.adminEditChore;
 window.adminSaveChoreEdit = ParentDash.adminSaveChoreEdit;
 window.adminSetMultiplier = ParentDash.adminSetMultiplier;
+window.parentDashEndOfDayAll = ParentDash.parentDashEndOfDayAll;
 
 // Points functions
 window.adjustDailyBP = Points.adjustDailyBP;

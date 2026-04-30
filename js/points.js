@@ -240,7 +240,7 @@ export async function endOfDay(kidId) {
 
     // Save to Google Sheets if configured
     if (getUseGoogleSheets() && SHEETS_API_URL) {
-        await savePointsToSheets(kidId, newDailyBP, newTotalBP, 'end-of-day', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
+        await savePointsToSheets(kidId, newDailyBP, newTotalBP, 'end-of-day', `End of day: +${currentDailyBP} Daily BP → Total: ${newTotalBP} BP`);
     }
 }
 
@@ -279,7 +279,7 @@ export async function endOfDayAll() {
 
             // Save to Google Sheets if configured
             if (getUseGoogleSheets() && SHEETS_API_URL) {
-                await savePointsToSheets(kid.id, newDailyBP, newTotalBP, 'end-of-day-all', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
+                await savePointsToSheets(kid.id, newDailyBP, newTotalBP, 'end-of-day-all', `End of day: +${currentDailyBP} Daily BP → Total: ${newTotalBP} BP`);
             }
         }
     }
