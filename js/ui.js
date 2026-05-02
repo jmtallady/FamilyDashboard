@@ -29,9 +29,6 @@ export function generateKidCards() {
                     <div class="currency-section total-bp-section">
                         <div class="points-label">Total BP (Bank)</div>
                         <div class="points-display total-bp-display" id="${kid.id}-total-bp">${kid.defaultTotalBP}</div>
-                        <div class="button-group">
-                            <button class="end-of-day-btn" onclick="endOfDay('${kid.id}')">End of Day (Add to Bank)</button>
-                        </div>
                     </div>
 
                 </div>
