@@ -4,7 +4,7 @@
 import { getConfig } from './config.js';
 import { fetchCalendarEvents } from './api.js';
 import { fetchWeatherData, getWeatherEmoji } from './weather.js';
-import { getTodayMeal } from './menu.js';
+import { getMealForDate } from './menu.js';
 
 /**
  * Format event date for display
@@ -157,9 +157,10 @@ export async function updateCalendar() {
         const isToday = i === 0;
         const dayClass = isToday ? 'calendar-day today' : 'calendar-day';
 
-        // Show today's meal on the Today card
-        const mealHtml = isToday && getTodayMeal()
-            ? `<div class="day-meal">🍽️ ${getTodayMeal()}</div>`
+        // Show planned meal for every day that has one
+        const plannedMeal = getMealForDate(date);
+        const mealHtml = plannedMeal
+            ? `<div class="day-meal">🍽️ ${plannedMeal}</div>`
             : '';
 
         daysHtml.push(`

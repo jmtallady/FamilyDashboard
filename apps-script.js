@@ -64,6 +64,8 @@ function doGet(e) {
     return getMeals();
   } else if (action === 'getDailyMeal') {
     return getDailyMeal(e.parameter.date);
+  } else if (action === 'getMealRequests') {
+    return getMealRequests();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
@@ -90,6 +92,8 @@ function doPost(e) {
       return addMeal(params);
     } else if (action === 'setDailyMeal') {
       return setDailyMeal(params);
+    } else if (action === 'addMealRequest') {
+      return addMealRequest(params);
     }
 
     return jsonResponse({ error: 'Invalid action' }, 400);
@@ -978,6 +982,46 @@ function setDailyMeal(params) {
     }
 
     sheet.appendRow([date, mealName]);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== MEAL REQUESTS ======
+// Sheet "Meal Requests": Date | KidName | MealName | Timestamp
+
+function getMealRequests() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Meal Requests');
+    if (!sheet) return jsonResponse({ success: true, requests: [] });
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return jsonResponse({ success: true, requests: [] });
+    const data = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+    const requests = data.filter(r => r[0]).map(r => ({
+      date: r[0] instanceof Date
+        ? Utilities.formatDate(r[0], Session.getScriptTimeZone(), 'yyyy-MM-dd')
+        : String(r[0]),
+      kidName: String(r[1]),
+      mealName: String(r[2]),
+      requestedAt: r[3] ? String(r[3]) : ''
+    }));
+    return jsonResponse({ success: true, requests });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+function addMealRequest(params) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Meal Requests');
+    if (!sheet) {
+      sheet = ss.insertSheet('Meal Requests');
+      sheet.getRange(1, 1, 1, 4).setValues([['Date', 'KidName', 'MealName', 'Timestamp']]);
+    }
+    sheet.appendRow([params.date, params.kidName, params.mealName, new Date().toISOString()]);
     return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);

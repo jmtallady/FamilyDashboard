@@ -417,6 +417,41 @@ export async function saveDailyMeal(date, mealName) {
 }
 
 /**
+ * Save a kid's dinner request (fire-and-forget)
+ */
+export async function saveMealRequest(date, kidName, mealName) {
+    if (!SHEETS_API_URL) return false;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'addMealRequest', date, kidName, mealName })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error saving meal request:', error);
+        return false;
+    }
+}
+
+/**
+ * Fetch pending meal requests from Google Sheets
+ */
+export async function fetchMealRequests() {
+    if (!SHEETS_API_URL) return [];
+    try {
+        const response = await fetch(`${SHEETS_API_URL}?action=getMealRequests&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data.success ? (data.requests || []) : [];
+    } catch (error) {
+        console.error('Error fetching meal requests:', error);
+        return [];
+    }
+}
+
+/**
  * Fetch recent activity log entries from Google Sheets
  */
 export async function fetchRecentPointsLog() {

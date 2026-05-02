@@ -10,7 +10,8 @@ import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
 import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores } from './api.js';
 import { endOfDayAll } from './points.js';
-import { renderMenuSectionHtml, toggleMenuSection, getTodayMeal, setTodayMeal, addMealToCache } from './menu.js';
+import { renderMenuSectionHtml, toggleMenuSection, getMealForDate, setMealForDate,
+         getRandomMeal, addMealToCache, approveDinnerRequest, dismissDinnerRequest } from './menu.js';
 import { updateCalendar } from './calendar.js';
 
 const STORAGE_KEY = 'pending-approvals';
@@ -426,29 +427,40 @@ export function adminToggleMenuSection() {
     renderParentDashboard();
 }
 
-function applyMealSelection(mealName) {
+function applyMealForDate(dateStr, mealName) {
     if (!mealName) return;
-    setTodayMeal(mealName);
+    const date = new Date(dateStr + 'T12:00:00');
+    setMealForDate(date, mealName);
     updateCalendar();
     renderParentDashboard();
-    showMessage(`🍽️ Tonight's meal set to: ${mealName}`);
+    const dayLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    showMessage(`🍽️ ${dayLabel}: ${mealName}`);
 }
 
-export function adminSetTodayMealFromSelect() {
-    const el = document.getElementById('mealSelectDropdown');
+export function adminSetMealForDate(dateStr) {
+    const el = document.getElementById(`mealPlanSelect-${dateStr}`);
     if (!el || !el.value) { showMessage('Select a meal first'); return; }
-    applyMealSelection(el.value);
+    applyMealForDate(dateStr, el.value);
 }
 
-export function adminSetCustomMeal() {
-    const el = document.getElementById('customMealInput');
-    const val = (el?.value || '').trim();
-    if (!val) { showMessage('Enter a meal name first'); return; }
-    applyMealSelection(val);
+export function adminRandomMealForDate(dateStr) {
+    const meal = getRandomMeal();
+    if (!meal) { showMessage('No meals in library yet'); return; }
+    const el = document.getElementById(`mealPlanSelect-${dateStr}`);
+    if (el) el.value = meal;
+    applyMealForDate(dateStr, meal);
 }
 
-export function adminSetMealFromLibrary(mealName) {
-    applyMealSelection(mealName);
+export function adminApproveDinnerRequest(id) {
+    approveDinnerRequest(id);
+    updateCalendar();
+    renderParentDashboard();
+    showMessage('✓ Dinner request approved and meal set!');
+}
+
+export function adminDismissDinnerRequest(id) {
+    dismissDinnerRequest(id);
+    renderParentDashboard();
 }
 
 export function adminAddMeal() {
@@ -456,6 +468,7 @@ export function adminAddMeal() {
     const name = (el?.value || '').trim();
     if (!name) { showMessage('Meal name is required'); return; }
     addMealToCache(name);
+    if (el) el.value = '';
     showMessage(`Meal added to library: ${name}`);
     renderParentDashboard();
 }

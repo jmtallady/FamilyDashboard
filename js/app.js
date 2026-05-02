@@ -172,6 +172,89 @@ function closeRewardsModal()  { document.getElementById('rewardsModal').classLis
 function openActivitiesModal()  { document.getElementById('activitiesModal').classList.add('active'); }
 function closeActivitiesModal() { document.getElementById('activitiesModal').classList.remove('active'); }
 
+// ── Dinner Request Modal ──────────────────────────────────────────────────────
+
+let _dinnerKidId   = null;
+let _dinnerDateStr = null;
+
+function openDinnerRequestModal() {
+    const CONFIG = getConfig();
+    _dinnerKidId   = null;
+    _dinnerDateStr = null;
+
+    // Build kid picker
+    const kidGrid = document.getElementById('dinnerKidPicker');
+    kidGrid.innerHTML = Object.values(CONFIG)
+        .filter(k => k.id)
+        .map(k => `<button class="dinner-kid-btn" onclick="dinnerPickKid('${k.id}','${k.name}')">${k.name}</button>`)
+        .join('');
+
+    // Build date chips — today + next 6 days
+    const dateGrid = document.getElementById('dinnerDatePicker');
+    const today = new Date();
+    dateGrid.innerHTML = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        const ds = d.toISOString().split('T')[0];
+        const label = i === 0 ? 'Tonight' : i === 1 ? 'Tomorrow'
+            : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        return `<button class="dinner-date-btn" onclick="dinnerPickDate('${ds}',this)">${label}</button>`;
+    }).join('');
+
+    // Populate meal dropdown
+    const sel = document.getElementById('dinnerMealSelect');
+    sel.innerHTML = '<option value="">Pick from menu…</option>' +
+        Menu.getMealsCache()
+            .filter(m => m.active !== false)
+            .map(m => `<option value="${m.name.replace(/"/g, '&quot;')}">${m.name}</option>`)
+            .join('');
+
+    document.getElementById('dinnerCustomMeal').value = '';
+    document.getElementById('dinnerReqValidation').textContent = '';
+    document.getElementById('dinnerRequestModal').classList.add('active');
+}
+
+function closeDinnerRequestModal() {
+    document.getElementById('dinnerRequestModal').classList.remove('active');
+    _dinnerKidId = null;
+    _dinnerDateStr = null;
+}
+
+function dinnerPickKid(kidId, kidName) {
+    _dinnerKidId = kidId;
+    document.querySelectorAll('.dinner-kid-btn').forEach(b => {
+        b.classList.toggle('selected', b.textContent === kidName);
+    });
+}
+
+function dinnerPickDate(dateStr, btn) {
+    _dinnerDateStr = dateStr;
+    document.querySelectorAll('.dinner-date-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
+function submitDinnerRequest() {
+    const validation = document.getElementById('dinnerReqValidation');
+    if (!_dinnerKidId)   { validation.textContent = 'Please pick who you are.'; return; }
+    if (!_dinnerDateStr) { validation.textContent = 'Please pick a night.'; return; }
+
+    const mealSel    = document.getElementById('dinnerMealSelect').value;
+    const mealCustom = document.getElementById('dinnerCustomMeal').value.trim();
+    const mealName   = mealCustom || mealSel;
+    if (!mealName) { validation.textContent = 'Please pick or type a meal.'; return; }
+
+    const CONFIG   = getConfig();
+    const kid      = Object.values(CONFIG).find(k => k.id === _dinnerKidId);
+    const kidName  = kid?.name || _dinnerKidId;
+
+    Menu.addDinnerRequest(_dinnerKidId, kidName, mealName, _dinnerDateStr);
+    closeDinnerRequestModal();
+    // Re-render parent dashboard if it's open so new request appears immediately
+    if (document.getElementById('parentDashPanel').classList.contains('open')) {
+        ParentDash.renderParentDashboard();
+    }
+}
+
 // Expose functions to global scope for onclick handlers (backwards compatibility)
 // Theme functions
 window.toggleDarkMode = Theme.toggleDarkMode;
@@ -236,10 +319,18 @@ window.closeActivitiesModal  = closeActivitiesModal;
 
 // Menu / meal planning functions
 window.adminToggleMenuSection      = ParentDash.adminToggleMenuSection;
-window.adminSetTodayMealFromSelect = ParentDash.adminSetTodayMealFromSelect;
-window.adminSetCustomMeal          = ParentDash.adminSetCustomMeal;
-window.adminSetMealFromLibrary     = ParentDash.adminSetMealFromLibrary;
+window.adminSetMealForDate         = ParentDash.adminSetMealForDate;
+window.adminRandomMealForDate      = ParentDash.adminRandomMealForDate;
+window.adminApproveDinnerRequest   = ParentDash.adminApproveDinnerRequest;
+window.adminDismissDinnerRequest   = ParentDash.adminDismissDinnerRequest;
 window.adminAddMeal                = ParentDash.adminAddMeal;
+
+// Dinner request modal
+window.openDinnerRequestModal  = openDinnerRequestModal;
+window.closeDinnerRequestModal = closeDinnerRequestModal;
+window.dinnerPickKid           = dinnerPickKid;
+window.dinnerPickDate          = dinnerPickDate;
+window.submitDinnerRequest     = submitDinnerRequest;
 
 // Recent Activity functions
 window.undoActivity = RecentActivity.undoActivity;

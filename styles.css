@@ -1033,6 +1033,12 @@ button {
     align-items: center;
 }
 
+/* Kid selector and PIN modal must sit above panel modals (rewards/activities) */
+#kidSelectorModal,
+#pinModal {
+    z-index: 1200;
+}
+
 .pin-modal.active {
     display: flex;
 }
@@ -2065,6 +2071,138 @@ body.dark-mode .panel-modal-header {
 
 body.dark-mode .panel-modal-header h2 {
     color: var(--primary-color);
+}
+
+/* ==========================================
+   MEAL PLANNER ADMIN STYLES
+   ========================================== */
+
+.meal-plan-row {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 8px 0;
+}
+
+.meal-plan-day {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meal-today-badge {
+    background: var(--primary-color);
+    color: white;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.meal-plan-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.meal-plan-current {
+    font-size: 11px;
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-top: 3px;
+}
+
+.meal-request-row {
+    background: #fff8e6;
+    border-radius: 8px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-left: 3px solid #f59f00;
+}
+
+body.dark-mode .meal-plan-day { color: #a0aec0; }
+body.dark-mode .meal-plan-row { border-bottom-color: #2d3748; }
+body.dark-mode .meal-request-row { background: #2d3748; }
+
+/* ==========================================
+   DINNER REQUEST MODAL
+   ========================================== */
+
+.dinner-req-section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+}
+
+.dinner-kid-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dinner-kid-btn {
+    padding: 10px 18px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    background: #f8f9fa;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: auto;
+    height: auto;
+}
+
+.dinner-kid-btn:hover,
+.dinner-kid-btn.selected {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: white;
+}
+
+.dinner-date-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.dinner-date-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    background: #f8f9fa;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: auto;
+    height: auto;
+}
+
+.dinner-date-btn:hover,
+.dinner-date-btn.selected {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: white;
+}
+
+body.dark-mode .dinner-req-section-label { color: #a0aec0; }
+body.dark-mode .dinner-kid-btn,
+body.dark-mode .dinner-date-btn {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+body.dark-mode .dinner-kid-btn.selected,
+body.dark-mode .dinner-date-btn.selected {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
 }
 
 /* ==========================================
