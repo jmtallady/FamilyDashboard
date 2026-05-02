@@ -166,13 +166,11 @@ async function initialize() {
     }
 }
 
-// Modal open/close helpers for Rewards, Activities, Recent Activity
+// Modal open/close helpers for Rewards and Activities
 function openRewardsModal()   { document.getElementById('rewardsModal').classList.add('active'); }
 function closeRewardsModal()  { document.getElementById('rewardsModal').classList.remove('active'); }
 function openActivitiesModal()  { document.getElementById('activitiesModal').classList.add('active'); }
 function closeActivitiesModal() { document.getElementById('activitiesModal').classList.remove('active'); }
-function openRecentActivityModal()  { document.getElementById('recentActivityModal').classList.add('active'); }
-function closeRecentActivityModal() { document.getElementById('recentActivityModal').classList.remove('active'); }
 
 // Expose functions to global scope for onclick handlers (backwards compatibility)
 // Theme functions
@@ -235,8 +233,6 @@ window.openRewardsModal    = openRewardsModal;
 window.closeRewardsModal   = closeRewardsModal;
 window.openActivitiesModal   = openActivitiesModal;
 window.closeActivitiesModal  = closeActivitiesModal;
-window.openRecentActivityModal   = openRecentActivityModal;
-window.closeRecentActivityModal  = closeRecentActivityModal;
 
 // Menu / meal planning functions
 window.adminToggleMenuSection      = ParentDash.adminToggleMenuSection;

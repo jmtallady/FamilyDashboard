@@ -58,11 +58,20 @@
                 <!-- Calendar will be added here -->
             </div>
 
+            <!-- Recent Activity — inline below calendar -->
+            <div class="recent-activity-inline">
+                <div class="section-header">
+                    <h2>📋 Recent Activity</h2>
+                </div>
+                <div id="recentActivityContainer">
+                    <!-- Recent activities will be dynamically generated -->
+                </div>
+            </div>
+
             <!-- Quick-access buttons row -->
             <div class="quick-access-row">
                 <button class="quick-access-btn" onclick="openRewardsModal()">🎁 Rewards</button>
                 <button class="quick-access-btn" onclick="openActivitiesModal()">⭐ Activities</button>
-                <button class="quick-access-btn" onclick="openRecentActivityModal()">📋 Recent Activity</button>
             </div>
         </div>
 
@@ -194,21 +203,6 @@
             <div class="panel-modal-body">
                 <div id="activitiesContainer">
                     <!-- Activities will be dynamically generated -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Activity Modal -->
-    <div class="pin-modal" id="recentActivityModal">
-        <div class="panel-modal-content">
-            <div class="panel-modal-header">
-                <h2>📋 Recent Activity</h2>
-                <button class="modal-close-btn" onclick="closeRecentActivityModal()" title="Close">✕</button>
-            </div>
-            <div class="panel-modal-body">
-                <div id="recentActivityContainer">
-                    <!-- Recent activities will be dynamically generated -->
                 </div>
             </div>
         </div>

@@ -67,7 +67,7 @@ body {
     font-family: Arial, sans-serif;
     background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
     min-height: 100vh;
-    padding: 14px;
+    padding: 20px 14px 14px;
 }
 
 /* Twemoji image styling */
@@ -85,7 +85,7 @@ img.emoji {
     gap: 10px;
     max-width: 1600px;
     margin: 0 auto;
-    height: calc(100vh - 28px);
+    height: calc(100vh - 34px);
     overflow: hidden;
 }
 
@@ -94,7 +94,7 @@ img.emoji {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    height: calc(100vh - 28px);
+    height: calc(100vh - 34px);
     overflow-y: auto;
 }
 
@@ -102,7 +102,7 @@ img.emoji {
 .main-content {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 28px);
+    height: calc(100vh - 34px);
     overflow-y: auto;
     gap: 8px;
     padding-bottom: 4px;
@@ -113,7 +113,7 @@ img.emoji {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    height: calc(100vh - 28px);
+    height: calc(100vh - 34px);
     overflow: hidden;
 }
 
@@ -917,6 +917,26 @@ body.dark-mode .modal-close-btn:hover {
     font-size: 14px;
     color: #666;
     margin-bottom: 4px;
+}
+
+/* BP stepper: buttons flank the number */
+.bp-stepper-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.bp-stepper-row .points-display {
+    min-width: 60px;
+}
+
+/* Kid card +/- buttons — smaller than modal stepper */
+.kid-card .minus-btn,
+.kid-card .plus-btn {
+    font-size: 20px;
+    width: 38px;
+    height: 38px;
 }
 
 .button-group {
@@ -1931,6 +1951,29 @@ body.dark-mode .reason-btn.selected {
     font-weight: 500;
     padding: 3px 0;
     margin-bottom: 6px;
+}
+
+/* ==========================================
+   RECENT ACTIVITY INLINE (below calendar in main content)
+   ========================================== */
+
+.recent-activity-inline {
+    background: white;
+    border-radius: 15px;
+    padding: 12px 14px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.recent-activity-inline .section-header {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+}
+
+body.dark-mode .recent-activity-inline {
+    background: #1a202c;
 }
 
 /* ==========================================

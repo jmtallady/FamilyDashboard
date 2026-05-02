@@ -12,9 +12,9 @@ export function renderBPStepper(label, displayId, value, minusFn, plusFn) {
     return `
         <div class="currency-section">
             <div class="points-label">${label}</div>
-            <div class="points-display" id="${displayId}">${value}</div>
-            <div class="button-group">
+            <div class="bp-stepper-row">
                 <button class="minus-btn" onclick="${minusFn}">−</button>
+                <div class="points-display" id="${displayId}">${value}</div>
                 <button class="plus-btn" onclick="${plusFn}">+</button>
             </div>
         </div>`;
