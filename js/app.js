@@ -130,6 +130,7 @@ window.showAdjustReason   = ReasonModal.showAdjustReason;
 window.selectAdjustReason = ReasonModal.selectAdjustReason;
 window.confirmAdjustment  = ReasonModal.confirmAdjustment;
 window.closeReasonModal   = ReasonModal.closeReasonModal;
+window.adjustReasonQty    = ReasonModal.adjustReasonQty;
 
 // Points functions
 window.adjustDailyBP = Points.adjustDailyBP;

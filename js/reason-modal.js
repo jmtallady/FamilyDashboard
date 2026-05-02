@@ -9,21 +9,32 @@ const DEDUCT_REASONS = ['Rule violation', 'Undesired behavior', 'Other'];
 // ─────────────────────────────────────────────────────────────────────────────
 
 let pendingKidId   = null;
-let pendingChange  = null;
+let pendingChange  = null;  // +1 or -1 (direction only)
+let pendingQty     = 1;
 let selectedReason = null;
+
+function updateQtyDisplay() {
+    const isAdd = pendingChange > 0;
+    document.getElementById('reasonQty').textContent = pendingQty;
+    document.getElementById('reasonModalTitle').textContent =
+        `${isAdd ? '➕' : '➖'} ${getKidByID(pendingKidId).name}: ${isAdd ? '+' : '-'}${pendingQty} Point${pendingQty !== 1 ? 's' : ''}`;
+}
+
+export function adjustReasonQty(delta) {
+    pendingQty = Math.max(1, pendingQty + delta);
+    updateQtyDisplay();
+}
 
 export function showAdjustReason(kidId, change) {
     pendingKidId   = kidId;
     pendingChange  = change;
+    pendingQty     = 1;
     selectedReason = null;
 
-    const kid     = getKidByID(kidId);
     const isAdd   = change > 0;
     const reasons = isAdd ? ADD_REASONS : DEDUCT_REASONS;
-    const sign    = isAdd ? '➕' : '➖';
 
-    document.getElementById('reasonModalTitle').textContent =
-        `${sign} ${kid.name}: ${isAdd ? 'Add' : 'Deduct'} Point`;
+    updateQtyDisplay();
 
     const grid = document.getElementById('reasonBtnGrid');
     grid.innerHTML = reasons.map(r =>
@@ -60,7 +71,7 @@ export async function confirmAdjustment() {
         reason = selectedReason;
     }
     const kidId  = pendingKidId;
-    const change = pendingChange;
+    const change = pendingChange * pendingQty;
     closeReasonModal();
     await adjustDailyBP(kidId, change, reason);
 }
@@ -69,5 +80,6 @@ export function closeReasonModal() {
     document.getElementById('reasonModal').classList.remove('active');
     pendingKidId   = null;
     pendingChange  = null;
+    pendingQty     = 1;
     selectedReason = null;
 }

@@ -179,6 +179,11 @@
     <div class="pin-modal" id="reasonModal">
         <div class="pin-content" style="max-width:360px;">
             <h2 id="reasonModalTitle">Reason</h2>
+            <div class="reason-qty-control">
+                <button class="minus-btn" onclick="adjustReasonQty(-1)">−</button>
+                <span id="reasonQty" class="reason-qty-display">1</span>
+                <button class="plus-btn" onclick="adjustReasonQty(1)">+</button>
+            </div>
             <div id="reasonBtnGrid" class="reason-btn-grid"></div>
             <div id="reasonOtherWrap" style="display:none; margin-bottom:12px;">
                 <input id="reasonOtherInput" class="chores-admin-input"
