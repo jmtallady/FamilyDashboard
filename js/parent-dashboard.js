@@ -9,6 +9,10 @@ import { getConfig } from './config.js';
 import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
 import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores } from './api.js';
+import { endOfDayAll } from './points.js';
+import { renderMenuSectionHtml, toggleMenuSection, getMealForDate, setMealForDate,
+         getRandomMeal, addMealToCache, approveDinnerRequest, dismissDinnerRequest } from './menu.js';
+import { updateCalendar } from './calendar.js';
 
 const STORAGE_KEY = 'pending-approvals';
 
@@ -142,6 +146,8 @@ export function renderParentDashboard() {
         });
     }
 
+    html += renderEndOfDaySectionHtml();
+    html += renderMenuSectionHtml();
     html += renderChoresSectionHtml();
     container.innerHTML = html;
 }
@@ -166,6 +172,39 @@ export function parentDashReject(type, kidId, itemId, itemName) {
     }
     removePendingApproval(kidId, itemId, type);
     renderParentDashboard();
+}
+
+// ── End of Day Section ────────────────────────────────────────────────────────
+
+function renderEndOfDaySectionHtml() {
+    const CONFIG = getConfig();
+    if (!CONFIG) return '';
+    const kids = Object.values(CONFIG).filter(k => k.id);
+
+    let html = `
+        <div class="chores-admin-section" style="margin-top:12px;">
+            <div class="chores-admin-header" style="cursor:default;">
+                <span>🌙 End of Day</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:8px;">`;
+
+    kids.forEach(kid => {
+        html += `<button class="chore-btn end-of-day-btn" style="width:100%;font-size:13px;padding:8px 10px;height:auto;"
+            onclick="endOfDay('${kid.id}')">End Day for ${kid.name}</button>`;
+    });
+
+    html += `
+                <button class="reset-btn" style="width:100%;margin-top:4px;font-size:13px;padding:8px 10px;height:auto;border-radius:8px;"
+                    onclick="parentDashEndOfDayAll()">End Day for All Kids</button>
+            </div>
+        </div>`;
+
+    return html;
+}
+
+export async function parentDashEndOfDayAll() {
+    await endOfDayAll();
+    closeParentDashboard();
 }
 
 // ── Chores Admin Section ──────────────────────────────────────────────────────
@@ -378,6 +417,59 @@ export async function adminAddChore() {
     addChoreToSheets(kidId, choreId, choreName, bp, 1);
 
     showMessage(`Chore added: ${choreName}`);
+    renderParentDashboard();
+}
+
+// ── Menu Admin Actions ────────────────────────────────────────────────────────
+
+export function adminToggleMenuSection() {
+    toggleMenuSection();
+    renderParentDashboard();
+}
+
+function applyMealForDate(dateStr, mealName) {
+    if (!mealName) return;
+    const date = new Date(dateStr + 'T12:00:00');
+    setMealForDate(date, mealName);
+    updateCalendar();
+    renderParentDashboard();
+    const dayLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    showMessage(`🍽️ ${dayLabel}: ${mealName}`);
+}
+
+export function adminSetMealForDate(dateStr) {
+    const el = document.getElementById(`mealPlanSelect-${dateStr}`);
+    if (!el || !el.value) { showMessage('Select a meal first'); return; }
+    applyMealForDate(dateStr, el.value);
+}
+
+export function adminRandomMealForDate(dateStr) {
+    const meal = getRandomMeal();
+    if (!meal) { showMessage('No meals in library yet'); return; }
+    const el = document.getElementById(`mealPlanSelect-${dateStr}`);
+    if (el) el.value = meal;
+    applyMealForDate(dateStr, meal);
+}
+
+export function adminApproveDinnerRequest(id) {
+    approveDinnerRequest(id);
+    updateCalendar();
+    renderParentDashboard();
+    showMessage('✓ Dinner request approved and meal set!');
+}
+
+export function adminDismissDinnerRequest(id) {
+    dismissDinnerRequest(id);
+    renderParentDashboard();
+}
+
+export function adminAddMeal() {
+    const el = document.getElementById('newMealName');
+    const name = (el?.value || '').trim();
+    if (!name) { showMessage('Meal name is required'); return; }
+    addMealToCache(name);
+    if (el) el.value = '';
+    showMessage(`Meal added to library: ${name}`);
     renderParentDashboard();
 }
 

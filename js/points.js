@@ -127,11 +127,11 @@ export async function refreshPointsFromSheets() {
     }
 }
 
-export async function adjustDailyBP(kidId, change) {
+export async function adjustDailyBP(kidId, change, reason = '') {
     const CONFIG = getConfig();
     // Check if PIN is required and user is not unlocked
     if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
-        showPinModal();
+        showPinModal('parent', null, null, () => adjustDailyBP(kidId, change, reason));
         return;
     }
 
@@ -188,11 +188,14 @@ export async function adjustDailyBP(kidId, change) {
     localStorage.setItem(`${kidId}-total-bp`, currentTotalBP.toString());
 
     const actionPast = change > 0 ? 'earned' : 'lost';
-    showMessage(`${kid.name} ${actionPast} a daily point! Now at ${newDailyBP} today`);
+    const absChange = Math.abs(change);
+    showMessage(`${kid.name} ${actionPast} ${absChange} daily point${absChange !== 1 ? 's' : ''}! Now at ${newDailyBP} today`);
 
     // Save to Google Sheets with fresh data
     if (getUseGoogleSheets() && SHEETS_API_URL) {
-        const note = `${actionPast} daily BP via dashboard`;
+        const note = reason
+            ? `${change > 0 ? '+' : ''}${change} BP — ${reason}`
+            : `${actionPast} daily BP via dashboard`;
         await savePointsToSheets(kidId, newDailyBP, currentTotalBP, 'daily-adjust', note);
     }
 }
@@ -202,7 +205,7 @@ export async function endOfDay(kidId) {
     const CONFIG = getConfig();
     // Check if PIN is required and user is not unlocked
     if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
-        showPinModal();
+        showPinModal('parent', null, null, () => endOfDay(kidId));
         return;
     }
 
@@ -240,7 +243,7 @@ export async function endOfDay(kidId) {
 
     // Save to Google Sheets if configured
     if (getUseGoogleSheets() && SHEETS_API_URL) {
-        await savePointsToSheets(kidId, newDailyBP, newTotalBP, 'end-of-day', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
+        await savePointsToSheets(kidId, newDailyBP, newTotalBP, 'end-of-day', `End of day: +${currentDailyBP} BP earned`);
     }
 }
 
@@ -249,7 +252,7 @@ export async function endOfDayAll() {
     const CONFIG = getConfig();
     // Check if PIN is required and user is not unlocked
     if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
-        showPinModal();
+        showPinModal('parent', null, null, () => endOfDayAll());
         return;
     }
 
@@ -279,7 +282,7 @@ export async function endOfDayAll() {
 
             // Save to Google Sheets if configured
             if (getUseGoogleSheets() && SHEETS_API_URL) {
-                await savePointsToSheets(kid.id, newDailyBP, newTotalBP, 'end-of-day-all', `Added ${currentDailyBP} daily BP to total, reset daily to ${newDailyBP}`);
+                await savePointsToSheets(kid.id, newDailyBP, newTotalBP, 'end-of-day-all', `End of day: +${currentDailyBP} BP earned`);
             }
         }
     }

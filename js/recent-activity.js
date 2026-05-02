@@ -93,16 +93,35 @@ export async function renderRecentActivity() {
                 activityColor = '#a78bfa';
                 break;
             }
-            case 'end-of-day-auto':
+            case 'end-of-day':
+            case 'end-of-day-all': {
                 activityIcon = '🌙';
-                activityText = `${kidName}: End of day`;
+                const mEod = entry.note?.match(/\+(\d+) BP earned/);
+                activityText = mEod
+                    ? `${kidName}: +${mEod[1]} BP earned today`
+                    : `${kidName}: End of day`;
                 activityColor = '#868e96';
                 break;
-            case 'daily-adjust':
-                activityIcon = '📊';
-                activityText = `${kidName}: Points adjusted`;
-                activityColor = '#339af0';
+            }
+            case 'end-of-day-auto':
+                activityIcon = '🌙';
+                activityText = `${kidName}: End of day (auto)`;
+                activityColor = '#868e96';
                 break;
+            case 'daily-adjust': {
+                const mAdj = entry.note?.match(/^([+-]\d+) BP — (.+)$/);
+                if (mAdj) {
+                    const isPos = parseInt(mAdj[1]) > 0;
+                    activityIcon  = isPos ? '⬆️' : '⬇️';
+                    activityText  = `${kidName}: ${mAdj[2]} (${mAdj[1]} BP)`;
+                    activityColor = isPos ? '#51cf66' : '#ff6b6b';
+                } else {
+                    activityIcon  = '📊';
+                    activityText  = `${kidName}: Daily points adjusted`;
+                    activityColor = '#339af0';
+                }
+                break;
+            }
             default:
                 activityIcon = '📝';
                 activityText = `${kidName}: ${entry.type}`;

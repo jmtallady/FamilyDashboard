@@ -346,6 +346,112 @@ export async function updateChoreInSheets(choreId, kidId, choreName, bp) {
 }
 
 /**
+ * Fetch the meal library from Google Sheets
+ */
+export async function fetchMeals() {
+    if (!SHEETS_API_URL) return null;
+    try {
+        const response = await fetch(`${SHEETS_API_URL}?action=getMeals&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data.success ? (data.meals || []) : null;
+    } catch (error) {
+        console.error('Error fetching meals:', error);
+        return null;
+    }
+}
+
+/**
+ * Fetch today's daily meal from Google Sheets
+ */
+export async function fetchDailyMeal() {
+    if (!SHEETS_API_URL) return null;
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch(`${SHEETS_API_URL}?action=getDailyMeal&date=${today}&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data.success && data.meal ? data.meal : null;
+    } catch (error) {
+        console.error('Error fetching daily meal:', error);
+        return null;
+    }
+}
+
+/**
+ * Save a new meal to the meal library (fire-and-forget)
+ */
+export async function saveMeal(name) {
+    if (!SHEETS_API_URL) return false;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'addMeal', name })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error saving meal:', error);
+        return false;
+    }
+}
+
+/**
+ * Save today's selected meal (fire-and-forget)
+ */
+export async function saveDailyMeal(date, mealName) {
+    if (!SHEETS_API_URL) return false;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'setDailyMeal', date, mealName })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error saving daily meal:', error);
+        return false;
+    }
+}
+
+/**
+ * Save a kid's dinner request (fire-and-forget)
+ */
+export async function saveMealRequest(date, kidName, mealName) {
+    if (!SHEETS_API_URL) return false;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'addMealRequest', date, kidName, mealName })
+        });
+        return true;
+    } catch (error) {
+        console.error('Error saving meal request:', error);
+        return false;
+    }
+}
+
+/**
+ * Fetch pending meal requests from Google Sheets
+ */
+export async function fetchMealRequests() {
+    if (!SHEETS_API_URL) return [];
+    try {
+        const response = await fetch(`${SHEETS_API_URL}?action=getMealRequests&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data.success ? (data.requests || []) : [];
+    } catch (error) {
+        console.error('Error fetching meal requests:', error);
+        return [];
+    }
+}
+
+/**
  * Fetch recent activity log entries from Google Sheets
  */
 export async function fetchRecentPointsLog() {

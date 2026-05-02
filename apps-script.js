@@ -60,6 +60,12 @@ function doGet(e) {
     return getHouseRules();
   } else if (action === 'getDailyStatuses') {
     return getDailyStatuses();
+  } else if (action === 'getMeals') {
+    return getMeals();
+  } else if (action === 'getDailyMeal') {
+    return getDailyMeal(e.parameter.date);
+  } else if (action === 'getMealRequests') {
+    return getMealRequests();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
@@ -82,6 +88,12 @@ function doPost(e) {
       return addChore(params);
     } else if (action === 'updateChore') {
       return updateChore(params);
+    } else if (action === 'addMeal') {
+      return addMeal(params);
+    } else if (action === 'setDailyMeal') {
+      return setDailyMeal(params);
+    } else if (action === 'addMealRequest') {
+      return addMealRequest(params);
     }
 
     return jsonResponse({ error: 'Invalid action' }, 400);
@@ -181,7 +193,7 @@ function getRecentPointsLog() {
 
       // Only include certain types in the activity feed
       // undo-* types are returned so the frontend can hide the original entry
-      const validTypes = ['chore-approved', 'activity-approved', 'reward-purchase', 'end-of-day-auto', 'daily-adjust', 'undo-chore-approved', 'undo-activity-approved', 'undo-reward-purchase'];
+      const validTypes = ['chore-approved', 'activity-approved', 'reward-purchase', 'end-of-day', 'end-of-day-all', 'end-of-day-auto', 'daily-adjust', 'undo-chore-approved', 'undo-activity-approved', 'undo-reward-purchase'];
       if (!validTypes.includes(type)) continue;
 
       entries.push({
@@ -864,6 +876,155 @@ function autoSaveAllPoints() {
   } catch (error) {
     Logger.log('ERROR in autoSaveAllPoints: ' + error.toString());
     return { success: false, error: error.toString() };
+  }
+}
+
+// ====== MEAL LIBRARY ======
+// Sheet "Meals": columns ID | Name | Active
+
+function getMeals() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Meals');
+    if (!sheet) {
+      // Sheet doesn't exist yet — return empty list so client degrades gracefully
+      return jsonResponse({ success: true, meals: [] });
+    }
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return jsonResponse({ success: true, meals: [] });
+
+    const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    const meals = data
+      .filter(row => row[0])
+      .map(row => ({ id: String(row[0]), name: String(row[1]), active: row[2] !== false && row[2] !== 'false' && row[2] !== 0 }));
+
+    return jsonResponse({ success: true, meals });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+function addMeal(params) {
+  try {
+    const name = (params.name || '').trim();
+    if (!name) return jsonResponse({ error: 'name required' }, 400);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Meals');
+    if (!sheet) {
+      sheet = ss.insertSheet('Meals');
+      sheet.getRange(1, 1, 1, 3).setValues([['ID', 'Name', 'Active']]);
+    }
+
+    const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Date.now().toString(36);
+    sheet.appendRow([id, name, true]);
+    return jsonResponse({ success: true, id });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== DAILY MEAL ======
+// Sheet "Daily Meal": columns Date | MealName
+
+function getDailyMeal(dateParam) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Daily Meal');
+    if (!sheet) return jsonResponse({ success: true, meal: null });
+
+    const today = dateParam || new Date().toISOString().split('T')[0];
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return jsonResponse({ success: true, meal: null });
+
+    const data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    // Search from bottom so most-recent entry wins
+    for (let i = data.length - 1; i >= 0; i--) {
+      const rowDate = data[i][0] instanceof Date
+        ? Utilities.formatDate(data[i][0], Session.getScriptTimeZone(), 'yyyy-MM-dd')
+        : String(data[i][0]);
+      if (rowDate === today) {
+        return jsonResponse({ success: true, meal: { date: today, mealName: String(data[i][1]) } });
+      }
+    }
+    return jsonResponse({ success: true, meal: null });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+function setDailyMeal(params) {
+  try {
+    const date = (params.date || '').trim();
+    const mealName = (params.mealName || '').trim();
+    if (!date) return jsonResponse({ error: 'date required' }, 400);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Daily Meal');
+    if (!sheet) {
+      sheet = ss.insertSheet('Daily Meal');
+      sheet.getRange(1, 1, 1, 2).setValues([['Date', 'MealName']]);
+    }
+
+    // Overwrite existing row for this date if present
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const dates = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (let i = 0; i < dates.length; i++) {
+        const rowDate = dates[i][0] instanceof Date
+          ? Utilities.formatDate(dates[i][0], Session.getScriptTimeZone(), 'yyyy-MM-dd')
+          : String(dates[i][0]);
+        if (rowDate === date) {
+          sheet.getRange(i + 2, 2).setValue(mealName);
+          return jsonResponse({ success: true });
+        }
+      }
+    }
+
+    sheet.appendRow([date, mealName]);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== MEAL REQUESTS ======
+// Sheet "Meal Requests": Date | KidName | MealName | Timestamp
+
+function getMealRequests() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Meal Requests');
+    if (!sheet) return jsonResponse({ success: true, requests: [] });
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return jsonResponse({ success: true, requests: [] });
+    const data = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+    const requests = data.filter(r => r[0]).map(r => ({
+      date: r[0] instanceof Date
+        ? Utilities.formatDate(r[0], Session.getScriptTimeZone(), 'yyyy-MM-dd')
+        : String(r[0]),
+      kidName: String(r[1]),
+      mealName: String(r[2]),
+      requestedAt: r[3] ? String(r[3]) : ''
+    }));
+    return jsonResponse({ success: true, requests });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+function addMealRequest(params) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Meal Requests');
+    if (!sheet) {
+      sheet = ss.insertSheet('Meal Requests');
+      sheet.getRange(1, 1, 1, 4).setValues([['Date', 'KidName', 'MealName', 'Timestamp']]);
+    }
+    sheet.appendRow([params.date, params.kidName, params.mealName, new Date().toISOString()]);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
   }
 }
 

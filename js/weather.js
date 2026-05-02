@@ -16,7 +16,7 @@ export async function fetchWeatherData() {
 
     try {
         const { latitude, longitude, timezone } = CONFIG.weather;
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=${timezone}&temperature_unit=fahrenheit&forecast_days=7`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=${timezone}&temperature_unit=fahrenheit&forecast_days=8`;
 
         const response = await fetch(url);
         if (!response.ok) {

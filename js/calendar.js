@@ -4,6 +4,7 @@
 import { getConfig } from './config.js';
 import { fetchCalendarEvents } from './api.js';
 import { fetchWeatherData, getWeatherEmoji } from './weather.js';
+import { getMealForDate } from './menu.js';
 
 /**
  * Format event date for display
@@ -96,7 +97,7 @@ export async function updateCalendar() {
         return;
     }
 
-    // Build 7-day view
+    // Build 8-day view
     const today = new Date();
     const daysHtml = [];
 
@@ -106,7 +107,7 @@ export async function updateCalendar() {
         ...getUSHolidays(today.getFullYear() + 1)
     ]);
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
 
@@ -156,6 +157,12 @@ export async function updateCalendar() {
         const isToday = i === 0;
         const dayClass = isToday ? 'calendar-day today' : 'calendar-day';
 
+        // Show planned meal for every day that has one
+        const plannedMeal = getMealForDate(date);
+        const mealHtml = plannedMeal
+            ? `<div class="day-meal">🍽️ ${plannedMeal}</div>`
+            : '';
+
         daysHtml.push(`
             <div class="${dayClass}">
                 <div class="day-header">
@@ -164,6 +171,7 @@ export async function updateCalendar() {
                     ${hasHoliday ? `<div class="holiday-indicator" title="${holidayLabel}">🎉</div>` : ''}
                 </div>
                 ${holidayLabel ? `<div class="holiday-name">${holidayLabel}</div>` : ''}
+                ${mealHtml}
                 <div class="day-weather">
                     <div class="day-weather-emoji">${weatherEmoji}</div>
                     <div class="day-weather-temp">${tempMax}° / ${tempMin}°</div>

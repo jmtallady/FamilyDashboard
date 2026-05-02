@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="dashboard-layout">
-        <!-- Left Sidebar: Clock, Weather, Calendar -->
+        <!-- Left Sidebar: Clock, Weather -->
         <div class="sidebar">
             <div class="dark-mode-toggle" onclick="toggleDarkMode()">
                 <span id="darkModeIcon">🌙</span>
@@ -24,8 +24,13 @@
                 <!-- Weather will be added here -->
             </div>
 
-            <div class="calendar-widget" id="calendarWidget">
-                <!-- Calendar will be added here -->
+            <div class="recent-activity-sidebar">
+                <div class="section-header">
+                    <h2>📋 Recent Activity</h2>
+                </div>
+                <div id="recentActivityContainer">
+                    <!-- Recent activities will be dynamically generated -->
+                </div>
             </div>
         </div>
 
@@ -55,33 +60,18 @@
                 <!-- Kids will be dynamically generated from CONFIG -->
             </div>
 
-            <div class="reset-container">
-                <button class="reset-btn" onclick="endOfDayAll()">End of Day for All Kids</button>
-            </div>
-
             <div class="status-message" id="statusMessage"></div>
 
-            <!-- Two Column Layout: Rewards and Recent Activity -->
-            <div class="rewards-activity-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1; min-height: 0;">
-                <!-- Rewards Section -->
-                <div class="rewards-section" style="margin-top: 0; flex: 1; min-height: 0;">
-                    <div class="section-header">
-                        <h2>🎁 Rewards</h2>
-                    </div>
-                    <div id="rewardsContainer" style="overflow-y: auto; flex: 1;">
-                        <!-- Rewards will be dynamically generated -->
-                    </div>
-                </div>
+            <!-- Calendar Widget — full-width below kids -->
+            <div class="calendar-widget calendar-main" id="calendarWidget">
+                <!-- Calendar will be added here -->
+            </div>
 
-                <!-- Recent Activity Section -->
-                <div class="rewards-section" style="margin-top: 0; flex: 1; min-height: 0;">
-                    <div class="section-header">
-                        <h2>📋 Recent Activity</h2>
-                    </div>
-                    <div id="recentActivityContainer" style="overflow-y: auto; flex: 1;">
-                        <!-- Recent activities will be dynamically generated -->
-                    </div>
-                </div>
+            <!-- Quick-access buttons row -->
+            <div class="quick-access-row">
+                <button class="quick-access-btn" onclick="openRewardsModal()">🎁 Rewards</button>
+                <button class="quick-access-btn" onclick="openActivitiesModal()">⭐ Activities</button>
+                <button class="quick-access-btn dinner-request-btn" onclick="openDinnerRequestModal()">🍽️ Request Dinner</button>
             </div>
         </div>
 
@@ -94,16 +84,6 @@
                 </div>
                 <div id="choresContainer">
                     <!-- Chores will be dynamically generated -->
-                </div>
-            </div>
-
-            <!-- Activities Section -->
-            <div class="chores-section">
-                <div class="section-header">
-                    <h2>⭐ Activities</h2>
-                </div>
-                <div id="activitiesContainer">
-                    <!-- Activities will be dynamically generated -->
                 </div>
             </div>
         </div>
@@ -178,6 +158,90 @@
 
     <!-- Unlock Indicator -->
     <div class="unlock-indicator" id="unlockIndicator" onclick="lockDashboard()">🔓 Unlocked (click to lock)</div>
+
+    <!-- Reason Selection Modal -->
+    <div class="pin-modal" id="reasonModal">
+        <div class="pin-content" style="max-width:360px;">
+            <h2 id="reasonModalTitle">Reason</h2>
+            <div id="reasonStepperWrap"></div>
+            <div id="reasonBtnGrid" class="reason-btn-grid"></div>
+            <div id="reasonOtherWrap" style="display:none; margin-bottom:12px;">
+                <input id="reasonOtherInput" class="chores-admin-input"
+                       style="width:100%;font-size:14px;padding:8px 10px;"
+                       type="text" placeholder="Describe reason…" maxlength="80">
+            </div>
+            <div id="reasonValidation" style="color:#ff6b6b;font-size:12px;min-height:18px;margin-bottom:8px;"></div>
+            <div class="pin-buttons">
+                <button class="pin-btn plus-btn" onclick="confirmAdjustment()">Confirm</button>
+                <button class="pin-btn reset-btn" onclick="closeReasonModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rewards Modal -->
+    <div class="pin-modal" id="rewardsModal">
+        <div class="panel-modal-content">
+            <div class="panel-modal-header">
+                <h2>🎁 Rewards</h2>
+                <button class="modal-close-btn" onclick="closeRewardsModal()" title="Close">✕</button>
+            </div>
+            <div class="panel-modal-body">
+                <div id="rewardsContainer">
+                    <!-- Rewards will be dynamically generated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activities Modal -->
+    <div class="pin-modal" id="activitiesModal">
+        <div class="panel-modal-content">
+            <div class="panel-modal-header">
+                <h2>⭐ Activities</h2>
+                <button class="modal-close-btn" onclick="closeActivitiesModal()" title="Close">✕</button>
+            </div>
+            <div class="panel-modal-body">
+                <div id="activitiesContainer">
+                    <!-- Activities will be dynamically generated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dinner Request Modal -->
+    <div class="pin-modal" id="dinnerRequestModal">
+        <div class="pin-content" style="max-width:400px;">
+            <h2>🍽️ Request Dinner</h2>
+
+            <div class="dinner-req-section-label">Who are you?</div>
+            <div id="dinnerKidPicker" class="dinner-kid-grid">
+                <!-- Kid buttons injected by JS -->
+            </div>
+
+            <div class="dinner-req-section-label" style="margin-top:14px;">Which night?</div>
+            <div id="dinnerDatePicker" class="dinner-date-grid">
+                <!-- Date chips injected by JS -->
+            </div>
+
+            <div class="dinner-req-section-label" style="margin-top:14px;">What would you like?</div>
+            <div style="margin-bottom:8px;">
+                <select id="dinnerMealSelect" class="chores-admin-input" style="width:100%;font-size:15px;padding:8px 10px;">
+                    <option value="">Pick from menu…</option>
+                </select>
+            </div>
+            <div style="margin-bottom:8px;">
+                <input id="dinnerCustomMeal" type="text" placeholder="Or type your own…"
+                    class="chores-admin-input" style="width:100%;font-size:15px;padding:8px 10px;" maxlength="80">
+            </div>
+
+            <div id="dinnerReqValidation" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
+
+            <div class="pin-buttons">
+                <button class="pin-btn plus-btn" onclick="submitDinnerRequest()">Send Request</button>
+                <button class="pin-btn reset-btn" onclick="closeDinnerRequestModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="js/app.js"></script>
 </body>
