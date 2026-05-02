@@ -131,7 +131,7 @@ export async function adjustDailyBP(kidId, change, reason = '') {
     const CONFIG = getConfig();
     // Check if PIN is required and user is not unlocked
     if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
-        showPinModal();
+        showPinModal('parent', null, null, () => adjustDailyBP(kidId, change, reason));
         return;
     }
 
@@ -205,7 +205,7 @@ export async function endOfDay(kidId) {
     const CONFIG = getConfig();
     // Check if PIN is required and user is not unlocked
     if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
-        showPinModal();
+        showPinModal('parent', null, null, () => endOfDay(kidId));
         return;
     }
 
@@ -252,7 +252,7 @@ export async function endOfDayAll() {
     const CONFIG = getConfig();
     // Check if PIN is required and user is not unlocked
     if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
-        showPinModal();
+        showPinModal('parent', null, null, () => endOfDayAll());
         return;
     }
 
