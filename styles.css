@@ -1952,26 +1952,6 @@ button {
    REASON SELECTION MODAL
    ========================================== */
 
-.reason-qty-control {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin: 10px 0 4px;
-}
-
-.reason-qty-display {
-    font-size: 32px;
-    font-weight: bold;
-    color: var(--primary-color);
-    min-width: 48px;
-    text-align: center;
-    line-height: 1;
-}
-
-body.dark-mode .reason-qty-display {
-    color: var(--primary-color);
-}
 
 .reason-btn-grid {
     display: grid;

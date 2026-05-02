@@ -4,6 +4,23 @@
 import { getConfig } from './config.js';
 
 /**
+ * Reusable BP stepper component: label + large number display + −/+ buttons.
+ * Returns an HTML string. displayId is the element id for the number.
+ * minusFn / plusFn are onclick expression strings (e.g. "stepReasonBP(-1)").
+ */
+export function renderBPStepper(label, displayId, value, minusFn, plusFn) {
+    return `
+        <div class="currency-section">
+            <div class="points-label">${label}</div>
+            <div class="points-display" id="${displayId}">${value}</div>
+            <div class="button-group">
+                <button class="minus-btn" onclick="${minusFn}">−</button>
+                <button class="plus-btn" onclick="${plusFn}">+</button>
+            </div>
+        </div>`;
+}
+
+/**
  * Generate kid cards dynamically from configuration
  */
 export function generateKidCards() {
@@ -17,14 +34,13 @@ export function generateKidCards() {
                 <div class="kid-card">
                     <div class="kid-name">${kid.name}</div>
 
-                    <div class="currency-section">
-                        <div class="points-label">Daily BP (Today)</div>
-                        <div class="points-display" id="${kid.id}-daily-bp">${kid.defaultDailyBP}</div>
-                        <div class="button-group">
-                            <button class="minus-btn" onclick="showAdjustReason('${kid.id}', -1)">−</button>
-                            <button class="plus-btn" onclick="showAdjustReason('${kid.id}', 1)">+</button>
-                        </div>
-                    </div>
+                    ${renderBPStepper(
+                        'Daily BP (Today)',
+                        `${kid.id}-daily-bp`,
+                        kid.defaultDailyBP,
+                        `showAdjustReason('${kid.id}', -1)`,
+                        `showAdjustReason('${kid.id}', 1)`
+                    )}
 
                     <div class="currency-section total-bp-section">
                         <div class="points-label">Total BP (Bank)</div>

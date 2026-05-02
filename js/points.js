@@ -188,7 +188,8 @@ export async function adjustDailyBP(kidId, change, reason = '') {
     localStorage.setItem(`${kidId}-total-bp`, currentTotalBP.toString());
 
     const actionPast = change > 0 ? 'earned' : 'lost';
-    showMessage(`${kid.name} ${actionPast} a daily point! Now at ${newDailyBP} today`);
+    const absChange = Math.abs(change);
+    showMessage(`${kid.name} ${actionPast} ${absChange} daily point${absChange !== 1 ? 's' : ''}! Now at ${newDailyBP} today`);
 
     // Save to Google Sheets with fresh data
     if (getUseGoogleSheets() && SHEETS_API_URL) {
