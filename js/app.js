@@ -1,8 +1,8 @@
 // app.js - Main Application Entry Point
 
 // Import all modules
-import { fetchConfig, setConfig } from './config.js';
-import {  setUseGoogleSheets, setChores, setRewards, setActivities, getUseGoogleSheets } from './state.js';
+import { fetchConfig, setConfig, getConfig } from './config.js';
+import { setUseGoogleSheets, setChores, setRewards, setActivities, getUseGoogleSheets, getChores, getActivities } from './state.js';
 import * as Theme from './theme.js';
 import * as Weather from './weather.js';
 import * as Calendar from './calendar.js';
@@ -34,7 +34,68 @@ async function loadDailyStatusesFromSheets() {
         const key = `${s.type}-${s.kidId}-${s.itemId}-${today}`;
         localStorage.setItem(key, s.status);
     });
+
+    syncPendingApprovalsFromStatuses(statuses);
     console.log(`Synced ${statuses.length} daily statuses from Sheets`);
+}
+
+/**
+ * Rebuild the pending approvals list from synced daily statuses.
+ * Runs on load and every 2 min so parent dashboard stays current across devices.
+ */
+function syncPendingApprovalsFromStatuses(statuses) {
+    const CONFIG = getConfig();
+    const CHORES = getChores();
+    const ACTIVITIES = getActivities();
+    if (!CONFIG || !CHORES || !ACTIVITIES) return;
+
+    statuses.forEach(s => {
+        // If approved/rejected on another device, remove from local pending list
+        if (s.status === 'approved' || s.status === 'rejected') {
+            ParentDash.removePendingApproval(s.kidId, s.itemId, s.type);
+            return;
+        }
+        if (s.status !== 'pending') return;
+
+        const kid = Object.values(CONFIG).find(
+            k => k.id && k.id.toLowerCase() === (s.kidId || '').toLowerCase()
+        );
+        if (!kid) return;
+
+        // Look up item details from loaded chores/activities state
+        let item = null;
+        if (s.type === 'chore') {
+            item = (CHORES.shared || []).find(c => c.id === s.itemId);
+            if (!item) {
+                for (const list of Object.values(CHORES.individual || {})) {
+                    item = list.find(c => c.id === s.itemId);
+                    if (item) break;
+                }
+            }
+        } else if (s.type === 'activity') {
+            item = (ACTIVITIES.shared || []).find(a => a.id === s.itemId);
+            if (!item) {
+                for (const list of Object.values(ACTIVITIES.individual || {})) {
+                    item = list.find(a => a.id === s.itemId);
+                    if (item) break;
+                }
+            }
+        }
+        if (!item) return;
+
+        // addPendingApproval is idempotent — skips duplicates automatically
+        ParentDash.addPendingApproval({
+            type:       s.type,
+            kidId:      kid.id,
+            kidName:    kid.name,
+            itemId:     s.itemId,
+            itemName:   item.name,
+            bp:         item.bp,
+            multiplier: item.multiplier || 1
+        });
+    });
+
+    ParentDash.updateParentBadge();
 }
 
 /**
