@@ -97,7 +97,7 @@ export async function updateCalendar() {
         return;
     }
 
-    // Build 7-day view
+    // Build 8-day view
     const today = new Date();
     const daysHtml = [];
 
@@ -107,7 +107,7 @@ export async function updateCalendar() {
         ...getUSHolidays(today.getFullYear() + 1)
     ]);
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
 
