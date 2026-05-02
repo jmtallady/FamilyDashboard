@@ -16,6 +16,7 @@ import * as HouseRules from './house-rules.js';
 import * as RecentActivity from './recent-activity.js';
 import * as Automation from './automation.js';
 import * as ReasonModal from './reason-modal.js';
+import * as Menu from './menu.js';
 import { fetchChores, fetchRewards, fetchActivities, fetchDailyStatuses } from './api.js';
 import * as ParentDash from './parent-dashboard.js';
 
@@ -145,6 +146,7 @@ async function initialize() {
     UI.updateDateTime();
     Weather.updateWeather();
     Calendar.updateCalendar();
+    await Menu.initializeMeals();
 
     // Load today's chore/activity statuses from Sheets for cross-device sync
     await loadDailyStatusesFromSheets();
@@ -163,6 +165,14 @@ async function initialize() {
         });
     }
 }
+
+// Modal open/close helpers for Rewards, Activities, Recent Activity
+function openRewardsModal()   { document.getElementById('rewardsModal').classList.add('active'); }
+function closeRewardsModal()  { document.getElementById('rewardsModal').classList.remove('active'); }
+function openActivitiesModal()  { document.getElementById('activitiesModal').classList.add('active'); }
+function closeActivitiesModal() { document.getElementById('activitiesModal').classList.remove('active'); }
+function openRecentActivityModal()  { document.getElementById('recentActivityModal').classList.add('active'); }
+function closeRecentActivityModal() { document.getElementById('recentActivityModal').classList.remove('active'); }
 
 // Expose functions to global scope for onclick handlers (backwards compatibility)
 // Theme functions
@@ -219,6 +229,21 @@ window.selectKidForActivity = Activities.selectKidForActivity;
 window.showActivityKidSelectorFromButton = Activities.showActivityKidSelectorFromButton;
 window.approveActivityFromButton = Activities.approveActivityFromButton;
 window.rejectActivityFromButton = Activities.rejectActivityFromButton;
+
+// Modal open/close
+window.openRewardsModal    = openRewardsModal;
+window.closeRewardsModal   = closeRewardsModal;
+window.openActivitiesModal   = openActivitiesModal;
+window.closeActivitiesModal  = closeActivitiesModal;
+window.openRecentActivityModal   = openRecentActivityModal;
+window.closeRecentActivityModal  = closeRecentActivityModal;
+
+// Menu / meal planning functions
+window.adminToggleMenuSection      = ParentDash.adminToggleMenuSection;
+window.adminSetTodayMealFromSelect = ParentDash.adminSetTodayMealFromSelect;
+window.adminSetCustomMeal          = ParentDash.adminSetCustomMeal;
+window.adminSetMealFromLibrary     = ParentDash.adminSetMealFromLibrary;
+window.adminAddMeal                = ParentDash.adminAddMeal;
 
 // Recent Activity functions
 window.undoActivity = RecentActivity.undoActivity;

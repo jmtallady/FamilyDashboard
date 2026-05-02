@@ -4,6 +4,7 @@
 import { getConfig } from './config.js';
 import { fetchCalendarEvents } from './api.js';
 import { fetchWeatherData, getWeatherEmoji } from './weather.js';
+import { getTodayMeal } from './menu.js';
 
 /**
  * Format event date for display
@@ -156,6 +157,11 @@ export async function updateCalendar() {
         const isToday = i === 0;
         const dayClass = isToday ? 'calendar-day today' : 'calendar-day';
 
+        // Show today's meal on the Today card
+        const mealHtml = isToday && getTodayMeal()
+            ? `<div class="day-meal">🍽️ ${getTodayMeal()}</div>`
+            : '';
+
         daysHtml.push(`
             <div class="${dayClass}">
                 <div class="day-header">
@@ -164,6 +170,7 @@ export async function updateCalendar() {
                     ${hasHoliday ? `<div class="holiday-indicator" title="${holidayLabel}">🎉</div>` : ''}
                 </div>
                 ${holidayLabel ? `<div class="holiday-name">${holidayLabel}</div>` : ''}
+                ${mealHtml}
                 <div class="day-weather">
                     <div class="day-weather-emoji">${weatherEmoji}</div>
                     <div class="day-weather-temp">${tempMax}° / ${tempMin}°</div>

@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="dashboard-layout">
-        <!-- Left Sidebar: Clock, Weather, Calendar -->
+        <!-- Left Sidebar: Clock, Weather -->
         <div class="sidebar">
             <div class="dark-mode-toggle" onclick="toggleDarkMode()">
                 <span id="darkModeIcon">🌙</span>
@@ -22,10 +22,6 @@
 
             <div class="weather-widget" id="weatherWidget">
                 <!-- Weather will be added here -->
-            </div>
-
-            <div class="calendar-widget" id="calendarWidget">
-                <!-- Calendar will be added here -->
             </div>
         </div>
 
@@ -57,27 +53,16 @@
 
             <div class="status-message" id="statusMessage"></div>
 
-            <!-- Two Column Layout: Rewards and Recent Activity -->
-            <div class="rewards-activity-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1; min-height: 0;">
-                <!-- Rewards Section -->
-                <div class="rewards-section" style="margin-top: 0; flex: 1; min-height: 0;">
-                    <div class="section-header">
-                        <h2>🎁 Rewards</h2>
-                    </div>
-                    <div id="rewardsContainer" style="overflow-y: auto; flex: 1;">
-                        <!-- Rewards will be dynamically generated -->
-                    </div>
-                </div>
+            <!-- Calendar Widget — full-width below kids -->
+            <div class="calendar-widget calendar-main" id="calendarWidget">
+                <!-- Calendar will be added here -->
+            </div>
 
-                <!-- Recent Activity Section -->
-                <div class="rewards-section" style="margin-top: 0; flex: 1; min-height: 0;">
-                    <div class="section-header">
-                        <h2>📋 Recent Activity</h2>
-                    </div>
-                    <div id="recentActivityContainer" style="overflow-y: auto; flex: 1;">
-                        <!-- Recent activities will be dynamically generated -->
-                    </div>
-                </div>
+            <!-- Quick-access buttons row -->
+            <div class="quick-access-row">
+                <button class="quick-access-btn" onclick="openRewardsModal()">🎁 Rewards</button>
+                <button class="quick-access-btn" onclick="openActivitiesModal()">⭐ Activities</button>
+                <button class="quick-access-btn" onclick="openRecentActivityModal()">📋 Recent Activity</button>
             </div>
         </div>
 
@@ -90,16 +75,6 @@
                 </div>
                 <div id="choresContainer">
                     <!-- Chores will be dynamically generated -->
-                </div>
-            </div>
-
-            <!-- Activities Section -->
-            <div class="chores-section">
-                <div class="section-header">
-                    <h2>⭐ Activities</h2>
-                </div>
-                <div id="activitiesContainer">
-                    <!-- Activities will be dynamically generated -->
                 </div>
             </div>
         </div>
@@ -190,6 +165,51 @@
             <div class="pin-buttons">
                 <button class="pin-btn plus-btn" onclick="confirmAdjustment()">Confirm</button>
                 <button class="pin-btn reset-btn" onclick="closeReasonModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rewards Modal -->
+    <div class="pin-modal" id="rewardsModal">
+        <div class="panel-modal-content">
+            <div class="panel-modal-header">
+                <h2>🎁 Rewards</h2>
+                <button class="modal-close-btn" onclick="closeRewardsModal()" title="Close">✕</button>
+            </div>
+            <div class="panel-modal-body">
+                <div id="rewardsContainer">
+                    <!-- Rewards will be dynamically generated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activities Modal -->
+    <div class="pin-modal" id="activitiesModal">
+        <div class="panel-modal-content">
+            <div class="panel-modal-header">
+                <h2>⭐ Activities</h2>
+                <button class="modal-close-btn" onclick="closeActivitiesModal()" title="Close">✕</button>
+            </div>
+            <div class="panel-modal-body">
+                <div id="activitiesContainer">
+                    <!-- Activities will be dynamically generated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Modal -->
+    <div class="pin-modal" id="recentActivityModal">
+        <div class="panel-modal-content">
+            <div class="panel-modal-header">
+                <h2>📋 Recent Activity</h2>
+                <button class="modal-close-btn" onclick="closeRecentActivityModal()" title="Close">✕</button>
+            </div>
+            <div class="panel-modal-body">
+                <div id="recentActivityContainer">
+                    <!-- Recent activities will be dynamically generated -->
+                </div>
             </div>
         </div>
     </div>

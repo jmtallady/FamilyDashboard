@@ -10,6 +10,8 @@ const state = {
     REWARDS: null,
     ACTIVITIES: null,
     HOUSE_RULES: null,
+    MEALS: null,      // Meal library: [{ id, name, active }]
+    todayMeal: null,  // Today's selected meal name (string or null)
     pinContext: {
         type: 'parent',  // 'parent' or 'kid'
         kidId: null,     // The kid ID when type is 'kid'
@@ -19,83 +21,38 @@ const state = {
 };
 
 // Getters and setters for controlled state access
-export function getIsUnlocked() {
-    return state.isUnlocked;
-}
+export function getIsUnlocked() { return state.isUnlocked; }
+export function setIsUnlocked(value) { state.isUnlocked = value; }
 
-export function setIsUnlocked(value) {
-    state.isUnlocked = value;
-}
+export function getUnlockTimeout() { return state.unlockTimeout; }
+export function setUnlockTimeout(value) { state.unlockTimeout = value; }
 
-export function getUnlockTimeout() {
-    return state.unlockTimeout;
-}
+export function getEnteredPin() { return state.enteredPin; }
+export function setEnteredPin(value) { state.enteredPin = value; }
 
-export function setUnlockTimeout(value) {
-    state.unlockTimeout = value;
-}
+export function getUseGoogleSheets() { return state.useGoogleSheets; }
+export function setUseGoogleSheets(value) { state.useGoogleSheets = value; }
 
-export function getEnteredPin() {
-    return state.enteredPin;
-}
+export function getChores() { return state.CHORES; }
+export function setChores(value) { state.CHORES = value; }
 
-export function setEnteredPin(value) {
-    state.enteredPin = value;
-}
+export function getRewards() { return state.REWARDS; }
+export function setRewards(value) { state.REWARDS = value; }
 
-export function getUseGoogleSheets() {
-    return state.useGoogleSheets;
-}
+export function getActivities() { return state.ACTIVITIES; }
+export function setActivities(value) { state.ACTIVITIES = value; }
 
-export function setUseGoogleSheets(value) {
-    state.useGoogleSheets = value;
-}
+export function getHouseRules() { return state.HOUSE_RULES; }
+export function setHouseRules(value) { state.HOUSE_RULES = value; }
 
-export function getChores() {
-    return state.CHORES;
-}
+export function getMeals() { return state.MEALS; }
+export function setMeals(value) { state.MEALS = value; }
 
-export function setChores(value) {
-    state.CHORES = value;
-}
+export function getTodayMealState() { return state.todayMeal; }
+export function setTodayMealState(value) { state.todayMeal = value; }
 
-export function getRewards() {
-    return state.REWARDS;
-}
-
-export function setRewards(value) {
-    state.REWARDS = value;
-}
-
-export function getActivities() {
-    return state.ACTIVITIES;
-}
-
-export function setActivities(value) {
-    state.ACTIVITIES = value;
-}
-
-export function getHouseRules() {
-    return state.HOUSE_RULES;
-}
-
-export function setHouseRules(value) {
-    state.HOUSE_RULES = value;
-}
-
-export function getPinContext() {
-    return state.pinContext;
-}
-
-export function setPinContext(context) {
-    state.pinContext = { ...state.pinContext, ...context };
-}
-
+export function getPinContext() { return state.pinContext; }
+export function setPinContext(context) { state.pinContext = { ...state.pinContext, ...context }; }
 export function resetPinContext() {
-    state.pinContext = {
-        type: 'parent',
-        kidId: null,
-        action: null,
-        callback: null
-    };
+    state.pinContext = { type: 'parent', kidId: null, action: null, callback: null };
 }
