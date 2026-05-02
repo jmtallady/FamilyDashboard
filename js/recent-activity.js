@@ -98,14 +98,14 @@ export async function renderRecentActivity() {
                 activityIcon = '🌙';
                 const mEod = entry.note?.match(/\+(\d+) BP earned/);
                 activityText = mEod
-                    ? `${kidName}: +${mEod[1]} BP earned — bank: ${entry.totalBP} BP`
-                    : `${kidName}: End of day — bank: ${entry.totalBP} BP`;
+                    ? `${kidName}: +${mEod[1]} BP earned today`
+                    : `${kidName}: End of day`;
                 activityColor = '#868e96';
                 break;
             }
             case 'end-of-day-auto':
                 activityIcon = '🌙';
-                activityText = `${kidName}: End of day (auto) — bank: ${entry.totalBP} BP`;
+                activityText = `${kidName}: End of day (auto)`;
                 activityColor = '#868e96';
                 break;
             case 'daily-adjust': {
