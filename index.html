@@ -175,6 +175,24 @@
     <!-- Unlock Indicator -->
     <div class="unlock-indicator" id="unlockIndicator" onclick="lockDashboard()">🔓 Unlocked (click to lock)</div>
 
+    <!-- Reason Selection Modal -->
+    <div class="pin-modal" id="reasonModal">
+        <div class="pin-content" style="max-width:360px;">
+            <h2 id="reasonModalTitle">Reason</h2>
+            <div id="reasonBtnGrid" class="reason-btn-grid"></div>
+            <div id="reasonOtherWrap" style="display:none; margin-bottom:12px;">
+                <input id="reasonOtherInput" class="chores-admin-input"
+                       style="width:100%;font-size:14px;padding:8px 10px;"
+                       type="text" placeholder="Describe reason…" maxlength="80">
+            </div>
+            <div id="reasonValidation" style="color:#ff6b6b;font-size:12px;min-height:18px;margin-bottom:8px;"></div>
+            <div class="pin-buttons">
+                <button class="pin-btn plus-btn" onclick="confirmAdjustment()">Confirm</button>
+                <button class="pin-btn reset-btn" onclick="closeReasonModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

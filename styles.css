@@ -1949,6 +1949,59 @@ button {
 }
 
 /* ==========================================
+   REASON SELECTION MODAL
+   ========================================== */
+
+.reason-btn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.reason-btn {
+    padding: 10px 8px;
+    font-size: 13px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    background: #f8f9fa;
+    color: #333;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    width: auto;
+    height: auto;
+}
+
+.reason-btn:hover {
+    border-color: var(--primary-color);
+    background: #f0f4ff;
+}
+
+.reason-btn.selected {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: white;
+}
+
+body.dark-mode .reason-btn {
+    background: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+body.dark-mode .reason-btn:hover {
+    border-color: var(--primary-color);
+    background: #2d3748;
+}
+
+body.dark-mode .reason-btn.selected {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* ==========================================
    MOBILE RESPONSIVE LAYOUT
    ========================================== */
 

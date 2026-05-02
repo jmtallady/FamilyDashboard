@@ -21,8 +21,8 @@ export function generateKidCards() {
                         <div class="points-label">Daily BP (Today)</div>
                         <div class="points-display" id="${kid.id}-daily-bp">${kid.defaultDailyBP}</div>
                         <div class="button-group">
-                            <button class="minus-btn" onclick="adjustDailyBP('${kid.id}', -1)">−</button>
-                            <button class="plus-btn" onclick="adjustDailyBP('${kid.id}', 1)">+</button>
+                            <button class="minus-btn" onclick="showAdjustReason('${kid.id}', -1)">−</button>
+                            <button class="plus-btn" onclick="showAdjustReason('${kid.id}', 1)">+</button>
                         </div>
                     </div>
 

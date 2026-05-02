@@ -15,6 +15,7 @@ import * as Rewards from './rewards.js';
 import * as HouseRules from './house-rules.js';
 import * as RecentActivity from './recent-activity.js';
 import * as Automation from './automation.js';
+import * as ReasonModal from './reason-modal.js';
 import { fetchChores, fetchRewards, fetchActivities, fetchDailyStatuses } from './api.js';
 import * as ParentDash from './parent-dashboard.js';
 
@@ -123,6 +124,12 @@ window.adminEditChore = ParentDash.adminEditChore;
 window.adminSaveChoreEdit = ParentDash.adminSaveChoreEdit;
 window.adminSetMultiplier = ParentDash.adminSetMultiplier;
 window.parentDashEndOfDayAll = ParentDash.parentDashEndOfDayAll;
+
+// Reason modal functions
+window.showAdjustReason   = ReasonModal.showAdjustReason;
+window.selectAdjustReason = ReasonModal.selectAdjustReason;
+window.confirmAdjustment  = ReasonModal.confirmAdjustment;
+window.closeReasonModal   = ReasonModal.closeReasonModal;
 
 // Points functions
 window.adjustDailyBP = Points.adjustDailyBP;

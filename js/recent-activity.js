@@ -108,11 +108,20 @@ export async function renderRecentActivity() {
                 activityText = `${kidName}: End of day (auto) — bank: ${entry.totalBP} BP`;
                 activityColor = '#868e96';
                 break;
-            case 'daily-adjust':
-                activityIcon = '📊';
-                activityText = `${kidName}: Points adjusted`;
-                activityColor = '#339af0';
+            case 'daily-adjust': {
+                const mAdj = entry.note?.match(/^([+-]\d+) BP — (.+)$/);
+                if (mAdj) {
+                    const isPos = parseInt(mAdj[1]) > 0;
+                    activityIcon  = isPos ? '⬆️' : '⬇️';
+                    activityText  = `${kidName}: ${mAdj[2]} (${mAdj[1]} BP)`;
+                    activityColor = isPos ? '#51cf66' : '#ff6b6b';
+                } else {
+                    activityIcon  = '📊';
+                    activityText  = `${kidName}: Daily points adjusted`;
+                    activityColor = '#339af0';
+                }
                 break;
+            }
             default:
                 activityIcon = '📝';
                 activityText = `${kidName}: ${entry.type}`;

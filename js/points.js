@@ -127,7 +127,7 @@ export async function refreshPointsFromSheets() {
     }
 }
 
-export async function adjustDailyBP(kidId, change) {
+export async function adjustDailyBP(kidId, change, reason = '') {
     const CONFIG = getConfig();
     // Check if PIN is required and user is not unlocked
     if (CONFIG.requirePinForEdits && !getIsUnlocked()) {
@@ -192,7 +192,9 @@ export async function adjustDailyBP(kidId, change) {
 
     // Save to Google Sheets with fresh data
     if (getUseGoogleSheets() && SHEETS_API_URL) {
-        const note = `${actionPast} daily BP via dashboard`;
+        const note = reason
+            ? `${change > 0 ? '+' : ''}${change} BP — ${reason}`
+            : `${actionPast} daily BP via dashboard`;
         await savePointsToSheets(kidId, newDailyBP, currentTotalBP, 'daily-adjust', note);
     }
 }
