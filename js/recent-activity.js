@@ -93,27 +93,19 @@ export async function renderRecentActivity() {
                 activityColor = '#a78bfa';
                 break;
             }
-            case 'end-of-day': {
-                activityIcon = '🌙';
-                const mEod = entry.note?.match(/\+(\d+) Daily BP → Total: (\d+) BP/);
-                activityText = mEod
-                    ? `${kidName}: End of day +${mEod[1]} → ${mEod[2]} BP total`
-                    : `${kidName}: End of day`;
-                activityColor = '#868e96';
-                break;
-            }
+            case 'end-of-day':
             case 'end-of-day-all': {
                 activityIcon = '🌙';
-                const mEodAll = entry.note?.match(/\+(\d+) Daily BP → Total: (\d+) BP/);
-                activityText = mEodAll
-                    ? `${kidName}: End of day +${mEodAll[1]} → ${mEodAll[2]} BP total`
-                    : `${kidName}: End of day`;
+                const mEod = entry.note?.match(/\+(\d+) BP earned/);
+                activityText = mEod
+                    ? `${kidName}: +${mEod[1]} BP earned — bank: ${entry.totalBP} BP`
+                    : `${kidName}: End of day — bank: ${entry.totalBP} BP`;
                 activityColor = '#868e96';
                 break;
             }
             case 'end-of-day-auto':
                 activityIcon = '🌙';
-                activityText = `${kidName}: End of day (auto)`;
+                activityText = `${kidName}: End of day (auto) — bank: ${entry.totalBP} BP`;
                 activityColor = '#868e96';
                 break;
             case 'daily-adjust':
