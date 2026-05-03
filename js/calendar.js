@@ -142,7 +142,7 @@ export async function updateCalendar() {
         let eventsHtml = '';
         if (dayEvents.length > 0) {
             const eventsList = dayEvents.slice(0, 3).map(event => {
-                const title = event.title.length > 18 ? event.title.substring(0, 18) + '...' : event.title;
+                const title = event.title.length > 100 ? event.title.substring(0, 100) + '...' : event.title;
                 const timeStr = event.allDay ? '' : new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
                 return `<div class="day-event">${timeStr ? timeStr + ' ' : ''}${title}</div>`;
             }).join('');
@@ -171,11 +171,11 @@ export async function updateCalendar() {
                     ${hasHoliday ? `<div class="holiday-indicator" title="${holidayLabel}">🎉</div>` : ''}
                 </div>
                 ${holidayLabel ? `<div class="holiday-name">${holidayLabel}</div>` : ''}
-                ${mealHtml}
                 <div class="day-weather">
                     <div class="day-weather-emoji">${weatherEmoji}</div>
                     <div class="day-weather-temp">${tempMax}° / ${tempMin}°</div>
                 </div>
+                ${mealHtml}
                 <div class="day-events">
                     ${eventsHtml || '<div class="no-events">No events</div>'}
                 </div>

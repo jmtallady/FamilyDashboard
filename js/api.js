@@ -362,13 +362,30 @@ export async function fetchMeals() {
 }
 
 /**
- * Fetch today's daily meal from Google Sheets
+ * Fetch the meal plan for the next N days from Google Sheets (single call).
+ * Returns an array of { date, mealName } objects.
  */
-export async function fetchDailyMeal() {
+export async function fetchMealPlan(days = 8) {
+    if (!SHEETS_API_URL) return [];
+    try {
+        const response = await fetch(`${SHEETS_API_URL}?action=getMealPlan&days=${days}&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data.success ? (data.plan || []) : [];
+    } catch (error) {
+        console.error('Error fetching meal plan:', error);
+        return [];
+    }
+}
+
+/**
+ * Fetch a day's planned meal from Google Sheets. dateStr defaults to today.
+ */
+export async function fetchDailyMeal(dateStr) {
     if (!SHEETS_API_URL) return null;
     try {
-        const today = new Date().toISOString().split('T')[0];
-        const response = await fetch(`${SHEETS_API_URL}?action=getDailyMeal&date=${today}&t=${Date.now()}`);
+        const date = dateStr || new Date().toISOString().split('T')[0];
+        const response = await fetch(`${SHEETS_API_URL}?action=getDailyMeal&date=${date}&t=${Date.now()}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         return data.success && data.meal ? data.meal : null;

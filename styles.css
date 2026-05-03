@@ -21,10 +21,10 @@
 /* Pink Theme */
 body.theme-pink {
     --primary-start: #f093fb;
-    --primary-end: #f5576c;
+    --primary-end: #f87183;
     --primary-color: #f093fb;
     --primary-dark: #e77bea;
-    --accent-color: #f5576c;
+    --accent-color: #f87183;
 }
 
 /* Blue Theme */
@@ -127,7 +127,7 @@ img.emoji {
 }
 
 .clock-time {
-    font-size: 56px;
+    font-size: 49px;
     font-weight: bold;
     color: var(--primary-color);
     margin-bottom: 4px;
@@ -1014,13 +1014,46 @@ button {
     background: #4c6ef5;
 }
 
-
-.status-message {
-    text-align: center;
+.end-of-day-all-btn {
+    background: #e8590c;
     color: white;
-    font-size: 12px;
-    margin-top: 10px;
-    min-height: 20px;
+    border: none;
+}
+
+.end-of-day-all-btn:hover {
+    background: #d04e0a;
+}
+
+body.dark-mode .end-of-day-all-btn {
+    background: #c25208;
+}
+
+body.dark-mode .end-of-day-all-btn:hover {
+    background: #a84506;
+}
+
+.toast-notification {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: rgba(30, 30, 40, 0.92);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 22px;
+    border-radius: 24px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    white-space: nowrap;
+}
+
+.toast-notification.toast-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
 
 /* PIN Modal Styles */
@@ -2000,21 +2033,20 @@ body.dark-mode .recent-activity-sidebar {
 
 .quick-access-btn {
     flex: 1;
-    padding: 16px 8px;
+    padding: 10px 8px;
     font-size: 17px;
     font-weight: 600;
-    border: none;
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
-    color: white;
+    background: white;
+    color: var(--primary-color);
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
     transition: all 0.2s ease;
 }
 
 .quick-access-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
 }
 
 .quick-access-btn:active {
@@ -2022,7 +2054,9 @@ body.dark-mode .recent-activity-sidebar {
 }
 
 body.dark-mode .quick-access-btn {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
 /* ==========================================
