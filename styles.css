@@ -63,6 +63,15 @@ body.theme-orange {
     --accent-color: #fee140;
 }
 
+/* Light Pink Theme */
+body.theme-light-pink {
+    --primary-start: #ffc8dd;
+    --primary-end: #ff9fb2;
+    --primary-color: #e8739b;
+    --primary-dark: #cf5f87;
+    --accent-color: #ffc8dd;
+}
+
 body {
     font-family: Arial, sans-serif;
     background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
