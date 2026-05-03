@@ -5,7 +5,7 @@
 
 import { SHEETS_API_URL } from './config.js';
 import { getMeals, setMeals, getUseGoogleSheets } from './state.js';
-import { fetchMeals, fetchDailyMeal, saveMeal, saveDailyMeal,
+import { fetchMeals, fetchMealPlan, saveMeal, saveDailyMeal,
          fetchMealRequests, saveMealRequest } from './api.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
@@ -111,25 +111,15 @@ export function dismissDinnerRequest(id) {
 export async function initializeMeals() {
     if (!getUseGoogleSheets() || !SHEETS_API_URL) return;
 
-    const today = new Date();
-    const dateStrings = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(today);
-        d.setDate(today.getDate() + i);
-        return d.toISOString().split('T')[0];
-    });
-
-    const [meals, ...dailyMeals] = await Promise.all([
-        fetchMeals(),
-        ...dateStrings.map(ds => fetchDailyMeal(ds))
-    ]);
+    const [meals, plan] = await Promise.all([fetchMeals(), fetchMealPlan(8)]);
 
     if (meals) setMeals(meals);
 
-    dailyMeals.forEach((meal, i) => {
-        if (meal?.mealName) {
-            const d = new Date(today);
-            d.setDate(today.getDate() + i);
-            localStorage.setItem(planKey(d), meal.mealName);
+    // Write each planned meal into localStorage so calendar shows them offline
+    plan.forEach(({ date, mealName }) => {
+        if (mealName) {
+            const d = new Date(date + 'T12:00:00');
+            if (!isNaN(d)) localStorage.setItem(planKey(d), mealName);
         }
     });
 }

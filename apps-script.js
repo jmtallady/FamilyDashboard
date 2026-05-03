@@ -64,6 +64,8 @@ function doGet(e) {
     return getMeals();
   } else if (action === 'getDailyMeal') {
     return getDailyMeal(e.parameter.date);
+  } else if (action === 'getMealPlan') {
+    return getMealPlan(e.parameter.days);
   } else if (action === 'getMealRequests') {
     return getMealRequests();
   } else if (action === 'test') {
@@ -926,6 +928,43 @@ function addMeal(params) {
 
 // ====== DAILY MEAL ======
 // Sheet "Daily Meal": columns Date | MealName
+
+function getMealPlan(daysParam) {
+  try {
+    const days = parseInt(daysParam) || 8;
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Daily Meal');
+    if (!sheet) return jsonResponse({ success: true, plan: [] });
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return jsonResponse({ success: true, plan: [] });
+
+    // Build set of target dates (today + N days)
+    const tz = Session.getScriptTimeZone();
+    const targets = new Set();
+    for (let i = 0; i < days; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      targets.add(Utilities.formatDate(d, tz, 'yyyy-MM-dd'));
+    }
+
+    const data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    const planMap = {};
+    // Iterate forward so later rows (more recent) win
+    data.forEach(row => {
+      if (!row[0]) return;
+      const rowDate = row[0] instanceof Date
+        ? Utilities.formatDate(row[0], tz, 'yyyy-MM-dd')
+        : String(row[0]);
+      if (targets.has(rowDate) && row[1]) planMap[rowDate] = String(row[1]);
+    });
+
+    const plan = Object.entries(planMap).map(([date, mealName]) => ({ date, mealName }));
+    return jsonResponse({ success: true, plan });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
 
 function getDailyMeal(dateParam) {
   try {
