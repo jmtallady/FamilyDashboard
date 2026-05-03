@@ -127,7 +127,7 @@ img.emoji {
 }
 
 .clock-time {
-    font-size: 49px;
+    font-size: 40px;
     font-weight: bold;
     color: var(--primary-color);
     margin-bottom: 4px;
@@ -156,12 +156,12 @@ img.emoji {
 }
 
 .weather-emoji-large {
-    font-size: 54px;
-    margin-bottom: 6px;
+    font-size: 40px;
+    margin-bottom: 5px;
 }
 
 .weather-temp-large {
-    font-size: 50px;
+    font-size: 40px;
     font-weight: bold;
     color: var(--primary-color);
     margin-bottom: 4px;
@@ -192,7 +192,7 @@ img.emoji {
 }
 
 .forecast-emoji {
-    font-size: 28px;
+    font-size: 20px;
     margin: 4px 0;
 }
 
@@ -1946,11 +1946,11 @@ body.dark-mode .reason-btn.selected {
 }
 
 .calendar-main .day-name {
-    font-size: 18px;
+    font-size: 20px;
 }
 
 .calendar-main .day-date {
-    font-size: 15px;
+    font-size: 18px;
 }
 
 .calendar-main .holiday-name {
@@ -1989,9 +1989,9 @@ body.dark-mode .reason-btn.selected {
 }
 
 .day-meal {
-    font-size: 15px;
+    font-size: 20px;
     color: var(--primary-color);
-    font-weight: 500;
+    font-weight: 700;
     padding: 3px 0;
     margin-bottom: 6px;
 }
@@ -2379,7 +2379,7 @@ body.dark-mode .dinner-date-btn.selected {
 
     /* Clock widget */
     .clock-time {
-        font-size: 40px;
+        font-size: 35px;
     }
 
     /* Rewards grid - wider items */

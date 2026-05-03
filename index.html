@@ -11,10 +11,6 @@
     <div class="dashboard-layout">
         <!-- Left Sidebar: Clock, Weather -->
         <div class="sidebar">
-            <div class="dark-mode-toggle" onclick="toggleDarkMode()">
-                <span id="darkModeIcon">🌙</span>
-            </div>
-
             <div class="clock-widget">
                 <div class="clock-time" id="clockTime">12:00:00</div>
                 <div class="clock-date" id="clockDate">Loading...</div>
@@ -53,6 +49,9 @@
                         <option value="teal">Teal</option>
                         <option value="orange">Orange</option>
                     </select>
+                    <div class="house-rules-btn" onclick="toggleDarkMode()">
+                        <span id="darkModeIcon">🌙</span>
+                    </div>
                 </div>
             </div>
 
