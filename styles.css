@@ -21,10 +21,10 @@
 /* Pink Theme */
 body.theme-pink {
     --primary-start: #f093fb;
-    --primary-end: #f5576c;
+    --primary-end: #f87183;
     --primary-color: #f093fb;
     --primary-dark: #e77bea;
-    --accent-color: #f5576c;
+    --accent-color: #f87183;
 }
 
 /* Blue Theme */
