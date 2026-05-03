@@ -19,12 +19,19 @@ export function getKidByName(name) {
 }
 
 /**
- * Show status message for 3 seconds
+ * Show a floating toast notification for 3 seconds.
  */
 export function showMessage(message) {
-    const statusElement = document.getElementById('statusMessage');
-    statusElement.textContent = message;
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    // Trigger fade-in on next frame
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+
     setTimeout(() => {
-        statusElement.textContent = '';
+        toast.classList.remove('toast-visible');
+        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
     }, 3000);
 }
