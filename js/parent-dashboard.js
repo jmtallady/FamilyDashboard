@@ -6,6 +6,7 @@ import { showPinModal } from './auth.js';
 import { getIsUnlocked } from './state.js';
 import { getChores, setChores } from './state.js';
 import { getConfig } from './config.js';
+import { showMessage } from './utils.js';
 import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
 import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores } from './api.js';
@@ -18,6 +19,7 @@ const STORAGE_KEY = 'pending-approvals';
 
 // Module-level state
 let choresSectionOpen = false;
+let endOfDaySectionOpen = false;
 let allChoresCache = null; // All chores including disabled (multiplier=0)
 
 // ── Pending approvals list ────────────────────────────────────────────────────
@@ -146,9 +148,9 @@ export function renderParentDashboard() {
         });
     }
 
-    html += renderEndOfDaySectionHtml();
     html += renderMenuSectionHtml();
     html += renderChoresSectionHtml();
+    html += renderEndOfDaySectionHtml();
     container.innerHTML = html;
 }
 
@@ -176,27 +178,38 @@ export function parentDashReject(type, kidId, itemId, itemName) {
 
 // ── End of Day Section ────────────────────────────────────────────────────────
 
+export function toggleEndOfDaySection() {
+    endOfDaySectionOpen = !endOfDaySectionOpen;
+    renderParentDashboard();
+}
+
 function renderEndOfDaySectionHtml() {
     const CONFIG = getConfig();
     if (!CONFIG) return '';
     const kids = Object.values(CONFIG).filter(k => k.id);
+    const toggleIcon = endOfDaySectionOpen ? '▾' : '▸';
 
     let html = `
         <div class="chores-admin-section" style="margin-top:12px;">
-            <div class="chores-admin-header" style="cursor:default;">
+            <div class="chores-admin-header" onclick="toggleEndOfDaySection()">
                 <span>🌙 End of Day</span>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:8px;">`;
+                <span>${toggleIcon}</span>
+            </div>`;
+
+    if (!endOfDaySectionOpen) return html + `</div>`;
+
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 4px;">`;
 
     kids.forEach(kid => {
-        html += `<button class="chore-btn end-of-day-btn" style="width:100%;font-size:13px;padding:8px 10px;height:auto;"
-            onclick="endOfDay('${kid.id}')">End Day for ${kid.name}</button>`;
+        html += `<button class="chore-btn end-of-day-btn"
+            style="flex:1;min-width:100px;font-size:12px;padding:5px 8px;height:auto;"
+            onclick="endOfDay('${kid.id}')">🌙 ${kid.name}</button>`;
     });
 
-    html += `
-                <button class="reset-btn" style="width:100%;margin-top:4px;font-size:13px;padding:8px 10px;height:auto;border-radius:8px;"
-                    onclick="parentDashEndOfDayAll()">End Day for All Kids</button>
-            </div>
+    html += `</div>
+        <button class="reset-btn end-of-day-all-btn"
+            style="width:100%;margin-bottom:8px;font-size:13px;padding:8px 10px;height:auto;border-radius:8px;"
+            onclick="parentDashEndOfDayAll()">🌙 End Day for All Kids</button>
         </div>`;
 
     return html;
@@ -486,10 +499,3 @@ function formatAge(isoString) {
     return 'just now';
 }
 
-function showMessage(msg) {
-    const el = document.getElementById('message');
-    if (!el) return;
-    el.textContent = msg;
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 3000);
-}

@@ -276,6 +276,7 @@ window.adminEditChore = ParentDash.adminEditChore;
 window.adminSaveChoreEdit = ParentDash.adminSaveChoreEdit;
 window.adminSetMultiplier = ParentDash.adminSetMultiplier;
 window.parentDashEndOfDayAll = ParentDash.parentDashEndOfDayAll;
+window.toggleEndOfDaySection = ParentDash.toggleEndOfDaySection;
 
 // Reason modal functions
 window.showAdjustReason   = ReasonModal.showAdjustReason;
