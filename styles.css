@@ -65,8 +65,8 @@ body.theme-orange {
 
 /* Light Pink Theme */
 body.theme-light-pink {
-    --primary-start: #fff0f5;
-    --primary-end: #ffd6e7;
+    --primary-start: #fcd5e8;
+    --primary-end: #f8bfd8;
     --primary-color: #d4688e;
     --primary-dark: #bb5578;
     --accent-color: #ffd6e7;
