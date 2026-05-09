@@ -379,15 +379,22 @@ img.emoji {
     margin-bottom: 5px;
 }
 
-.color-scheme-selector {
+.header-btns {
     position: absolute;
-    right: 0;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.color-scheme-selector label {
+.header-btns-right {
+    right: 0;
+}
+
+.header-btns-left {
+    left: 0;
+}
+
+.header-btns label {
     font-size: 18px;
     cursor: default;
 }
@@ -841,7 +848,7 @@ body.dark-mode .modal-close-btn:hover {
     }
 }
 
-.color-scheme-selector select {
+.header-btns select {
     padding: 6px 10px;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 8px;
@@ -854,18 +861,18 @@ body.dark-mode .modal-close-btn:hover {
     backdrop-filter: blur(10px);
 }
 
-.color-scheme-selector select:hover {
+.header-btns select:hover {
     background: rgba(255, 255, 255, 0.3);
     border-color: rgba(255, 255, 255, 0.5);
 }
 
-.color-scheme-selector select:focus {
+.header-btns select:focus {
     outline: none;
     border-color: rgba(255, 255, 255, 0.7);
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
-.color-scheme-selector select option {
+.header-btns select option {
     background: #2d1b4e;
     color: white;
 }
@@ -2319,7 +2326,7 @@ body.dark-mode .dinner-date-btn.selected {
         font-size: 20px;
     }
 
-    .color-scheme-selector select {
+    .header-btns select {
         font-size: 13px;
         padding: 4px 8px;
     }

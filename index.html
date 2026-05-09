@@ -33,13 +33,7 @@
         <!-- Main Content: Kids Cards and Rewards -->
         <div class="main-content">
             <div class="header">
-                <h1>Family Dashboard</h1>
-                <div class="color-scheme-selector">
-                    <button class="house-rules-btn" onclick="showHouseRules()" title="View House Rules">📋</button>
-                    <button class="house-rules-btn parent-dash-btn" onclick="openParentDashboard()" title="Parent Dashboard">
-                        👪
-                        <span class="pending-badge" id="parentDashBadge" style="display:none;">0</span>
-                    </button>
+                <div class="header-btns header-btns-left">
                     <label for="colorScheme">🎨</label>
                     <select id="colorScheme" onchange="changeColorScheme(this.value)">
                         <option value="purple">Purple</option>
@@ -53,6 +47,14 @@
                     <div class="house-rules-btn" onclick="toggleDarkMode()">
                         <span id="darkModeIcon">🌙</span>
                     </div>
+                </div>
+                <h1>Family Dashboard</h1>
+                <div class="header-btns header-btns-right">
+                    <button class="house-rules-btn" onclick="showHouseRules()" title="View House Rules">📋</button>
+                    <button class="house-rules-btn parent-dash-btn" onclick="openParentDashboard()" title="Parent Dashboard">
+                        👪
+                        <span class="pending-badge" id="parentDashBadge" style="display:none;">0</span>
+                    </button>
                 </div>
             </div>
 
