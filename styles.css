@@ -65,11 +65,11 @@ body.theme-orange {
 
 /* Light Pink Theme */
 body.theme-light-pink {
-    --primary-start: #ffc8dd;
-    --primary-end: #ff9fb2;
-    --primary-color: #e8739b;
-    --primary-dark: #cf5f87;
-    --accent-color: #ffc8dd;
+    --primary-start: #fff0f5;
+    --primary-end: #ffd6e7;
+    --primary-color: #d4688e;
+    --primary-dark: #bb5578;
+    --accent-color: #ffd6e7;
 }
 
 body {
