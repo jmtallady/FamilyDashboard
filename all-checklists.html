@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Checklists</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFF8ED;
+    --card: #FFFFFF;
+    --text: #2D2D2D;
+    --grey: #888888;
+    --mint: #6EFFC3;
+    --done-bg: #F0FFF4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 30px;
+  }
+
+  /* ── Tab bar ─────────────────────────────────────────── */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    padding: 14px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 3px solid #eee;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 10px 6px 12px;
+    border: none;
+    background: none;
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(0.8rem, 3.5vw, 1rem);
+    color: #bbb;
+    cursor: pointer;
+    border-bottom: 4px solid transparent;
+    margin-bottom: -3px;
+    transition: color 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    line-height: 1.1;
+  }
+
+  .tab-btn .tab-icon { font-size: 1.5rem; }
+
+  .tab-btn.active-morning  { color: #FF7F3F; border-color: #FF7F3F; }
+  .tab-btn.active-school   { color: #2BBFA4; border-color: #2BBFA4; }
+  .tab-btn.active-dinner   { color: #6B7FFF; border-color: #6B7FFF; }
+
+  /* mini progress dots in tab */
+  .tab-dots {
+    display: flex;
+    gap: 3px;
+    margin-top: 2px;
+    height: 6px;
+    align-items: center;
+  }
+  .tab-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #ddd;
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .tab-dot.filled-morning { background: #FF7F3F; }
+  .tab-dot.filled-school  { background: #2BBFA4; }
+  .tab-dot.filled-dinner  { background: #6B7FFF; }
+
+  /* ── Panels ──────────────────────────────────────────── */
+  .panel { display: none; padding: 20px 16px 10px; }
+  .panel.active { display: block; }
+
+  /* ── Panel headers ───────────────────────────────────── */
+  .panel-header { text-align: center; margin-bottom: 20px; }
+
+  .header-icon {
+    font-size: 46px;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .spin  { animation: spin  12s linear   infinite; }
+  .sway  { animation: sway  4s  ease-in-out infinite; }
+  .pulse { animation: pulse 3s  ease-in-out infinite; }
+
+  @keyframes spin  { to { transform: rotate(360deg); } }
+  @keyframes sway  { 0%,100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+
+  .panel-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.6rem, 6vw, 2.4rem);
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .morning-title { color: #FF7F3F; text-shadow: 3px 3px 0 #FFD93D; }
+  .school-title  { color: #2BBFA4; text-shadow: 3px 3px 0 #A8F0E8; }
+  .dinner-title  { color: #6B7FFF; text-shadow: 3px 3px 0 #C9A8FF; }
+
+  .panel-subtitle { font-size: 0.88rem; color: var(--grey); font-weight: 700; margin-bottom: 12px; }
+
+  /* Progress bar */
+  .progress-wrap {
+    background: #eee;
+    border-radius: 20px;
+    height: 14px;
+    max-width: 320px;
+    margin: 0 auto 4px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 20px;
+    width: 0%;
+    transition: width 0.5s cubic-bezier(.4,2,.6,1);
+  }
+  .morning-fill { background: linear-gradient(90deg, #FFD93D, #FF9A3C); }
+  .school-fill  { background: linear-gradient(90deg, #6EFFC3, #2BBFA4); }
+  .dinner-fill  { background: linear-gradient(90deg, #C9A8FF, #6B7FFF); }
+
+  .progress-label { font-size: 0.8rem; color: #aaa; font-weight: 700; text-align: center; }
+
+  /* ── Section headers (after-school / after-dinner sub-sections) ── */
+  .section-header {
+    border-radius: 14px;
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    margin-top: 14px;
+  }
+  .section-header h2 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    color: white;
+  }
+  .section-header .s-emoji { font-size: 20px; }
+  .sec-teal   { background: #2BBFA4; }
+  .sec-indigo { background: #6B7FFF; }
+  .sec-progress { margin-left: auto; font-size: 0.78rem; color: rgba(255,255,255,0.85); font-weight: 700; }
+
+  /* ── Task cards ──────────────────────────────────────── */
+  .task-card {
+    background: var(--card);
+    border-radius: 16px;
+    margin-bottom: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.3s, border-color 0.3s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .task-card:hover  { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,0.1); }
+  .task-card:active { transform: scale(0.98); }
+  .task-card.done   { background: var(--done-bg); border-color: var(--mint); }
+  .task-card.done .task-title  { text-decoration: line-through; color: #aaa; }
+  .task-card.done .task-detail { text-decoration: line-through; color: #ccc; }
+
+  .checkbox {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 2.5px solid #ddd;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    transition: all 0.25s cubic-bezier(.4,2,.6,1);
+  }
+  .task-card.done .checkbox {
+    background: var(--mint); border-color: var(--mint);
+    animation: pop 0.3s cubic-bezier(.4,2,.6,1);
+  }
+  @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
+
+  .emoji-badge {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .task-body { flex: 1; }
+  .task-title  { font-family: 'Fredoka One', cursive; font-size: 1.05rem; color: var(--text); line-height: 1.2; transition: color 0.3s; }
+  .task-detail { font-size: 0.78rem; color: var(--grey); margin-top: 2px; font-weight: 600; transition: color 0.3s; }
+
+  /* badge bg colours */
+  .bg1{background:#FFF3C4} .bg2{background:#D6F5FF} .bg3{background:#FFE5E5}
+  .bg4{background:#E8F5E9} .bg5{background:#F3E5FF} .bg6{background:#FFF3C4}
+  .bg7{background:#D6F5FF} .bg8{background:#FFE5E5} .bg9{background:#E8F5E9}
+  .bg10{background:#F3E5FF} .bg11{background:#FFF3C4}
+
+  /* ── Finish banner ────────────────────────────────────── */
+  .finish-banner {
+    display: none;
+    text-align: center;
+    padding: 20px 16px;
+    margin-top: 8px;
+    border-radius: 20px;
+    animation: slideUp 0.5s cubic-bezier(.4,2,.6,1);
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+  .finish-banner.show { display: block; }
+  .morning-banner { background: linear-gradient(135deg, #FFD93D, #FF9A3C); box-shadow: 0 6px 24px #FFD93D55; }
+  .school-banner  { background: linear-gradient(135deg, #6EFFC3, #2BBFA4); box-shadow: 0 6px 24px #2BBFA455; }
+  .dinner-banner  { background: linear-gradient(135deg, #C9A8FF, #6B7FFF); box-shadow: 0 6px 24px #6B7FFF55; }
+  .finish-banner .trophy { font-size: 46px; }
+  .finish-banner h2 { font-family: 'Fredoka One', cursive; font-size: 1.7rem; color: white; text-shadow: 2px 2px 0 rgba(0,0,0,0.12); margin: 4px 0; }
+  .finish-banner p  { color: rgba(255,255,255,0.92); font-weight: 700; font-size: 0.92rem; }
+
+  .reset-btn {
+    margin-top: 14px;
+    background: white;
+    border: none; border-radius: 50px;
+    padding: 9px 26px;
+    font-family: 'Fredoka One', cursive; font-size: 1rem;
+    cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    transition: transform 0.15s;
+  }
+  .reset-btn:hover { transform: scale(1.05); }
+  .reset-morning { color: #FF9A3C; }
+  .reset-school  { color: #2BBFA4; }
+  .reset-dinner  { color: #6B7FFF; }
+
+  @media (max-width: 380px) {
+    .tab-btn { font-size: 0.72rem; }
+    .task-title { font-size: 0.95rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Tab bar -->
+<div class="tab-bar" id="tabBar">
+  <button class="tab-btn active-morning" id="tab-morning" onclick="switchTab('morning')">
+    <span class="tab-icon">☀️</span>
+    Morning
+    <div class="tab-dots" id="dots-morning"></div>
+  </button>
+  <button class="tab-btn" id="tab-school" onclick="switchTab('school')">
+    <span class="tab-icon">🏫</span>
+    After School
+    <div class="tab-dots" id="dots-school"></div>
+  </button>
+  <button class="tab-btn" id="tab-dinner" onclick="switchTab('dinner')">
+    <span class="tab-icon">🌙</span>
+    After Dinner
+    <div class="tab-dots" id="dots-dinner"></div>
+  </button>
+</div>
+
+<!-- ── Morning panel ─────────────────────────────────────── -->
+<div class="panel active" id="panel-morning">
+  <div class="panel-header">
+    <div class="header-icon spin">☀️</div>
+    <div class="panel-title morning-title">Good Morning!<br>Let's Get Ready!</div>
+    <div class="panel-subtitle">Tap each one when you're done ✓</div>
+    <div class="progress-wrap"><div class="progress-fill morning-fill" id="fill-morning"></div></div>
+    <div class="progress-label" id="label-morning">0 of 11 done</div>
+  </div>
+  <div id="list-morning"></div>
+  <div class="finish-banner morning-banner" id="banner-morning">
+    <div class="trophy">🏆</div>
+    <h2>Amazing Job!</h2>
+    <p>You are totally ready for school!<br>Have an awesome day! 🎉</p>
+    <button class="reset-btn reset-morning" onclick="resetSection('morning')">Reset</button>
+  </div>
+</div>
+
+<!-- ── After School panel ────────────────────────────────── -->
+<div class="panel" id="panel-school">
+  <div class="panel-header">
+    <div class="header-icon pulse">🏫</div>
+    <div class="panel-title school-title">After School</div>
+    <div class="panel-subtitle">Tap each one when you're done ✓</div>
+    <div class="progress-wrap"><div class="progress-fill school-fill" id="fill-school"></div></div>
+    <div class="progress-label" id="label-school">0 of 4 done</div>
+  </div>
+  <div id="list-school"></div>
+  <div class="finish-banner school-banner" id="banner-school">
+    <div class="trophy">🏆</div>
+    <h2>Crushed it!</h2>
+    <p>Everything done. Go relax! 🎮</p>
+    <button class="reset-btn reset-school" onclick="resetSection('school')">Reset</button>
+  </div>
+</div>
+
+<!-- ── After Dinner panel ────────────────────────────────── -->
+<div class="panel" id="panel-dinner">
+  <div class="panel-header">
+    <div class="header-icon sway">🌙</div>
+    <div class="panel-title dinner-title">After Dinner</div>
+    <div class="panel-subtitle">Tap each one when you're done ✓</div>
+    <div class="progress-wrap"><div class="progress-fill dinner-fill" id="fill-dinner"></div></div>
+    <div class="progress-label" id="label-dinner">0 of 5 done</div>
+  </div>
+  <div id="list-dinner"></div>
+  <div class="finish-banner dinner-banner" id="banner-dinner">
+    <div class="trophy">🌟</div>
+    <h2>All Done!</h2>
+    <p>Great work today. Sleep tight! 😴</p>
+    <button class="reset-btn reset-dinner" onclick="resetSection('dinner')">Reset</button>
+  </div>
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+const data = {
+  morning: {
+    tasks: [
+      { emoji:"👕", title:"Get dressed",          detail:"Clothes + socks!",                     bg:"bg1" },
+      { emoji:"🧺", title:"PJ's in the basket",   detail:"Floor stuff too.",                     bg:"bg2" },
+      { emoji:"💊", title:"Take your meds",        detail:"With water.",                          bg:"bg3" },
+      { emoji:"🥤", title:"Eat breakfast",         detail:"Smoothie, cereal, toast, or fruit!",  bg:"bg4" },
+      { emoji:"🪥", title:"Brush your teeth",      detail:"2 minutes!",                           bg:"bg5" },
+      { emoji:"🧥", title:"Hoodie or coat",        detail:"Wear it or pack it.",                 bg:"bg6" },
+      { emoji:"🥪", title:"Get your lunch",        detail:"Shelf → backpack.",                   bg:"bg7" },
+      { emoji:"🎒", title:"Pack your backpack",    detail:"Everything in — then ZIP IT. 🤐",     bg:"bg8" },
+      { emoji:"👟", title:"Shoes on",              detail:"Both feet!",                           bg:"bg9" },
+      { emoji:"🚪", title:"Ready by the door",     detail:"Backpack on. Let's go!",              bg:"bg10"},
+      { emoji:"🔑", title:"Got everything?",       detail:"Backpack ✓  Lunch ✓  Hoodie ✓  Meds ✓", bg:"bg11"},
+    ]
+  },
+  school: {
+    tasks: [
+      { emoji:"🎒", title:"Unpack your backpack", detail:"Empty it out + put lunch bag away.", bg:"bg2" },
+      { emoji:"📚", title:"Homework",             detail:"Get it done!",                      bg:"bg4" },
+      { emoji:"🥋", title:"Karate practice",      detail:"Gi on, ready to go!",              bg:"bg3" },
+      { emoji:"🧹", title:"Chores",               detail:"Check the list!",                  bg:"bg5" },
+    ]
+  },
+  dinner: {
+    tasks: [
+      { emoji:"🥪", title:"Pack your lunch",         detail:"Shelf → lunch bag → backpack.",    bg:"bg5" },
+      { emoji:"👕", title:"Get clothes out",          detail:"Pick tomorrow's outfit now.",      bg:"bg3" },
+      { emoji:"🍪", title:"Treat — if earned! 🌟",   detail:"You know what you did today.",     bg:"bg3" },
+      { emoji:"🚿", title:"Wash up & brush teeth",    detail:"Face, hands, 2 min brush!",       bg:"bg2" },
+      { emoji:"🩳", title:"PJ's on",                  detail:"Comfy time!",                     bg:"bg4" },
+    ]
+  }
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const state = {
+  morning: data.morning.tasks.map(() => false),
+  school:  data.school.tasks.map(()  => false),
+  dinner:  data.dinner.tasks.map(()  => false),
+};
+
+let currentTab = 'morning';
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  ['morning','school','dinner'].forEach(t => {
+    document.getElementById(`panel-${t}`).classList.toggle('active', t === tab);
+    const btn = document.getElementById(`tab-${t}`);
+    btn.className = `tab-btn${t === tab ? ` active-${t}` : ''}`;
+  });
+  renderAll();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderSection(id) {
+  const tasks  = data[id].tasks;
+  const states = state[id];
+  const list   = document.getElementById(`list-${id}`);
+  const fill   = document.getElementById(`fill-${id}`);
+  const label  = document.getElementById(`label-${id}`);
+  const banner = document.getElementById(`banner-${id}`);
+  const dots   = document.getElementById(`dots-${id}`);
+
+  // Cards
+  list.innerHTML = '';
+  tasks.forEach((task, i) => {
+    const done = states[i];
+    const card = document.createElement('div');
+    card.className = `task-card${done ? ' done' : ''}`;
+    card.onclick = () => { states[i] = !states[i]; renderSection(id); updateDots(); };
+    card.innerHTML = `
+      <div class="checkbox">${done ? '✓' : ''}</div>
+      <div class="emoji-badge ${task.bg}">${task.emoji}</div>
+      <div class="task-body">
+        <div class="task-title">${task.title}</div>
+        <div class="task-detail">${task.detail}</div>
+      </div>`;
+    list.appendChild(card);
+  });
+
+  // Progress
+  const done  = states.filter(Boolean).length;
+  const total = tasks.length;
+  const pct   = total ? (done / total) * 100 : 0;
+  fill.style.width = `${pct}%`;
+  label.textContent = `${done} of ${total} done`;
+
+  // Banner
+  if (done === total) {
+    banner.classList.add('show');
+    list.style.opacity = '0.5';
+  } else {
+    banner.classList.remove('show');
+    list.style.opacity = '1';
+  }
+
+  // Dots
+  dots.innerHTML = '';
+  tasks.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = `tab-dot${states[i] ? ` filled-${id}` : ''}`;
+    dots.appendChild(dot);
+  });
+}
+
+function renderAll() {
+  ['morning','school','dinner'].forEach(renderSection);
+}
+
+function updateDots() {
+  ['morning','school','dinner'].forEach(id => {
+    const dots   = document.getElementById(`dots-${id}`);
+    const states = state[id];
+    dots.innerHTML = '';
+    states.forEach(s => {
+      const dot = document.createElement('div');
+      dot.className = `tab-dot${s ? ` filled-${id}` : ''}`;
+      dots.appendChild(dot);
+    });
+  });
+}
+
+function resetSection(id) {
+  state[id].fill(false);
+  renderSection(id);
+  updateDots();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
