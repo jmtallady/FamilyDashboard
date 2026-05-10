@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Checklists</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+<style>
+  img.emoji {
+    height: 1em; width: 1em;
+    margin: 0 0.05em 0 0.1em;
+    vertical-align: -0.1em;
+    pointer-events: none;
+  }
+</style>
 <style>
   :root {
     --bg: #FFF8ED;
@@ -456,6 +465,21 @@ function resetSection(id) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderAll();
+
+// ── Twemoji: replace all emoji with cross-platform images ─────────────────────
+function parseTwemoji() {
+  twemoji.parse(document.body, { folder: 'svg', ext: '.svg' });
+}
+
+// Patch renderSection to call twemoji after each render
+const _renderSection = renderSection;
+window.renderSection = function(id) {
+  _renderSection(id);
+  parseTwemoji();
+};
+
+// Initial parse
+parseTwemoji();
 </script>
 </body>
 </html>
