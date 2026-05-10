@@ -146,24 +146,40 @@ export function renderChores() {
     // Sort chores by total BP high to low
     allChores.sort((a, b) => (b.bp * (b.multiplier || 1)) - (a.bp * (a.multiplier || 1)));
 
+    const unlocked = getIsUnlocked();
+
     // Render all chores in one compact list
     allChores.forEach(chore => {
         let status = 'incomplete';
         let assignedKidId = chore.kidId;
 
-        // For shared chores, check if any kid completed it
+        // For shared chores, check if parent marked done or any kid completed it
         if (chore.isShared) {
-            Object.values(CONFIG).forEach(kid => {
-                if (kid.id) {
-                    const kidStatus = getChoreStatus(kid.id, chore.id);
-                    if (kidStatus === 'approved' || kidStatus === 'pending') {
-                        status = kidStatus;
-                        assignedKidId = kid.id;
+            const parentStatus = getChoreStatus('parent', chore.id);
+            if (parentStatus === 'approved') {
+                status = 'approved';
+                assignedKidId = 'parent';
+            } else {
+                Object.values(CONFIG).forEach(kid => {
+                    if (kid.id) {
+                        const kidStatus = getChoreStatus(kid.id, chore.id);
+                        if (kidStatus === 'approved' || kidStatus === 'pending') {
+                            status = kidStatus;
+                            assignedKidId = kid.id;
+                        }
                     }
-                }
-            });
+                });
+            }
         } else {
             status = getChoreStatus(chore.kidId, chore.id);
+            // Also check if parent marked it done
+            if (status === 'incomplete') {
+                const parentStatus = getChoreStatus('parent', chore.id);
+                if (parentStatus === 'approved') {
+                    status = 'approved';
+                    assignedKidId = 'parent';
+                }
+            }
         }
 
         const statusClass = status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'incomplete';
@@ -182,9 +198,12 @@ export function renderChores() {
 
         if (status === 'incomplete') {
             if (chore.isShared) {
-                html += `<button class="chore-btn complete-btn" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>`;
+                html += `<button class="chore-btn complete-btn" title="Kid did this" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>`;
             } else {
-                html += `<button class="chore-btn complete-btn" onclick="markChoreCompleteForKid('${chore.kidId}', '${chore.id}')">✓</button>`;
+                html += `<button class="chore-btn complete-btn" title="Kid did this" onclick="markChoreCompleteForKid('${chore.kidId}', '${chore.id}')">✓</button>`;
+            }
+            if (unlocked) {
+                html += `<button class="chore-btn parent-done-btn" title="Parent did this (no BP)" onclick="markChoreDoneByParent('${chore.id}')">🏠</button>`;
             }
         } else if (status === 'pending') {
             html += `
@@ -280,6 +299,13 @@ export function markChoreCompleteForKid(kidId, choreId) {
 
     renderChores();
     showMessage(`${kid.name} marked chore complete! Waiting for parent approval.`);
+}
+
+// Mark a chore done by the parent — no kid, no BP, immediately approved
+export function markChoreDoneByParent(choreId) {
+    setChoreStatus('parent', choreId, 'approved');
+    renderChores();
+    showMessage('✅ Chore marked done by parent');
 }
 
 // ====== ACTIVITIES FUNCTIONALITY ======

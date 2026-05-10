@@ -1600,6 +1600,16 @@ body.dark-mode .activity-undo-btn:hover {
     transform: scale(1.05);
 }
 
+.parent-done-btn {
+    background: #868e96;
+    color: white;
+}
+
+.parent-done-btn:hover {
+    background: #6c757d;
+    transform: scale(1.05);
+}
+
 .approved-text {
     font-size: 12px;
     color: #51cf66;
