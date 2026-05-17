@@ -151,30 +151,44 @@ export function renderChores() {
         let status = 'incomplete';
         let assignedKidId = chore.kidId;
 
-        // For shared chores, check if any kid completed it
+        // For shared chores, check if parent marked done or any kid completed it
         if (chore.isShared) {
-            Object.values(CONFIG).forEach(kid => {
-                if (kid.id) {
-                    const kidStatus = getChoreStatus(kid.id, chore.id);
-                    if (kidStatus === 'approved' || kidStatus === 'pending') {
-                        status = kidStatus;
-                        assignedKidId = kid.id;
+            const parentStatus = getChoreStatus('parent', chore.id);
+            if (parentStatus === 'approved') {
+                status = 'approved';
+                assignedKidId = 'parent';
+            } else {
+                Object.values(CONFIG).forEach(kid => {
+                    if (kid.id) {
+                        const kidStatus = getChoreStatus(kid.id, chore.id);
+                        if (kidStatus === 'approved' || kidStatus === 'pending') {
+                            status = kidStatus;
+                            assignedKidId = kid.id;
+                        }
                     }
-                }
-            });
+                });
+            }
         } else {
             status = getChoreStatus(chore.kidId, chore.id);
+            // Also check if parent marked it done
+            if (status === 'incomplete') {
+                const parentStatus = getChoreStatus('parent', chore.id);
+                if (parentStatus === 'approved') {
+                    status = 'approved';
+                    assignedKidId = 'parent';
+                }
+            }
         }
 
         const statusClass = status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'incomplete';
-        const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '⬜';
+        const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '';
         const totalBP = chore.bp * (chore.multiplier || 1);
         const bpDisplay = chore.multiplier > 1 ? `+${chore.bp}×${chore.multiplier} (${totalBP} BP)` : `+${chore.bp} BP`;
 
         html += `
             <div class="chore-item ${statusClass}">
                 <div class="chore-info">
-                    <span class="chore-status-icon">${statusIcon}</span>
+                    ${statusIcon ? `<span class="chore-status-icon">${statusIcon}</span>` : ''}
                     <span class="chore-name">${chore.displayName}</span>
                     <span class="chore-bp">${bpDisplay}</span>
                 </div>
@@ -184,7 +198,7 @@ export function renderChores() {
             if (chore.isShared) {
                 html += `<button class="chore-btn complete-btn" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>`;
             } else {
-                html += `<button class="chore-btn complete-btn" onclick="markChoreCompleteForKid('${chore.kidId}', '${chore.id}')">✓</button>`;
+                html += `<button class="chore-btn complete-btn" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1}, '${chore.kidId}')">✓</button>`;
             }
         } else if (status === 'pending') {
             html += `
@@ -214,15 +228,15 @@ let selectedChore = null;
 
 // Show kid selector for shared chore completion
 
-export function showChoreKidSelector(choreId, choreName, bp, multiplier) {
+export function showChoreKidSelector(choreId, choreName, bp, multiplier, singleKidId = null) {
     const CONFIG = getConfig();
-    selectedChore = { id: choreId, name: choreName, bp, multiplier };
+    selectedChore = { id: choreId, name: choreName, bp, multiplier, kidId: singleKidId };
 
-    let html = '<h2>Who completed this chore?</h2>';
+    let html = `<h2>${choreName}</h2><p style="color:#666;font-size:14px;margin-bottom:4px;">Who completed this?</p>`;
     html += '<div class="kid-selector-grid">';
 
     Object.values(CONFIG).forEach(kid => {
-        if (kid.id) {
+        if (kid.id && (!singleKidId || kid.id === singleKidId)) {
             html += `
                 <div class="kid-selector-card" onclick="selectKidForChore('${kid.id}')">
                     <div class="kid-selector-name">${kid.name}</div>
@@ -231,10 +245,18 @@ export function showChoreKidSelector(choreId, choreName, bp, multiplier) {
         }
     });
 
-    html += '</div>';
+    html += `</div>
+        <button class="kid-selector-parent-btn" onclick="selectParentForChore()">I did it (no BP awarded)</button>`;
 
     document.getElementById('kidSelectorContent').innerHTML = html;
     document.getElementById('kidSelectorModal').classList.add('active');
+}
+
+export function selectParentForChore() {
+    if (!selectedChore) return;
+    closeKidSelector();
+    markChoreDoneByParent(selectedChore.id, selectedChore.kidId);
+    selectedChore = null;
 }
 
 export function selectKidForChore(kidId) {
@@ -280,6 +302,23 @@ export function markChoreCompleteForKid(kidId, choreId) {
 
     renderChores();
     showMessage(`${kid.name} marked chore complete! Waiting for parent approval.`);
+}
+
+// Mark a chore done by the parent — no kid, no BP, permanently removed (same as approval)
+export async function markChoreDoneByParent(choreId, kidId = null) {
+    setChoreStatus('parent', choreId, 'approved');
+
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
+        const CHORES = getChores();
+        const isShared = CHORES?.shared?.some(c => c.id === choreId);
+        const sheetKidId = isShared ? '' : (kidId || '');
+        await setChoreMultiplier(choreId, sheetKidId, 0);
+        const updatedChores = await fetchChores();
+        if (updatedChores) setChores(updatedChores);
+    }
+
+    renderChores();
+    showMessage('✅ Chore marked done by parent');
 }
 
 // ====== ACTIVITIES FUNCTIONALITY ======
