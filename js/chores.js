@@ -143,8 +143,11 @@ export function renderChores() {
         }
     });
 
-    // Sort chores by total BP high to low
-    allChores.sort((a, b) => (b.bp * (b.multiplier || 1)) - (a.bp * (a.multiplier || 1)));
+    // Sort by multiplier high to low, then by name alphabetically as tiebreaker
+    allChores.sort((a, b) => {
+        const multDiff = (b.multiplier || 1) - (a.multiplier || 1);
+        return multDiff !== 0 ? multDiff : a.name.localeCompare(b.name);
+    });
 
     // Render all chores in one compact list
     allChores.forEach(chore => {

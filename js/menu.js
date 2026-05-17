@@ -143,7 +143,7 @@ export function renderMenuSectionHtml() {
 
     if (!menuSectionOpen) return html + `</div>`;
 
-    const meals = getMealsCache().filter(m => m.active !== false);
+    const meals = getMealsCache().filter(m => m.active !== false).sort((a, b) => a.name.localeCompare(b.name));
 
     html += `<div class="chores-admin-body">`;
 
@@ -200,7 +200,7 @@ export function renderMenuSectionHtml() {
     }
 
     // ── Meal library ─────────────────────────────────────────────────────────
-    const allMeals = getMealsCache();
+    const allMeals = [...getMealsCache()].sort((a, b) => a.name.localeCompare(b.name));
     if (allMeals.length > 0) {
         html += `<div class="chores-admin-group-label" style="margin-top:10px;">📚 Meal Library</div>`;
         allMeals.forEach(meal => {

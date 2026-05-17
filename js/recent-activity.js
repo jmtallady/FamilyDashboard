@@ -103,11 +103,15 @@ export async function renderRecentActivity() {
                 activityColor = '#868e96';
                 break;
             }
-            case 'end-of-day-auto':
+            case 'end-of-day-auto': {
                 activityIcon = '🌙';
-                activityText = `${kidName}: End of day (auto)`;
+                const mAuto = entry.note?.match(/Added (\d+) Daily BP/);
+                activityText = mAuto
+                    ? `${kidName}: +${mAuto[1]} BP earned today`
+                    : `${kidName}: End of day (auto)`;
                 activityColor = '#868e96';
                 break;
+            }
             case 'daily-adjust': {
                 const mAdj = entry.note?.match(/^([+-]\d+) BP — (.+)$/);
                 if (mAdj) {

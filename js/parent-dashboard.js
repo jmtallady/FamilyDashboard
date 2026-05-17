@@ -51,6 +51,13 @@ export function addPendingApproval(item) {
 }
 
 /**
+ * Clear all pending approvals (called before rebuilding from Sheets).
+ */
+export function clearPendingApprovals() {
+    savePendingApprovals([]);
+}
+
+/**
  * Remove an item from the pending approvals list.
  */
 export function removePendingApproval(kidId, itemId, type) {
@@ -261,11 +268,13 @@ function renderChoresSectionHtml() {
 
     let hasAny = false;
 
+    const byName = (a, b) => a.name.localeCompare(b.name);
+
     // Shared chores
     if (CHORES.shared && CHORES.shared.length > 0) {
         hasAny = true;
         html += `<div class="chores-admin-group-label">Shared</div>`;
-        CHORES.shared.forEach(chore => { html += choreAdminRow(chore, ''); });
+        [...CHORES.shared].sort(byName).forEach(chore => { html += choreAdminRow(chore, ''); });
     }
 
     // Individual chores grouped by kid
@@ -274,7 +283,7 @@ function renderChoresSectionHtml() {
         hasAny = true;
         const kid = kids.find(k => k.id.toLowerCase() === kidId.toLowerCase()) || { name: kidId };
         html += `<div class="chores-admin-group-label">${kid.name}</div>`;
-        chores.forEach(chore => { html += choreAdminRow(chore, kidId); });
+        [...chores].sort(byName).forEach(chore => { html += choreAdminRow(chore, kidId); });
     });
 
     if (!hasAny) {
