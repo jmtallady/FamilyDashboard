@@ -28,9 +28,20 @@ async function loadDailyStatusesFromSheets() {
     if (!getUseGoogleSheets()) return;
 
     const statuses = await fetchDailyStatuses();
-    if (!statuses || statuses.length === 0) return;
 
+    // Clear today's chore/activity statuses before rewriting — Sheets is authoritative.
+    // This removes any local-only entries (e.g. from a failed Sheets write) so every
+    // device shows exactly what Sheets has.
     const today = new Date().toDateString();
+    Object.keys(localStorage)
+        .filter(k => (k.startsWith('chore-') || k.startsWith('activity-')) && k.endsWith(today))
+        .forEach(k => localStorage.removeItem(k));
+
+    if (!statuses || statuses.length === 0) {
+        syncPendingApprovalsFromStatuses([]);
+        return;
+    }
+
     statuses.forEach(s => {
         const key = `${s.type}-${s.kidId}-${s.itemId}-${today}`;
         localStorage.setItem(key, s.status);
@@ -50,12 +61,11 @@ function syncPendingApprovalsFromStatuses(statuses) {
     const ACTIVITIES = getActivities();
     if (!CONFIG || !CHORES || !ACTIVITIES) return;
 
+    // Wipe local pending list and rebuild entirely from Sheets so every device
+    // sees the same state — no stale approvals can persist locally.
+    ParentDash.clearPendingApprovals();
+
     statuses.forEach(s => {
-        // If approved/rejected on another device, remove from local pending list
-        if (s.status === 'approved' || s.status === 'rejected') {
-            ParentDash.removePendingApproval(s.kidId, s.itemId, s.type);
-            return;
-        }
         if (s.status !== 'pending') return;
 
         const kid = Object.values(CONFIG).find(
@@ -63,7 +73,6 @@ function syncPendingApprovalsFromStatuses(statuses) {
         );
         if (!kid) return;
 
-        // Look up item details from loaded chores/activities state
         let item = null;
         if (s.type === 'chore') {
             item = (CHORES.shared || []).find(c => c.id === s.itemId);
@@ -84,7 +93,6 @@ function syncPendingApprovalsFromStatuses(statuses) {
         }
         if (!item) return;
 
-        // addPendingApproval is idempotent — skips duplicates automatically
         ParentDash.addPendingApproval({
             type:       s.type,
             kidId:      kid.id,
@@ -107,6 +115,35 @@ async function refreshDailyStatuses() {
     await loadDailyStatusesFromSheets();
     Chores.renderChores();
     Activities.renderActivities();
+}
+
+/**
+ * Periodic refresh of meal library and meal plan from Sheets
+ */
+async function refreshMeals() {
+    if (!getUseGoogleSheets()) return;
+    await Menu.initializeMeals();
+    Calendar.updateCalendar();
+}
+
+/**
+ * Manual refresh of all data — triggered by the refresh button
+ */
+async function refreshAll() {
+    const btn = document.getElementById('refreshBtn');
+    if (btn) btn.classList.add('spinning');
+    try {
+        await Promise.all([
+            Weather.updateWeather(),
+            Calendar.updateCalendar(),
+            Points.refreshPointsFromSheets(),
+            refreshDailyStatuses(),
+            refreshMeals(),
+            RecentActivity.renderRecentActivity()
+        ]);
+    } finally {
+        if (btn) btn.classList.remove('spinning');
+    }
 }
 
 /**
@@ -206,6 +243,7 @@ function openDinnerRequestModal() {
     sel.innerHTML = '<option value="">Pick from menu…</option>' +
         Menu.getMealsCache()
             .filter(m => m.active !== false)
+            .sort((a, b) => a.name.localeCompare(b.name))
             .map(m => `<option value="${m.name.replace(/"/g, '&quot;')}">${m.name}</option>`)
             .join('');
 
@@ -338,6 +376,9 @@ window.submitDinnerRequest     = submitDinnerRequest;
 // Recent Activity functions
 window.undoActivity = RecentActivity.undoActivity;
 
+// Manual refresh
+window.refreshAll = refreshAll;
+
 // Rewards functions
 window.showKidSelector = Rewards.showKidSelector;
 window.closeKidSelector = Rewards.closeKidSelector;
@@ -352,6 +393,7 @@ setInterval(Weather.updateWeather, 600000);          // Update weather every 10 
 setInterval(Calendar.updateCalendar, 900000);        // Update calendar every 15 minutes
 setInterval(Points.refreshPointsFromSheets, 120000); // Refresh points every 2 minutes
 setInterval(refreshDailyStatuses, 120000);           // Refresh chore/activity statuses every 2 minutes
+setInterval(refreshMeals, 1800000);                  // Refresh meals every 30 minutes
 setInterval(Automation.checkForMidnight, 60000);     // Check for midnight every minute
 setInterval(Automation.checkFor9pmSave, 60000);      // Check for 9pm save every minute
 
