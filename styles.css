@@ -1601,13 +1601,21 @@ body.dark-mode .activity-undo-btn:hover {
 }
 
 .parent-done-btn {
-    background: #868e96;
-    color: white;
+    background: none;
+    border: none;
+    color: #adb5bd;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+    transition: color 0.15s ease;
+    align-self: center;
 }
 
 .parent-done-btn:hover {
-    background: #6c757d;
-    transform: scale(1.05);
+    color: #6c757d;
 }
 
 .approved-text {

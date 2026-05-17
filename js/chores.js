@@ -200,7 +200,7 @@ export function renderChores() {
             } else {
                 html += `<button class="chore-btn complete-btn" title="Kid did this" onclick="markChoreCompleteForKid('${chore.kidId}', '${chore.id}')">✓</button>`;
             }
-            html += `<button class="chore-btn parent-done-btn" title="Parent did this (no BP)" onclick="markChoreDoneByParent('${chore.id}')">🏠</button>`;
+            html += `<button class="parent-done-btn" title="Parent did this (no BP)" onclick="markChoreDoneByParent('${chore.id}')">done</button>`;
         } else if (status === 'pending') {
             html += `
                 <button class="chore-btn approve-btn" onclick="approveChore('${assignedKidId}', '${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>
