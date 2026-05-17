@@ -230,7 +230,7 @@ let selectedChore = null;
 
 export function showChoreKidSelector(choreId, choreName, bp, multiplier, singleKidId = null) {
     const CONFIG = getConfig();
-    selectedChore = { id: choreId, name: choreName, bp, multiplier };
+    selectedChore = { id: choreId, name: choreName, bp, multiplier, kidId: singleKidId };
 
     let html = `<h2>${choreName}</h2><p style="color:#666;font-size:14px;margin-bottom:4px;">Who completed this?</p>`;
     html += '<div class="kid-selector-grid">';
@@ -255,7 +255,7 @@ export function showChoreKidSelector(choreId, choreName, bp, multiplier, singleK
 export function selectParentForChore() {
     if (!selectedChore) return;
     closeKidSelector();
-    markChoreDoneByParent(selectedChore.id);
+    markChoreDoneByParent(selectedChore.id, selectedChore.kidId);
     selectedChore = null;
 }
 
@@ -305,13 +305,13 @@ export function markChoreCompleteForKid(kidId, choreId) {
 }
 
 // Mark a chore done by the parent — no kid, no BP, permanently removed (same as approval)
-export async function markChoreDoneByParent(choreId) {
+export async function markChoreDoneByParent(choreId, kidId = null) {
     setChoreStatus('parent', choreId, 'approved');
 
     if (getUseGoogleSheets() && SHEETS_API_URL) {
         const CHORES = getChores();
         const isShared = CHORES?.shared?.some(c => c.id === choreId);
-        const sheetKidId = isShared ? '' : (CHORES?.individual && Object.entries(CHORES.individual).find(([, list]) => list.some(c => c.id === choreId))?.[0] ?? '');
+        const sheetKidId = isShared ? '' : (kidId || '');
         await setChoreMultiplier(choreId, sheetKidId, 0);
         const updatedChores = await fetchChores();
         if (updatedChores) setChores(updatedChores);
