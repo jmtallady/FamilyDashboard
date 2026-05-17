@@ -146,8 +146,6 @@ export function renderChores() {
     // Sort chores by total BP high to low
     allChores.sort((a, b) => (b.bp * (b.multiplier || 1)) - (a.bp * (a.multiplier || 1)));
 
-    const unlocked = getIsUnlocked();
-
     // Render all chores in one compact list
     allChores.forEach(chore => {
         let status = 'incomplete';
@@ -202,9 +200,7 @@ export function renderChores() {
             } else {
                 html += `<button class="chore-btn complete-btn" title="Kid did this" onclick="markChoreCompleteForKid('${chore.kidId}', '${chore.id}')">✓</button>`;
             }
-            if (unlocked) {
-                html += `<button class="chore-btn parent-done-btn" title="Parent did this (no BP)" onclick="markChoreDoneByParent('${chore.id}')">🏠</button>`;
-            }
+            html += `<button class="chore-btn parent-done-btn" title="Parent did this (no BP)" onclick="markChoreDoneByParent('${chore.id}')">🏠</button>`;
         } else if (status === 'pending') {
             html += `
                 <button class="chore-btn approve-btn" onclick="approveChore('${assignedKidId}', '${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>
