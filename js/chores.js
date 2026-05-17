@@ -181,14 +181,14 @@ export function renderChores() {
         }
 
         const statusClass = status === 'approved' ? 'approved' : status === 'pending' ? 'pending' : 'incomplete';
-        const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '⬜';
+        const statusIcon = status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '';
         const totalBP = chore.bp * (chore.multiplier || 1);
         const bpDisplay = chore.multiplier > 1 ? `+${chore.bp}×${chore.multiplier} (${totalBP} BP)` : `+${chore.bp} BP`;
 
         html += `
             <div class="chore-item ${statusClass}">
                 <div class="chore-info">
-                    <span class="chore-status-icon">${statusIcon}</span>
+                    ${statusIcon ? `<span class="chore-status-icon">${statusIcon}</span>` : ''}
                     <span class="chore-name">${chore.displayName}</span>
                     <span class="chore-bp">${bpDisplay}</span>
                 </div>
@@ -196,11 +196,10 @@ export function renderChores() {
 
         if (status === 'incomplete') {
             if (chore.isShared) {
-                html += `<button class="chore-btn complete-btn" title="Kid did this" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>`;
+                html += `<button class="chore-btn complete-btn" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>`;
             } else {
-                html += `<button class="chore-btn complete-btn" title="Kid did this" onclick="markChoreCompleteForKid('${chore.kidId}', '${chore.id}')">✓</button>`;
+                html += `<button class="chore-btn complete-btn" onclick="showChoreKidSelector('${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1}, '${chore.kidId}')">✓</button>`;
             }
-            html += `<button class="parent-done-btn" title="Parent did this (no BP)" onclick="markChoreDoneByParent('${chore.id}')">done</button>`;
         } else if (status === 'pending') {
             html += `
                 <button class="chore-btn approve-btn" onclick="approveChore('${assignedKidId}', '${chore.id}', '${chore.name}', ${chore.bp}, ${chore.multiplier || 1})">✓</button>
@@ -229,15 +228,15 @@ let selectedChore = null;
 
 // Show kid selector for shared chore completion
 
-export function showChoreKidSelector(choreId, choreName, bp, multiplier) {
+export function showChoreKidSelector(choreId, choreName, bp, multiplier, singleKidId = null) {
     const CONFIG = getConfig();
     selectedChore = { id: choreId, name: choreName, bp, multiplier };
 
-    let html = '<h2>Who completed this chore?</h2>';
+    let html = `<h2>${choreName}</h2><p style="color:#666;font-size:14px;margin-bottom:4px;">Who completed this?</p>`;
     html += '<div class="kid-selector-grid">';
 
     Object.values(CONFIG).forEach(kid => {
-        if (kid.id) {
+        if (kid.id && (!singleKidId || kid.id === singleKidId)) {
             html += `
                 <div class="kid-selector-card" onclick="selectKidForChore('${kid.id}')">
                     <div class="kid-selector-name">${kid.name}</div>
@@ -246,10 +245,18 @@ export function showChoreKidSelector(choreId, choreName, bp, multiplier) {
         }
     });
 
-    html += '</div>';
+    html += `</div>
+        <button class="kid-selector-parent-btn" onclick="selectParentForChore()">I did it (no BP awarded)</button>`;
 
     document.getElementById('kidSelectorContent').innerHTML = html;
     document.getElementById('kidSelectorModal').classList.add('active');
+}
+
+export function selectParentForChore() {
+    if (!selectedChore) return;
+    closeKidSelector();
+    markChoreDoneByParent(selectedChore.id);
+    selectedChore = null;
 }
 
 export function selectKidForChore(kidId) {

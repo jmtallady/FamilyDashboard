@@ -302,6 +302,7 @@ window.lockDashboard = Auth.lockDashboard;
 // Chores functions
 window.showChoreKidSelector = Chores.showChoreKidSelector;
 window.selectKidForChore = Chores.selectKidForChore;
+window.selectParentForChore = Chores.selectParentForChore;
 window.markChoreCompleteForKid = Chores.markChoreCompleteForKid;
 window.markChoreDoneByParent = Chores.markChoreDoneByParent;
 window.approveChore = Chores.approveChore;
