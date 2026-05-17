@@ -304,9 +304,19 @@ export function markChoreCompleteForKid(kidId, choreId) {
     showMessage(`${kid.name} marked chore complete! Waiting for parent approval.`);
 }
 
-// Mark a chore done by the parent — no kid, no BP, immediately approved
-export function markChoreDoneByParent(choreId) {
+// Mark a chore done by the parent — no kid, no BP, permanently removed (same as approval)
+export async function markChoreDoneByParent(choreId) {
     setChoreStatus('parent', choreId, 'approved');
+
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
+        const CHORES = getChores();
+        const isShared = CHORES?.shared?.some(c => c.id === choreId);
+        const sheetKidId = isShared ? '' : (CHORES?.individual && Object.entries(CHORES.individual).find(([, list]) => list.some(c => c.id === choreId))?.[0] ?? '');
+        await setChoreMultiplier(choreId, sheetKidId, 0);
+        const updatedChores = await fetchChores();
+        if (updatedChores) setChores(updatedChores);
+    }
+
     renderChores();
     showMessage('✅ Chore marked done by parent');
 }
