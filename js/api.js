@@ -502,3 +502,26 @@ export async function fetchRecentPointsLog() {
         return [];
     }
 }
+
+export async function fetchChecklistsFromSheets() {
+    if (!SHEETS_API_URL) return null;
+    try {
+        const response = await fetch(`${SHEETS_API_URL}?action=getChecklists&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data.success ? (data.checklists || []) : null;
+    } catch (error) {
+        console.error('Error fetching checklists:', error);
+        return null;
+    }
+}
+
+export function saveChecklistsToSheets(checklists) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'saveChecklists', checklists })
+    }).catch(console.error);
+}

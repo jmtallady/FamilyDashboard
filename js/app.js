@@ -19,6 +19,7 @@ import * as ReasonModal from './reason-modal.js';
 import * as Menu from './menu.js';
 import { fetchChores, fetchRewards, fetchActivities, fetchDailyStatuses } from './api.js';
 import * as ParentDash from './parent-dashboard.js';
+import * as Checklists from './checklists.js';
 
 /**
  * Load today's chore/activity statuses from Google Sheets into localStorage
@@ -39,6 +40,7 @@ async function loadDailyStatusesFromSheets() {
 
     if (!statuses || statuses.length === 0) {
         syncPendingApprovalsFromStatuses([]);
+        Checklists.syncChecklistStatusesFromSheets([]);
         return;
     }
 
@@ -48,6 +50,7 @@ async function loadDailyStatusesFromSheets() {
     });
 
     syncPendingApprovalsFromStatuses(statuses);
+    Checklists.syncChecklistStatusesFromSheets(statuses);
     console.log(`Synced ${statuses.length} daily statuses from Sheets`);
 }
 
@@ -184,6 +187,7 @@ async function initialize() {
     Weather.updateWeather();
     Calendar.updateCalendar();
     await Menu.initializeMeals();
+    await Checklists.initializeChecklists();
 
     // Load today's chore/activity statuses from Sheets for cross-device sync
     await loadDailyStatusesFromSheets();
@@ -378,6 +382,47 @@ window.undoActivity = RecentActivity.undoActivity;
 
 // Manual refresh
 window.refreshAll = refreshAll;
+
+// Emoji picker (used by checklist admin and any future pickers)
+window.toggleEmojiPicker = function(pickerId) {
+    const el = document.getElementById(pickerId);
+    if (el) el.classList.toggle('open');
+};
+window.pickEmoji = function(inputId, btnId, pickerId, emoji) {
+    const inp = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    if (inp) inp.value = emoji;
+    if (btn) btn.textContent = emoji || '—';
+    const picker = document.getElementById(pickerId);
+    if (picker) picker.classList.remove('open');
+};
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.emoji-pick-wrap')) {
+        document.querySelectorAll('.emoji-picker.open').forEach(p => p.classList.remove('open'));
+    }
+});
+
+// Checklists — modal
+window.openChecklistModal     = Checklists.openChecklistModal;
+window.closeChecklistModal    = Checklists.closeChecklistModal;
+window.viewChecklist          = Checklists.viewChecklist;
+window.viewChecklistSelector  = Checklists.viewChecklistSelector;
+window.toggleCheckItem        = Checklists.toggleCheckItem;
+window.resetChecklist         = Checklists.resetChecklist;
+// Checklists — admin
+window.toggleChecklistsAdmin      = Checklists.toggleChecklistsAdmin;
+window.toggleChecklistExpand      = Checklists.toggleChecklistExpand;
+window.adminAddChecklist          = Checklists.adminAddChecklist;
+window.adminDeleteChecklist       = Checklists.adminDeleteChecklist;
+window.adminEditChecklist         = Checklists.adminEditChecklist;
+window.adminSaveChecklist         = Checklists.adminSaveChecklist;
+window.adminCancelChecklistEdit   = Checklists.adminCancelChecklistEdit;
+window.adminAddChecklistItem        = Checklists.adminAddChecklistItem;
+window.adminEditChecklistItem       = Checklists.adminEditChecklistItem;
+window.adminSaveChecklistItem       = Checklists.adminSaveChecklistItem;
+window.adminCancelChecklistItemEdit = Checklists.adminCancelChecklistItemEdit;
+window.adminDeleteChecklistItem     = Checklists.adminDeleteChecklistItem;
+window.adminMoveChecklistItem       = Checklists.adminMoveChecklistItem;
 
 // Rewards functions
 window.showKidSelector = Rewards.showKidSelector;

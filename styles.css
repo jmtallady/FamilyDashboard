@@ -1537,6 +1537,16 @@ body.dark-mode .reset-btn:hover {
     transition: all 0.2s ease;
 }
 
+/* Compact buttons inside checklist admin panel */
+.cl-admin-body .chore-btn {
+    padding: 3px 7px;
+    font-size: 12px;
+    min-height: 24px;
+    min-width: 24px;
+    height: unset;
+    width: unset;
+}
+
 /* Make shopping cart icon bigger on reward buttons */
 .chore-btn.complete-btn {
     font-size: 22px;
@@ -1584,6 +1594,269 @@ body.dark-mode .activity-undo-btn:hover {
     background: #5c7cfa;
     color: white;
 }
+
+/* ── Checklist Modal ────────────────────────────────────────────────────────── */
+
+.checklist-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: min(460px, 94vw);
+    max-height: 82vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.cl-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+    border-radius: 20px 20px 0 0;
+}
+
+.cl-modal-header h2 {
+    flex: 1;
+    font-size: 17px;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cl-back-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--primary-color, #7c3aed);
+    padding: 0 6px 0 0;
+    font-weight: bold;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.cl-back-btn:hover { opacity: 0.7; }
+
+/* Selector grid */
+.cl-selector-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px 18px;
+}
+
+.cl-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.2s;
+    user-select: none;
+}
+
+.cl-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.09);
+}
+
+.cl-card.cl-card-done {
+    background: #f0fff4;
+    border-color: #6EFFC3;
+}
+
+.cl-card-icon  { font-size: 28px; flex-shrink: 0; }
+.cl-card-body  { flex: 1; min-width: 0; }
+.cl-card-name  { font-weight: 700; font-size: 15px; color: #333; margin-bottom: 5px; }
+.cl-card-count { font-size: 11px; color: #999; margin-top: 3px; }
+.cl-card-badge { font-size: 20px; flex-shrink: 0; }
+
+/* Progress bars */
+.cl-bar-wrap {
+    background: #eee;
+    border-radius: 10px;
+    height: 6px;
+    overflow: hidden;
+}
+
+.cl-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-start, #9f5de2), var(--primary-end, #7c3aed));
+    border-radius: 10px;
+    transition: width 0.4s ease;
+}
+
+.cl-bar-lg { height: 10px; }
+
+/* List view */
+.cl-list-meta {
+    padding: 10px 16px 4px;
+}
+
+.cl-progress-label {
+    font-size: 11px;
+    color: #999;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.cl-items {
+    padding: 8px 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cl-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.2s, border-color 0.2s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.cl-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+}
+
+.cl-item:active { transform: scale(0.98); }
+
+.cl-item.cl-item-done {
+    background: #f0fff4;
+    border-color: #6EFFC3;
+}
+
+.cl-check-circle {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2.5px solid #ddd;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: bold;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.cl-check-circle.cl-checked {
+    background: #6EFFC3;
+    border-color: #6EFFC3;
+    color: #1a5c3a;
+    animation: cl-pop 0.25s cubic-bezier(.4,2,.6,1);
+}
+
+@keyframes cl-pop {
+    0%  { transform: scale(1); }
+    50% { transform: scale(1.35); }
+    100%{ transform: scale(1); }
+}
+
+.cl-item-emoji { font-size: 20px; flex-shrink: 0; }
+.cl-item-body  { flex: 1; min-width: 0; }
+
+.cl-item-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    transition: color 0.2s;
+}
+
+.cl-item-detail {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.cl-item-done .cl-item-title  { text-decoration: line-through; color: #aaa; }
+.cl-item-done .cl-item-detail { text-decoration: line-through; color: #ccc; }
+
+/* Completion banner */
+.cl-banner {
+    text-align: center;
+    padding: 14px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #2BBFA4;
+    background: #f0fff4;
+    border-radius: 12px;
+    margin: 2px 14px 8px;
+    animation: cl-slideup 0.4s cubic-bezier(.4,2,.6,1);
+}
+
+@keyframes cl-slideup {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.cl-reset-btn {
+    display: block;
+    margin: 0 14px 16px;
+    padding: 8px;
+    width: calc(100% - 28px);
+    background: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    color: #666;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cl-reset-btn:hover { background: #e0e0e0; }
+
+.cl-empty {
+    text-align: center;
+    color: #999;
+    padding: 30px 20px;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+/* Admin section in parent dashboard */
+.cl-admin-list-header {
+    cursor: pointer;
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Dark mode */
+body.dark-mode .checklist-modal-content { background: #1e1e2e; }
+body.dark-mode .cl-modal-header        { background: #1e1e2e; border-color: #333; }
+body.dark-mode .cl-modal-header h2     { color: #eee; }
+body.dark-mode .cl-card                { background: #2a2a3e; }
+body.dark-mode .cl-card.cl-card-done   { background: #1a3a2a; border-color: #3a7a5a; }
+body.dark-mode .cl-card-name           { color: #eee; }
+body.dark-mode .cl-bar-wrap            { background: #444; }
+body.dark-mode .cl-item                { background: #2a2a3e; }
+body.dark-mode .cl-item.cl-item-done   { background: #1a3a2a; border-color: #3a7a5a; }
+body.dark-mode .cl-item-title          { color: #eee; }
+body.dark-mode .cl-item-detail         { color: #888; }
+body.dark-mode .cl-item-done .cl-item-title  { color: #666; }
+body.dark-mode .cl-item-done .cl-item-detail { color: #555; }
+body.dark-mode .cl-banner              { background: #1a3a2a; color: #6EFFC3; }
+body.dark-mode .cl-reset-btn           { background: #2a2a3e; color: #aaa; }
+body.dark-mode .cl-reset-btn:hover     { background: #333; }
+body.dark-mode .cl-empty               { color: #666; }
+body.dark-mode .cl-progress-label      { color: #888; }
 
 .complete-btn:hover {
     background: #4c6ef5;
@@ -2580,4 +2853,81 @@ body.dark-mode .dinner-date-btn.selected {
     .numpad {
         gap: 8px;
     }
+}
+
+/* ── Emoji Picker ─────────────────────────────────────────────────────────── */
+.emoji-pick-wrap {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.emoji-pick-btn {
+    width: 44px;
+    height: 36px;
+    font-size: 20px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.emoji-pick-btn:hover {
+    background: rgba(255,255,255,0.22);
+}
+
+.emoji-picker {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 300;
+    background: var(--card-bg, #2a2a4a);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 6px;
+    width: 240px;
+    max-height: 280px;
+    overflow-y: auto;
+    flex-wrap: wrap;
+    gap: 2px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+}
+
+.emoji-picker.open {
+    display: flex;
+}
+
+.emoji-opt {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.emoji-opt:hover {
+    background: rgba(255,255,255,0.18);
+}
+
+body.dark-mode .emoji-pick-btn {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+}
+
+body.dark-mode .emoji-picker {
+    background: #1a1a2e;
+    border-color: rgba(255,255,255,0.15);
 }
