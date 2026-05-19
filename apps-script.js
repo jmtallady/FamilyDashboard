@@ -68,6 +68,8 @@ function doGet(e) {
     return getMealPlan(e.parameter.days);
   } else if (action === 'getMealRequests') {
     return getMealRequests();
+  } else if (action === 'getChecklists') {
+    return getChecklistsData();
   } else if (action === 'test') {
     return jsonResponse({ message: 'API is working!', timestamp: new Date().toISOString() });
   }
@@ -96,6 +98,8 @@ function doPost(e) {
       return setDailyMeal(params);
     } else if (action === 'addMealRequest') {
       return addMealRequest(params);
+    } else if (action === 'saveChecklists') {
+      return saveChecklistsData(params);
     }
 
     return jsonResponse({ error: 'Invalid action' }, 400);
@@ -1061,6 +1065,41 @@ function addMealRequest(params) {
       sheet.getRange(1, 1, 1, 4).setValues([['Date', 'KidName', 'MealName', 'Timestamp']]);
     }
     sheet.appendRow([params.date, params.kidName, params.mealName, new Date().toISOString()]);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== CHECKLISTS ======
+// Stores the full checklist definitions as a JSON blob in the Checklists sheet.
+// Checked state (which items are ticked) stays in the browser — resets daily.
+
+function getChecklistsData() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Checklists');
+    if (!sheet || sheet.getLastRow() < 2) {
+      return jsonResponse({ success: true, checklists: [] });
+    }
+    const raw = sheet.getRange(2, 2).getValue();
+    const checklists = raw ? JSON.parse(raw) : [];
+    return jsonResponse({ success: true, checklists });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+function saveChecklistsData(params) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Checklists');
+    if (!sheet) {
+      sheet = ss.insertSheet('Checklists');
+      sheet.getRange(1, 1, 1, 2).setValues([['Key', 'Value']]);
+      sheet.getRange(2, 1).setValue('data');
+    }
+    sheet.getRange(2, 2).setValue(JSON.stringify(params.checklists || []));
     return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);

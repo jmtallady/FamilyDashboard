@@ -47,10 +47,11 @@
                     <div class="house-rules-btn" onclick="toggleDarkMode()">
                         <span id="darkModeIcon">🌙</span>
                     </div>
+                    <button class="house-rules-btn" id="refreshBtn" onclick="refreshAll()" title="Refresh all data">🔄</button>
                 </div>
                 <h1>Family Dashboard</h1>
                 <div class="header-btns header-btns-right">
-                    <button class="house-rules-btn" id="refreshBtn" onclick="refreshAll()" title="Refresh all data">🔄</button>
+                    <button class="house-rules-btn" onclick="openChecklistModal()" title="Checklists">✅</button>
                     <button class="house-rules-btn" onclick="showHouseRules()" title="View House Rules">📋</button>
                     <button class="house-rules-btn parent-dash-btn" onclick="openParentDashboard()" title="Parent Dashboard">
                         👪
@@ -128,6 +129,13 @@
             <div class="pin-buttons">
                 <button class="pin-btn reset-btn" onclick="closeKidSelector()">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Checklist Modal -->
+    <div class="pin-modal" id="checklistModal">
+        <div class="checklist-modal-content">
+            <div id="checklistModalInner"></div>
         </div>
     </div>
 

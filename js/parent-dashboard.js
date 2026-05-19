@@ -13,6 +13,7 @@ import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChor
 import { endOfDayAll } from './points.js';
 import { renderMenuSectionHtml, toggleMenuSection, getMealForDate, setMealForDate,
          getRandomMeal, addMealToCache, approveDinnerRequest, dismissDinnerRequest } from './menu.js';
+import { renderChecklistsAdminSectionHtml } from './checklists.js';
 import { updateCalendar } from './calendar.js';
 
 const STORAGE_KEY = 'pending-approvals';
@@ -157,6 +158,7 @@ export function renderParentDashboard() {
 
     html += renderMenuSectionHtml();
     html += renderChoresSectionHtml();
+    html += renderChecklistsAdminSectionHtml();
     html += renderEndOfDaySectionHtml();
     container.innerHTML = html;
 }
