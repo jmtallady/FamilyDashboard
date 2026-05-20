@@ -72,6 +72,14 @@ body.theme-light-pink {
     --accent-color: #ffd6e7;
 }
 
+body.theme-light-green {
+    --primary-start: #d4f5e0;
+    --primary-end: #bfefcf;
+    --primary-color: #4a9e6b;
+    --primary-dark: #3b8558;
+    --accent-color: #d6ffe7;
+}
+
 body {
     font-family: Arial, sans-serif;
     background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);

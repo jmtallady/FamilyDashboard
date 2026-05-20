@@ -46,7 +46,7 @@ export function loadDarkMode() {
  */
 export function applyColorScheme() {
     const CONFIG = getConfig();
-    const validSchemes = ['purple', 'pink', 'blue', 'green', 'teal', 'orange', 'light-pink'];
+    const validSchemes = ['purple', 'pink', 'blue', 'green', 'teal', 'orange', 'light-pink', 'light-green'];
 
     // Check localStorage first (per-device preference)
     let scheme = localStorage.getItem('colorScheme');
@@ -91,7 +91,7 @@ export function applyColorScheme() {
  * Change color scheme and save to localStorage
  */
 export function changeColorScheme(scheme) {
-    const validSchemes = ['purple', 'pink', 'blue', 'green', 'teal', 'orange', 'light-pink'];
+    const validSchemes = ['purple', 'pink', 'blue', 'green', 'teal', 'orange', 'light-pink', 'light-green'];
 
     if (!validSchemes.includes(scheme)) {
         console.error('Invalid color scheme:', scheme);
