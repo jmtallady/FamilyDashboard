@@ -116,7 +116,10 @@ function syncPendingApprovalsFromStatuses(statuses) {
  */
 async function refreshDailyStatuses() {
     if (!getUseGoogleSheets()) return;
-    await loadDailyStatusesFromSheets();
+    await Promise.all([
+        loadDailyStatusesFromSheets(),
+        Checklists.initializeChecklists(),
+    ]);
     Chores.renderChores();
     Activities.renderActivities();
 }
@@ -143,7 +146,8 @@ async function refreshAll() {
             Points.refreshPointsFromSheets(),
             refreshDailyStatuses(),
             refreshMeals(),
-            RecentActivity.renderRecentActivity()
+            RecentActivity.renderRecentActivity(),
+            Checklists.initializeChecklists(),
         ]);
     } finally {
         if (btn) btn.classList.remove('spinning');
