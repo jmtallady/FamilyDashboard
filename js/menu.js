@@ -177,7 +177,7 @@ export function renderMenuSectionHtml() {
     for (let i = 0; i < 7; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         const planned = getMealForDate(d) || '';
         const todayBadge = i === 0 ? `<span class="meal-today-badge">Today</span>` : '';
