@@ -100,6 +100,8 @@ function doPost(e) {
       return addMealRequest(params);
     } else if (action === 'saveChecklists') {
       return saveChecklistsData(params);
+    } else if (action === 'saveConfig') {
+      return saveConfigValue(params);
     }
 
     return jsonResponse({ error: 'Invalid action' }, 400);
@@ -305,6 +307,34 @@ function getConfig() {
       timestamp: new Date().toISOString()
     });
 
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== SAVE CONFIG VALUE ======
+function saveConfigValue(params) {
+  try {
+    const { key, value } = params;
+    if (!key) return jsonResponse({ error: 'Missing key' }, 400);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Config');
+    if (!sheet) return jsonResponse({ error: 'Config sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    const serialized = (typeof value === 'object' || typeof value === 'number' || typeof value === 'boolean')
+      ? JSON.stringify(value)
+      : String(value);
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === key) {
+        sheet.getRange(i + 1, 2).setValue(serialized);
+        return jsonResponse({ success: true });
+      }
+    }
+    // Key not found — append new row
+    sheet.appendRow([key, serialized]);
+    return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);
   }
