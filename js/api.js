@@ -525,3 +525,13 @@ export function saveChecklistsToSheets(checklists) {
         body: JSON.stringify({ action: 'saveChecklists', checklists })
     }).catch(console.error);
 }
+
+export function saveConfigValue(key, value) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'saveConfig', key, value })
+    }).catch(console.error);
+}

@@ -5,48 +5,15 @@ import { showMessage } from './utils.js';
 import { fetchChecklistsFromSheets, saveChecklistsToSheets, saveDailyStatusToSheets } from './api.js';
 import { getUseGoogleSheets } from './state.js';
 
-// [emoji, tooltip label] — no duplicates; '' = no emoji option
-const COMMON_EMOJIS = [
-    ['', 'None'],
-    // Time & Sleep
-    ['☀️', 'Morning'], ['🌙', 'Night'], ['⏰', 'Alarm'], ['🌅', 'Sunrise'], ['😴', 'Sleep'],
-    // Hygiene
-    ['🪥', 'Brush Teeth'], ['🧼', 'Soap'], ['🚿', 'Shower'], ['🛁', 'Bath'], ['💊', 'Medicine'],
-    // Clothing
-    ['👕', 'Shirt'], ['👗', 'Dress'], ['🧥', 'Jacket'], ['👟', 'Shoes'], ['👖', 'Pants'],
-    ['🧦', 'Socks'], ['🩳', 'Shorts'], ['🩱', 'Swimsuit'],  ['🧢', 'Cap'], ['👒', 'Hat'],
-    ['🎒', 'Backpack'],
-    // Food & Drink
-    ['🥤', 'Drink'], ['🥪', 'Sandwich'], ['🍽️', 'Dinner'], ['🍎', 'Apple'],
-    ['🥣', 'Cereal'], ['🥞', 'Pancakes'], ['🍌', 'Banana'], ['🥕', 'Carrot'],
-    ['🥛', 'Milk'], ['🧃', 'Juice Box'], ['🍕', 'Pizza'], ['🥗', 'Salad'],
-    ['🍜', 'Noodles'], ['🍪', 'Cookie'],
-    // School
-    ['📚', 'Books'], ['✏️', 'Pencil'], ['📝', 'Homework'], ['🏫', 'School'], ['📖', 'Reading'],
-    // Chores
-    ['🧹', 'Sweep'], ['🧺', 'Laundry'], ['🗑️', 'Trash'], ['🌱', 'Water Plants'],
-    ['🪣', 'Mop'], ['🧽', 'Wipe Down'],
-    // Sports
-    ['🏃', 'Running'], ['⚽', 'Soccer'], ['🏀', 'Basketball'], ['⚾', 'Baseball'],
-    ['🏈', 'Football'], ['🎾', 'Tennis'], ['🏊', 'Swimming'], ['🚴', 'Biking'],
-    ['🥋', 'Karate'], ['⛷️', 'Skiing'], ['🏒', 'Hockey'], ['⛸️', 'Ice Skating'],
-    ['🏋️', 'Weightlifting'], ['🤸', 'Gymnastics'],
-    // Music & Hobbies
-    ['🎵', 'Music'], ['🎸', 'Guitar'], ['🎨', 'Art'], ['🎮', 'Gaming'],
-    // General / Positive
-    ['✅', 'Done'], ['⭐', 'Star'], ['🏆', 'Trophy'], ['💪', 'Strong'],
-    ['🌟', 'Great'], ['❤️', 'Love'], ['😊', 'Happy'], ['📌', 'Pin'], ['🔑', 'Key'],
-];
-
-function _emojiPickerHtml(current, inputId, btnId, pickerId) {
+function _emojiPickerHtml(current, inputId, btnId) {
     const stored = current ?? '';
     const btnLabel = stored || '—';
-    const opts = COMMON_EMOJIS.map(([e, label]) =>
-        `<button type="button" class="emoji-opt" title="${label}" onclick="pickEmoji('${inputId}','${btnId}','${pickerId}','${e}')">${e || '—'}</button>`
-    ).join('');
     return `<div class="emoji-pick-wrap">` +
-        `<button type="button" class="emoji-pick-btn" id="${btnId}" onclick="toggleEmojiPicker('${pickerId}')">${btnLabel}</button>` +
-        `<div id="${pickerId}" class="emoji-picker">${opts}</div>` +
+        `<button type="button" class="emoji-pick-btn" id="${btnId}" ` +
+            `onclick="toggleEmojiPicker('${inputId}','${btnId}')">${btnLabel}</button>` +
+        `<button type="button" class="emoji-clear-btn" id="${btnId}-clr" ` +
+            `style="display:${stored ? 'flex' : 'none'}" ` +
+            `onclick="clearEmoji('${inputId}','${btnId}')">✕</button>` +
         `<input type="hidden" id="${inputId}" value="${stored}">` +
         `</div>`;
 }
@@ -240,6 +207,9 @@ function _renderModal() {
     el.innerHTML = _viewId
         ? _renderListView(lists.find(l => l.id === _viewId))
         : _renderSelector(lists);
+    if (typeof twemoji !== 'undefined') {
+        twemoji.parse(el, { folder: 'svg', ext: '.svg' });
+    }
 }
 
 function _renderSelector(lists) {

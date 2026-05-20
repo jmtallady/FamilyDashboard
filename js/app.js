@@ -20,6 +20,7 @@ import * as Menu from './menu.js';
 import { fetchChores, fetchRewards, fetchActivities, fetchDailyStatuses } from './api.js';
 import * as ParentDash from './parent-dashboard.js';
 import * as Checklists from './checklists.js';
+import * as ModalTimeout from './modal-timeout.js';
 
 /**
  * Load today's chore/activity statuses from Google Sheets into localStorage
@@ -165,6 +166,7 @@ async function initialize() {
     }
 
     setConfig(CONFIG);
+    ModalTimeout.initModalTimeout();
 
     // Apply color scheme from config
     Theme.applyColorScheme();
@@ -383,22 +385,89 @@ window.undoActivity = RecentActivity.undoActivity;
 // Manual refresh
 window.refreshAll = refreshAll;
 
-// Emoji picker (used by checklist admin and any future pickers)
-window.toggleEmojiPicker = function(pickerId) {
-    const el = document.getElementById(pickerId);
-    if (el) el.classList.toggle('open');
-};
-window.pickEmoji = function(inputId, btnId, pickerId, emoji) {
+// Shared emoji-mart picker — one instance, moved off-screen when inactive.
+// We avoid display:none because web components don't render their shadow DOM
+// while hidden, causing the picker to appear blank when first shown.
+let _emojiPickerEl = null;
+let _emojiPickerVisible = false;
+let _activeEmojiInput = null;
+let _activeEmojiBtn = null;
+
+function _getOrCreateEmojiPicker() {
+    if (_emojiPickerEl) return _emojiPickerEl;
+    if (typeof EmojiMart === 'undefined') {
+        console.warn('emoji-mart not loaded — emoji picker unavailable');
+        return null;
+    }
+    _emojiPickerEl = new EmojiMart.Picker({
+        onEmojiSelect: (emoji) => {
+            const native = emoji.native;
+            if (_activeEmojiInput) _activeEmojiInput.value = native;
+            if (_activeEmojiBtn) {
+                _activeEmojiBtn.textContent = native;
+                const clr = document.getElementById(_activeEmojiBtn.id + '-clr');
+                if (clr) clr.style.display = 'flex';
+            }
+            _hideEmojiPicker();
+        },
+    });
+    // Park off-screen so shadow DOM initialises without being visible
+    Object.assign(_emojiPickerEl.style, {
+        position: 'fixed',
+        zIndex: '9999',
+        top: '-9999px',
+        left: '-9999px',
+    });
+    document.body.appendChild(_emojiPickerEl);
+    return _emojiPickerEl;
+}
+
+function _hideEmojiPicker() {
+    if (_emojiPickerEl) {
+        _emojiPickerEl.style.top  = '-9999px';
+        _emojiPickerEl.style.left = '-9999px';
+    }
+    _emojiPickerVisible = false;
+    _activeEmojiInput = null;
+    _activeEmojiBtn = null;
+}
+
+window.toggleEmojiPicker = function(inputId, btnId) {
+    const picker = _getOrCreateEmojiPicker();
+    if (!picker) return;
     const inp = document.getElementById(inputId);
     const btn = document.getElementById(btnId);
-    if (inp) inp.value = emoji;
-    if (btn) btn.textContent = emoji || '—';
-    const picker = document.getElementById(pickerId);
-    if (picker) picker.classList.remove('open');
+    if (_emojiPickerVisible && _activeEmojiInput === inp) {
+        _hideEmojiPicker();
+        return;
+    }
+    _activeEmojiInput = inp;
+    _activeEmojiBtn = btn;
+    const rect = btn.getBoundingClientRect();
+    const pw = 352, ph = 435;
+    const left = Math.min(rect.left, window.innerWidth - pw - 8);
+    const top = rect.bottom + 4 + ph > window.innerHeight
+        ? Math.max(4, rect.top - ph - 4)
+        : rect.bottom + 4;
+    picker.style.left = left + 'px';
+    picker.style.top  = top  + 'px';
+    _emojiPickerVisible = true;
 };
+
+window.clearEmoji = function(inputId, btnId) {
+    const inp = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    const clr = document.getElementById(btnId + '-clr');
+    if (inp) inp.value = '';
+    if (btn) btn.textContent = '—';
+    if (clr) clr.style.display = 'none';
+};
+
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.emoji-pick-wrap')) {
-        document.querySelectorAll('.emoji-picker.open').forEach(p => p.classList.remove('open'));
+    if (_emojiPickerVisible &&
+        !e.target.closest('em-emoji-picker') &&
+        !e.target.closest('.emoji-pick-btn')) {
+        _hideEmojiPicker();
     }
 });
 
@@ -423,6 +492,12 @@ window.adminSaveChecklistItem       = Checklists.adminSaveChecklistItem;
 window.adminCancelChecklistItemEdit = Checklists.adminCancelChecklistItemEdit;
 window.adminDeleteChecklistItem     = Checklists.adminDeleteChecklistItem;
 window.adminMoveChecklistItem       = Checklists.adminMoveChecklistItem;
+
+window.applyModalTimeout = ModalTimeout.applyModalTimeout;
+window.getModalTimeoutSettings = ModalTimeout.getModalTimeoutSettings;
+
+window.toggleSettingsSection = ParentDash.toggleSettingsSection;
+window.saveModalTimeoutSettings = ParentDash.saveModalTimeoutSettings;
 
 // Rewards functions
 window.showKidSelector = Rewards.showKidSelector;

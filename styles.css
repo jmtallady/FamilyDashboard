@@ -2855,10 +2855,11 @@ body.dark-mode .dinner-date-btn.selected {
     }
 }
 
-/* ── Emoji Picker ─────────────────────────────────────────────────────────── */
+/* ── Emoji Picker (emoji-mart) ────────────────────────────────────────────── */
 .emoji-pick-wrap {
-    position: relative;
     display: inline-flex;
+    align-items: center;
+    gap: 2px;
     flex-shrink: 0;
 }
 
@@ -2881,45 +2882,26 @@ body.dark-mode .dinner-date-btn.selected {
     background: rgba(255,255,255,0.22);
 }
 
-.emoji-picker {
-    display: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 300;
-    background: var(--card-bg, #2a2a4a);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 10px;
-    padding: 6px;
-    width: 240px;
-    max-height: 280px;
-    overflow-y: auto;
-    flex-wrap: wrap;
-    gap: 2px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.45);
-}
-
-.emoji-picker.open {
-    display: flex;
-}
-
-.emoji-opt {
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
-    background: none;
+.emoji-clear-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    background: rgba(255,255,255,0.15);
     border: none;
-    border-radius: 6px;
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
+    color: #ccc;
     line-height: 1;
+    flex-shrink: 0;
 }
 
-.emoji-opt:hover {
-    background: rgba(255,255,255,0.18);
+.emoji-clear-btn:hover {
+    background: rgba(255,80,80,0.5);
+    color: white;
 }
 
 body.dark-mode .emoji-pick-btn {
@@ -2927,7 +2909,8 @@ body.dark-mode .emoji-pick-btn {
     border-color: rgba(255,255,255,0.15);
 }
 
-body.dark-mode .emoji-picker {
-    background: #1a1a2e;
-    border-color: rgba(255,255,255,0.15);
+em-emoji-picker {
+    --border-radius: 10px;
+    height: 380px;
+    width: 340px;
 }

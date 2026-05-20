@@ -160,7 +160,11 @@ export function renderParentDashboard() {
     html += renderChoresSectionHtml();
     html += renderChecklistsAdminSectionHtml();
     html += renderEndOfDaySectionHtml();
+    html += renderSettingsSectionHtml();
     container.innerHTML = html;
+    if (typeof twemoji !== 'undefined') {
+        twemoji.parse(container, { folder: 'svg', ext: '.svg' });
+    }
 }
 
 // ── Approve / Reject from parent dash ────────────────────────────────────────
@@ -227,6 +231,57 @@ function renderEndOfDaySectionHtml() {
 export async function parentDashEndOfDayAll() {
     await endOfDayAll();
     closeParentDashboard();
+}
+
+// ── Settings Section ─────────────────────────────────────────────────────────
+
+function renderSettingsSectionHtml() {
+    const settings = typeof window.getModalTimeoutSettings === 'function'
+        ? window.getModalTimeoutSettings()
+        : { enabled: true, minutes: 2 };
+    const checkedAttr = settings.enabled ? 'checked' : '';
+
+    return `
+        <div class="chores-admin-section" style="margin-top:12px;">
+            <div class="chores-admin-header" onclick="toggleSettingsSection()">
+                <span>⚙️ Settings</span>
+                <span id="settingsSectionToggle">▸</span>
+            </div>
+            <div id="settingsSectionBody" style="display:none;padding:8px 0 4px;">
+                <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Modal Auto-Close</div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" id="modalTimeoutEnabled" ${checkedAttr}
+                            onchange="saveModalTimeoutSettings()">
+                        Auto-close after inactivity
+                    </label>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;">
+                    <label for="modalTimeoutMinutes">Minutes:</label>
+                    <input type="number" id="modalTimeoutMinutes" min="1" max="60"
+                        value="${settings.minutes}"
+                        style="width:60px;padding:4px 6px;border-radius:6px;border:1px solid var(--primary-color);font-size:13px;"
+                        onchange="saveModalTimeoutSettings()">
+                </div>
+            </div>
+        </div>`;
+}
+
+export function toggleSettingsSection() {
+    const body = document.getElementById('settingsSectionBody');
+    const toggle = document.getElementById('settingsSectionToggle');
+    if (!body) return;
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if (toggle) toggle.textContent = open ? '▸' : '▾';
+}
+
+export function saveModalTimeoutSettings() {
+    const enabled = document.getElementById('modalTimeoutEnabled')?.checked ?? true;
+    const minutes = parseInt(document.getElementById('modalTimeoutMinutes')?.value || '2', 10);
+    if (typeof window.applyModalTimeout === 'function') {
+        window.applyModalTimeout(enabled, isNaN(minutes) || minutes < 1 ? 2 : minutes);
+    }
 }
 
 // ── Chores Admin Section ──────────────────────────────────────────────────────
