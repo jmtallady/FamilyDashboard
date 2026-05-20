@@ -944,7 +944,7 @@ body.dark-mode .modal-close-btn:hover {
     font-weight: bold;
     text-align: center;
     margin: 6px 0;
-    color: var(--accent-color);
+    color: var(--primary-color);
 }
 
 .points-label {
