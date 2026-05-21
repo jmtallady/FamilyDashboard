@@ -119,6 +119,7 @@ async function refreshDailyStatuses() {
     await Promise.all([
         loadDailyStatusesFromSheets(),
         Checklists.initializeChecklists(),
+        RecentActivity.renderRecentActivity(),
     ]);
     Chores.renderChores();
     Activities.renderActivities();
@@ -129,7 +130,15 @@ async function refreshDailyStatuses() {
  */
 async function refreshMeals() {
     if (!getUseGoogleSheets()) return;
-    await Menu.initializeMeals();
+    const [chores, rewards, activities] = await Promise.all([
+        fetchChores(),
+        fetchRewards(),
+        fetchActivities(),
+        Menu.initializeMeals(),
+    ]);
+    if (chores)     { setChores(chores);         Chores.renderChores(); }
+    if (rewards)    { setRewards(rewards);        Rewards.renderRewards(); }
+    if (activities) { setActivities(activities);  Activities.renderActivities(); }
     Calendar.updateCalendar();
 }
 
