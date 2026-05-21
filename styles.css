@@ -1838,6 +1838,14 @@ body.dark-mode .activity-undo-btn:hover {
     line-height: 1.7;
 }
 
+.cl-dwd-btn { opacity: 0.25; transition: opacity 0.15s, color 0.15s; }
+.cl-dwd-btn.active { opacity: 1; color: #e53935; }
+
+.cl-dwd-tag {
+    color: #e07b00;
+    font-style: italic;
+}
+
 /* Admin section in parent dashboard */
 .cl-admin-list-header {
     cursor: pointer;

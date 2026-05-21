@@ -75,6 +75,19 @@ export function clearOldCheckKeys() {
     localStorage.setItem(CLEAR_KEY, today);
 }
 
+// Remove items flagged deleteWhenDone that were checked today — called at midnight.
+export function purgeDeleteWhenDoneItems() {
+    const lists = getChecklists();
+    let changed = false;
+    lists.forEach(list => {
+        const checks = getChecks(list.id);
+        const before = list.items.length;
+        list.items = list.items.filter(item => !(item.deleteWhenDone && checks.includes(item.id)));
+        if (list.items.length !== before) changed = true;
+    });
+    if (changed) saveChecklists(lists);
+}
+
 // Rebuild local check state from Sheets statuses — called by loadDailyStatusesFromSheets.
 // Sheets is authoritative: clears today's local arrays then rewrites from 'checked' entries.
 export function syncChecklistStatusesFromSheets(statuses) {
@@ -100,9 +113,16 @@ export function syncChecklistStatusesFromSheets(statuses) {
 function addChecklist(name, icon) {
     const lists = getChecklists();
     const id = `cl-${Date.now()}`;
-    lists.push({ id, name: name.trim(), icon: (icon ?? '').trim(), items: [] });
+    lists.push({ id, name: name.trim(), icon: (icon ?? '').trim(), items: [], enabled: true });
     saveChecklists(lists);
     return id;
+}
+
+function toggleChecklistEnabled(listId) {
+    const lists = getChecklists();
+    const list = lists.find(l => l.id === listId);
+    if (list) list.enabled = list.enabled === false ? true : false;
+    saveChecklists(lists);
 }
 
 function deleteChecklist(id) {
@@ -119,7 +139,7 @@ function updateChecklist(listId, name, icon) {
     saveChecklists(lists);
 }
 
-function addChecklistItem(listId, emoji, title, detail) {
+function addChecklistItem(listId, emoji, title, detail, deleteWhenDone) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
     if (!list) return;
@@ -127,20 +147,22 @@ function addChecklistItem(listId, emoji, title, detail) {
         id: `ci-${Date.now()}`,
         emoji: (emoji ?? '').trim(),
         title: title.trim(),
-        detail: (detail || '').trim()
+        detail: (detail || '').trim(),
+        deleteWhenDone: !!deleteWhenDone,
     });
     saveChecklists(lists);
 }
 
-function updateChecklistItem(listId, itemId, emoji, title, detail) {
+function updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
     if (!list) return;
     const item = list.items.find(i => i.id === itemId);
     if (item) {
-        item.emoji  = (emoji ?? '').trim();
-        item.title  = title.trim();
-        item.detail = (detail || '').trim();
+        item.emoji         = (emoji ?? '').trim();
+        item.title         = title.trim();
+        item.detail        = (detail || '').trim();
+        item.deleteWhenDone = !!deleteWhenDone;
     }
     saveChecklists(lists);
 }
@@ -219,9 +241,11 @@ function _renderSelector(lists) {
             <button class="modal-close-btn" onclick="closeChecklistModal()">✕</button>
         </div>`;
 
-    if (!lists.length) {
+    const enabled = lists.filter(l => l.enabled !== false);
+    if (!enabled.length) {
         return header + `<div class="cl-empty">No checklists yet —<br>add some in the Parent Dashboard.</div>`;
     }
+    lists = enabled;
 
     const cards = lists.map(l => {
         const checks = getChecks(l.id);
@@ -323,6 +347,11 @@ export function adminDeleteChecklist(listId) {
     _rerender();
 }
 
+export function adminToggleChecklistEnabled(listId) {
+    toggleChecklistEnabled(listId);
+    _rerender();
+}
+
 export function adminEditChecklist(listId) {
     _editingListId = listId;
     _rerender();
@@ -343,11 +372,12 @@ export function adminCancelChecklistEdit() {
 }
 
 export function adminAddChecklistItem(listId) {
-    const emoji  = (document.getElementById(`cl-ei-${listId}`)?.value ?? '').trim();
-    const title  = document.getElementById(`cl-ti-${listId}`)?.value.trim();
-    const detail = document.getElementById(`cl-di-${listId}`)?.value.trim() || '';
+    const emoji         = (document.getElementById(`cl-ei-${listId}`)?.value ?? '').trim();
+    const title         = document.getElementById(`cl-ti-${listId}`)?.value.trim();
+    const detail        = document.getElementById(`cl-di-${listId}`)?.value.trim() || '';
+    const deleteWhenDone = document.getElementById(`cl-dwd-${listId}`)?.checked ?? false;
     if (!title) { showMessage('Enter an item title'); return; }
-    addChecklistItem(listId, emoji, title, detail);
+    addChecklistItem(listId, emoji, title, detail, deleteWhenDone);
     _rerender();
 }
 
@@ -362,11 +392,12 @@ export function adminCancelChecklistItemEdit() {
 }
 
 export function adminSaveChecklistItem(listId, itemId) {
-    const emoji  = (document.getElementById(`cl-ee-${itemId}`)?.value ?? '').trim();
-    const title  = document.getElementById(`cl-te-${itemId}`)?.value.trim();
-    const detail = document.getElementById(`cl-de-${itemId}`)?.value.trim() || '';
+    const emoji         = (document.getElementById(`cl-ee-${itemId}`)?.value ?? '').trim();
+    const title         = document.getElementById(`cl-te-${itemId}`)?.value.trim();
+    const detail        = document.getElementById(`cl-de-${itemId}`)?.value.trim() || '';
+    const deleteWhenDone = document.getElementById(`cl-dwd-e-${itemId}`)?.checked ?? false;
     if (!title) { showMessage('Item title cannot be empty'); return; }
-    updateChecklistItem(listId, itemId, emoji, title, detail);
+    updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone);
     _editingItemId = null;
     _rerender();
 }
@@ -412,13 +443,21 @@ export function renderChecklistsAdminSectionHtml() {
                         onclick="adminCancelChecklistEdit()">✕</button>
                 </div>`;
         } else {
+            const isEnabled = list.enabled !== false;
+            const disabledStyle = isEnabled ? '' : 'opacity:0.5;';
+            const toggleTitle = isEnabled ? 'Disable' : 'Enable';
+            const toggleLabel = isEnabled ? '🟢' : '🔴';
             html += `
                 <div class="chores-admin-group-label cl-admin-list-header"
+                    style="${disabledStyle}"
                     onclick="toggleChecklistExpand('${list.id}')">
                     <span>${list.icon} ${list.name}
                         <span class="chores-admin-meta">${list.items.length} items</span>
+                        ${!isEnabled ? `<span class="chores-admin-meta cl-dwd-tag">disabled</span>` : ''}
                     </span>
                     <div style="display:flex;gap:4px;align-items:center;">
+                        <button class="chore-btn" style="padding:2px 6px;" title="${toggleTitle}"
+                            onclick="event.stopPropagation();adminToggleChecklistEnabled('${list.id}')">${toggleLabel}</button>
                         <button class="chore-btn" style="padding:2px 6px;"
                             onclick="event.stopPropagation();adminEditChecklist('${list.id}')">✏️</button>
                         <button class="chore-btn reject-btn" style="padding:2px 6px;"
@@ -435,13 +474,19 @@ export function renderChecklistsAdminSectionHtml() {
                 const safeDetail = item.detail.replace(/"/g, '&quot;');
 
                 if (_editingItemId === item.id) {
+                    const dwdChecked = item.deleteWhenDone ? 'checked' : '';
                     html += `
-                        <div class="chores-admin-add-form" style="margin:4px 0;">
+                        <div class="chores-admin-add-form" style="margin:4px 0;flex-wrap:wrap;">
                             ${_emojiPickerHtml(item.emoji, `cl-ee-${item.id}`, `cl-ee-btn-${item.id}`, `cl-ee-pick-${item.id}`)}
                             <input id="cl-te-${item.id}" type="text" value="${safeTitle}"
                                 class="chores-admin-input chores-admin-input-grow">
                             <input id="cl-de-${item.id}" type="text" value="${safeDetail}"
                                 class="chores-admin-input chores-admin-input-grow" placeholder="Detail (optional)">
+                                    <input type="checkbox" id="cl-dwd-e-${item.id}" style="display:none" ${dwdChecked}>
+                            <button type="button" id="cl-dwd-btn-e-${item.id}"
+                                class="chore-btn cl-dwd-btn${item.deleteWhenDone ? ' active' : ''}"
+                                title="Delete when done"
+                                onclick="toggleDwdBtn('cl-dwd-e-${item.id}','cl-dwd-btn-e-${item.id}')">🗑</button>
                             <button class="chore-btn approve-btn"
                                 onclick="adminSaveChecklistItem('${list.id}','${item.id}')">✓</button>
                             <button class="chore-btn"
@@ -453,6 +498,7 @@ export function renderChecklistsAdminSectionHtml() {
                             <div class="chores-admin-row-info">
                                 <span class="chore-name">${[item.emoji, item.title].filter(Boolean).join(' ')}</span>
                                 ${item.detail ? `<span class="chores-admin-meta">${item.detail}</span>` : ''}
+                                ${item.deleteWhenDone ? `<span class="chores-admin-meta cl-dwd-tag">auto-delete</span>` : ''}
                             </div>
                             <div class="chores-admin-row-actions">
                                 ${idx > 0
@@ -473,12 +519,17 @@ export function renderChecklistsAdminSectionHtml() {
             });
 
             html += `
-                <div class="chores-admin-add-form" style="margin:4px 0 10px;">
+                <div class="chores-admin-add-form" style="margin:4px 0 10px;flex-wrap:wrap;">
                     ${_emojiPickerHtml('📌', `cl-ei-${list.id}`, `cl-ei-btn-${list.id}`, `cl-ei-pick-${list.id}`)}
                     <input id="cl-ti-${list.id}" type="text" placeholder="Item title"
                         class="chores-admin-input chores-admin-input-grow">
                     <input id="cl-di-${list.id}" type="text" placeholder="Detail (optional)"
                         class="chores-admin-input chores-admin-input-grow">
+                    <input type="checkbox" id="cl-dwd-${list.id}" style="display:none">
+                    <button type="button" id="cl-dwd-btn-${list.id}"
+                        class="chore-btn cl-dwd-btn"
+                        title="Delete when done"
+                        onclick="toggleDwdBtn('cl-dwd-${list.id}','cl-dwd-btn-${list.id}')">🗑</button>
                     <button class="chore-btn approve-btn"
                         onclick="adminAddChecklistItem('${list.id}')">+</button>
                 </div>`;

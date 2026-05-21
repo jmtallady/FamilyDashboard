@@ -5,6 +5,7 @@ import { getUseGoogleSheets } from './state.js';
 import { SHEETS_API_URL } from './config.js';
 import { savePointsToSheets } from './api.js';
 import { showMessage } from './utils.js';
+import { purgeDeleteWhenDoneItems } from './checklists.js';
 
 /**
  * Check for midnight and auto-reset Daily BP
@@ -18,6 +19,9 @@ export async function checkForMidnight() {
     const today = now.toDateString();
 
     if (lastReset !== today && now.getHours() === 0 && now.getMinutes() === 0) {
+        // Fallback purge if site happens to be open at midnight (server-side trigger is primary)
+        purgeDeleteWhenDoneItems();
+
         // Auto-reset bypasses PIN requirement
         Object.values(CONFIG).forEach(kid => {
             if (kid.id) {

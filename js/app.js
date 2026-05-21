@@ -467,6 +467,14 @@ window.toggleEmojiPicker = function(inputId, btnId) {
     _emojiPickerVisible = true;
 };
 
+window.toggleDwdBtn = function(checkId, btnId) {
+    const cb  = document.getElementById(checkId);
+    const btn = document.getElementById(btnId);
+    if (!cb || !btn) return;
+    cb.checked = !cb.checked;
+    btn.classList.toggle('active', cb.checked);
+};
+
 window.clearEmoji = function(inputId, btnId) {
     const inp = document.getElementById(inputId);
     const btn = document.getElementById(btnId);
@@ -495,7 +503,8 @@ window.resetChecklist         = Checklists.resetChecklist;
 window.toggleChecklistsAdmin      = Checklists.toggleChecklistsAdmin;
 window.toggleChecklistExpand      = Checklists.toggleChecklistExpand;
 window.adminAddChecklist          = Checklists.adminAddChecklist;
-window.adminDeleteChecklist       = Checklists.adminDeleteChecklist;
+window.adminDeleteChecklist           = Checklists.adminDeleteChecklist;
+window.adminToggleChecklistEnabled    = Checklists.adminToggleChecklistEnabled;
 window.adminEditChecklist         = Checklists.adminEditChecklist;
 window.adminSaveChecklist         = Checklists.adminSaveChecklist;
 window.adminCancelChecklistEdit   = Checklists.adminCancelChecklistEdit;

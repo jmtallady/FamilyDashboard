@@ -1136,6 +1136,71 @@ function saveChecklistsData(params) {
   }
 }
 
+// ====== PURGE COMPLETED CHECKLIST ITEMS ======
+// Run via a time-based trigger at ~12:05 AM.
+// Removes items flagged deleteWhenDone that were checked yesterday.
+function purgeCompletedChecklistItems() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Build set of itemIds checked yesterday, keyed by listId
+    const statusSheet = ss.getSheetByName('Daily Status');
+    const checkedByList = {}; // { listId: Set<itemId> }
+    if (statusSheet && statusSheet.getLastRow() >= 2) {
+      const tz = Session.getScriptTimeZone();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = Utilities.formatDate(yesterday, tz, 'yyyy-MM-dd');
+
+      const rows = statusSheet.getRange(2, 1, statusSheet.getLastRow() - 1, 5).getValues();
+      // Last-write-wins per (type, kidId, itemId)
+      const statusMap = {};
+      rows.forEach(row => {
+        if (!row[0]) return;
+        const rowDate = Utilities.formatDate(new Date(row[0]), tz, 'yyyy-MM-dd');
+        if (rowDate !== yesterdayStr) return;
+        const type   = row[1] ? row[1].toString() : '';
+        const listId = row[2] ? row[2].toString() : '';
+        const itemId = row[3] ? row[3].toString() : '';
+        const status = row[4] ? row[4].toString() : '';
+        if (type !== 'checklist') return;
+        statusMap[`${listId}-${itemId}`] = { listId, itemId, status };
+      });
+      Object.values(statusMap).forEach(({ listId, itemId, status }) => {
+        if (status !== 'checked') return;
+        if (!checkedByList[listId]) checkedByList[listId] = new Set();
+        checkedByList[listId].add(itemId);
+      });
+    }
+
+    // Nothing was checked — nothing to purge
+    if (Object.keys(checkedByList).length === 0) return;
+
+    // Load checklists, filter out completed deleteWhenDone items, save back
+    const clSheet = ss.getSheetByName('Checklists');
+    if (!clSheet || clSheet.getLastRow() < 2) return;
+
+    const raw = clSheet.getRange(2, 2).getValue();
+    const lists = raw ? JSON.parse(raw) : [];
+    let changed = false;
+
+    lists.forEach(list => {
+      const checked = checkedByList[list.id];
+      if (!checked) return;
+      const before = list.items.length;
+      list.items = list.items.filter(item => !(item.deleteWhenDone && checked.has(item.id)));
+      if (list.items.length !== before) changed = true;
+    });
+
+    if (changed) {
+      clSheet.getRange(2, 2).setValue(JSON.stringify(lists));
+      Logger.log('purgeCompletedChecklistItems: saved updated checklists');
+    }
+  } catch (error) {
+    Logger.log('purgeCompletedChecklistItems error: ' + error.toString());
+  }
+}
+
 // ====== HELPER FUNCTIONS ======
 
 // Helper to return JSON response with CORS headers
