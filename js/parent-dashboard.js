@@ -966,23 +966,32 @@ function rewardEditForm(r) {
         .join('');
     return `
         <div class="chores-admin-add-form" id="${id}" style="flex-direction:column;gap:6px;">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <input id="rwd-icon-${isNew ? 'new' : r.id}" type="text" placeholder="🎁 icon"
-                    value="${r?.icon || ''}" class="chores-admin-input" style="width:48px;" maxlength="4">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <span class="admin-field-label">Icon</span>
+                <input id="rwd-icon-${isNew ? 'new' : r.id}" type="text" placeholder="🎁"
+                    value="${r?.icon || ''}" class="chores-admin-input" style="width:40px;" maxlength="4">
+                <span class="admin-field-label">Name</span>
                 <input id="rwd-name-${isNew ? 'new' : r.id}" type="text" placeholder="Reward name"
                     value="${r?.name || ''}" class="chores-admin-input chores-admin-input-grow">
-                <input id="rwd-cost-${isNew ? 'new' : r.id}" type="number" placeholder="Cost (BP)"
+                <span class="admin-field-label">Cost</span>
+                <input id="rwd-cost-${isNew ? 'new' : r.id}" type="number" placeholder="0"
                     value="${r?.cost ?? ''}" min="0" class="chores-admin-input chores-admin-input-sm">
+                <span class="admin-field-label">BP</span>
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <span class="admin-field-label">Limit</span>
                 <select id="rwd-limit-type-${isNew ? 'new' : r.id}" class="chores-admin-input">${limitTypeOpts}</select>
-                <input id="rwd-limit-count-${isNew ? 'new' : r.id}" type="number" placeholder="Limit #"
+                <input id="rwd-limit-count-${isNew ? 'new' : r.id}" type="number" placeholder="#"
                     value="${r?.limitCount ?? ''}" min="1" class="chores-admin-input chores-admin-input-sm">
-                <input id="rwd-fallback-${isNew ? 'new' : r.id}" type="text" placeholder="Text fallback"
+                <span class="admin-field-label">Fallback</span>
+                <input id="rwd-fallback-${isNew ? 'new' : r.id}" type="text" placeholder="Text if emoji missing"
                     value="${r?.text || r?.textFallback || ''}" class="chores-admin-input chores-admin-input-grow">
             </div>
-            <textarea id="rwd-guidelines-${isNew ? 'new' : r.id}" placeholder="Guidelines (optional)"
-                class="chores-admin-input" style="width:100%;resize:vertical;min-height:36px;">${r?.guidelines || ''}</textarea>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+                <span class="admin-field-label">Guidelines</span>
+                <textarea id="rwd-guidelines-${isNew ? 'new' : r.id}" placeholder="Parent notes / redemption rules (optional)"
+                    class="chores-admin-input" style="width:100%;resize:vertical;min-height:36px;box-sizing:border-box;">${r?.guidelines || ''}</textarea>
+            </div>
             <div style="display:flex;gap:6px;">
                 <button class="chore-btn approve-btn" title="Save reward" onclick="adminSaveRewardEdit('${isNew ? 'new' : r.id}')">✓</button>
                 <button class="chore-btn" title="Cancel" onclick="adminCancelRewardEdit()">✕</button>
