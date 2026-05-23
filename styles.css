@@ -450,7 +450,7 @@ img.emoji {
     position: fixed;
     top: 0;
     right: 0;
-    width: min(420px, 100vw);
+    width: min(620px, 100vw);
     height: 100vh;
     background: white;
     z-index: 1200;
@@ -1840,6 +1840,24 @@ body.dark-mode .activity-undo-btn:hover {
 
 .cl-dwd-btn { opacity: 0.25; transition: opacity 0.15s, color 0.15s; }
 .cl-dwd-btn.active { opacity: 1; color: #e53935; }
+
+.cl-move-form {
+    margin: 2px 0 6px;
+    background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+    border-radius: 8px;
+    padding: 6px 8px;
+    flex-wrap: wrap;
+}
+
+.cl-move-bp-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #555;
+    white-space: nowrap;
+    cursor: pointer;
+}
 
 .cl-dwd-tag {
     color: #e07b00;

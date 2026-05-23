@@ -13,13 +13,12 @@ import { getKidByName, showMessage } from './utils.js';
 // Negative = BP was spent (reward purchase).
 
 function parseBPDelta(type, note) {
-    if (type === 'chore-approved' || type === 'activity-approved') {
-        // Note: "...+N BP to bank)" or "...= N BP to bank)"
+    if (type === 'chore-approved' || type === 'activity-approved' ||
+        type === 'checklist-item' || type === 'checklist-complete') {
         const m = note?.match(/(\d+) BP to bank/);
         return m ? parseInt(m[1]) : null;
     }
     if (type === 'reward-purchase') {
-        // Note: "...(-N BP)"
         const m = note?.match(/\(-(\d+) BP\)/);
         return m ? -parseInt(m[1]) : null;
     }
@@ -110,6 +109,20 @@ export async function renderRecentActivity() {
                     ? `${kidName}: +${mAuto[1]} BP earned today`
                     : `${kidName}: End of day (auto)`;
                 activityColor = '#868e96';
+                break;
+            }
+            case 'checklist-item': {
+                activityIcon = '✅';
+                const mCli = entry.note?.match(/Checked '(.+?)' —/);
+                activityText = `${kidName} checked: ${mCli ? mCli[1] : 'a task'}`;
+                activityColor = '#51cf66';
+                break;
+            }
+            case 'checklist-complete': {
+                activityIcon = '🏆';
+                const mClc = entry.note?.match(/Completed checklist '(.+?)' —/);
+                activityText = `${kidName} completed checklist: ${mClc ? mClc[1] : 'a list'}`;
+                activityColor = '#f59f00';
                 break;
             }
             case 'daily-adjust': {
