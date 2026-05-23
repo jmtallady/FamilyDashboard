@@ -1164,14 +1164,22 @@ function ruleEditForm(r, kids) {
         .join('');
     return `
         <div class="chores-admin-add-form" style="flex-direction:column;gap:6px;margin:4px 0;">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <span class="admin-field-label">Category</span>
                 <select id="rule-kid-edit" class="chores-admin-input">${kidOpts}</select>
+                <span class="admin-field-label">Type</span>
                 <select id="rule-type-edit" class="chores-admin-input">${typeOpts}</select>
             </div>
-            <textarea id="rule-text-edit" placeholder="Rule text" class="chores-admin-input"
-                style="width:100%;resize:vertical;min-height:40px;">${r?.rule || ''}</textarea>
-            <input id="rule-consequence-edit" type="text" placeholder="Consequence (optional)"
-                value="${r?.consequence || ''}" class="chores-admin-input chores-admin-input-grow">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+                <span class="admin-field-label">Rule</span>
+                <textarea id="rule-text-edit" placeholder="Rule text" class="chores-admin-input"
+                    style="width:100%;resize:vertical;min-height:40px;box-sizing:border-box;">${r?.rule || ''}</textarea>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+                <span class="admin-field-label">Consequence</span>
+                <input id="rule-consequence-edit" type="text" placeholder="Optional — e.g. lose 5 BP"
+                    value="${r?.consequence || ''}" class="chores-admin-input chores-admin-input-grow">
+            </div>
             <div style="display:flex;gap:6px;">
                 <button class="chore-btn approve-btn" title="Save rule" onclick="adminSaveHouseRuleEdit('${safeKid}','${safeRule}')">✓</button>
                 <button class="chore-btn" title="Cancel" onclick="adminCancelRuleEdit()">✕</button>
