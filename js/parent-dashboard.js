@@ -294,10 +294,12 @@ function renderSettingsSectionHtml() {
 
                 <div class="settings-subsection-label" style="margin-top:12px;">Parent PIN</div>
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <span class="admin-field-label">New</span>
                     <input id="settings-new-pin" type="password" placeholder="New PIN" maxlength="6"
-                        class="chores-admin-input chores-admin-input-sm" style="letter-spacing:4px;">
-                    <input id="settings-confirm-pin" type="password" placeholder="Confirm" maxlength="6"
-                        class="chores-admin-input chores-admin-input-sm" style="letter-spacing:4px;">
+                        class="chores-admin-input chores-admin-input-grow" style="letter-spacing:4px;max-width:120px;">
+                    <span class="admin-field-label">Confirm</span>
+                    <input id="settings-confirm-pin" type="password" placeholder="Confirm PIN" maxlength="6"
+                        class="chores-admin-input chores-admin-input-grow" style="letter-spacing:4px;max-width:120px;">
                     <button class="chore-btn approve-btn" onclick="adminSaveParentPin()" title="Save new parent PIN">Save</button>
                 </div>
 
