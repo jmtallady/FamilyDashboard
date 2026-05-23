@@ -566,8 +566,8 @@ export function adminConfirmMoveChoreToChecklist(kidId, choreId) {
         showMessage('Checklist not found'); return;
     }
 
-    adminSetMultiplier(kidId, choreId, 0);
     _movingChoreKey = null;
+    adminSetMultiplier(kidId, choreId, 0);
     showMessage(`📋 "${chore.name}" moved to checklist`);
 }
 

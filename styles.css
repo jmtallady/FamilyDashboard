@@ -450,7 +450,7 @@ img.emoji {
     position: fixed;
     top: 0;
     right: 0;
-    width: min(420px, 100vw);
+    width: min(620px, 100vw);
     height: 100vh;
     background: white;
     z-index: 1200;
