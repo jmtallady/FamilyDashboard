@@ -934,7 +934,7 @@ function renderRewardsSectionHtml() {
                     <div class="chores-admin-row-info">
                         <span style="font-size:14px;">${r.icon || '🎁'}</span>
                         <span class="chore-name">${r.name}</span>
-                        <span class="chores-admin-meta">${r.cost} PC</span>
+                        <span class="chores-admin-meta">${r.cost} BP</span>
                         ${limitBadge}
                     </div>
                     <div class="chores-admin-row-actions">
@@ -971,7 +971,7 @@ function rewardEditForm(r) {
                     value="${r?.icon || ''}" class="chores-admin-input" style="width:48px;" maxlength="4">
                 <input id="rwd-name-${isNew ? 'new' : r.id}" type="text" placeholder="Reward name"
                     value="${r?.name || ''}" class="chores-admin-input chores-admin-input-grow">
-                <input id="rwd-cost-${isNew ? 'new' : r.id}" type="number" placeholder="Cost (PC)"
+                <input id="rwd-cost-${isNew ? 'new' : r.id}" type="number" placeholder="Cost (BP)"
                     value="${r?.cost ?? ''}" min="0" class="chores-admin-input chores-admin-input-sm">
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
