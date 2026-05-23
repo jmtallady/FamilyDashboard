@@ -391,6 +391,10 @@ function choreAdminRow(chore, kidId) {
                 <input type="checkbox" id="move-cl-bp-${chore.id}" checked>
                 Award ${chore.bp} BP to ${kidName}
             </label>
+            <label class="cl-move-bp-label">
+                <input type="checkbox" id="move-cl-dwd-${chore.id}" checked>
+                Delete when done
+            </label>
             <button class="chore-btn approve-btn" title="Confirm"
                 onclick="adminConfirmMoveChoreToChecklist('${kidId}','${chore.id}')">✓</button>
             <button class="chore-btn" title="Cancel"
@@ -541,8 +545,9 @@ export function adminCancelMoveChore() {
 }
 
 export function adminConfirmMoveChoreToChecklist(kidId, choreId) {
-    const listId   = document.getElementById(`move-cl-target-${choreId}`)?.value;
-    const awardBp  = document.getElementById(`move-cl-bp-${choreId}`)?.checked ?? true;
+    const listId        = document.getElementById(`move-cl-target-${choreId}`)?.value;
+    const awardBp       = document.getElementById(`move-cl-bp-${choreId}`)?.checked ?? true;
+    const deleteWhenDone = document.getElementById(`move-cl-dwd-${choreId}`)?.checked ?? true;
 
     if (!listId) { showMessage('Select a checklist first'); return; }
 
@@ -557,7 +562,7 @@ export function adminConfirmMoveChoreToChecklist(kidId, choreId) {
         emoji: '',
         title: chore.name,
         detail: '',
-        deleteWhenDone: false,
+        deleteWhenDone,
         bp: awardBp ? (chore.bp || 0) : 0,
         awardTo: awardBp && kidId ? kidId : null,
     };
