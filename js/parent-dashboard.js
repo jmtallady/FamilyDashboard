@@ -944,7 +944,7 @@ function renderRewardsSectionHtml() {
                     </div>
                     <div class="chores-admin-row-actions">
                         ${_confirmDeleteRewardId === r.id
-                            ? `<span style="font-size:11px;color:#c92a2a;white-space:nowrap;">Delete?</span><button class="chore-btn approve-btn" title="Confirm delete" onclick="adminConfirmDeleteReward('${r.id}')">✓</button><button class="chore-btn" title="Cancel" onclick="adminCancelDelete()">✕</button>`
+                            ? confirmDeleteHtml(`adminConfirmDeleteReward('${r.id}')`)
                             : `<button class="chore-btn" title="Edit reward" onclick="adminEditReward('${r.id}')">✏️</button><button class="chore-btn reject-btn" title="Delete reward" onclick="adminDeleteReward('${r.id}')">🗑</button>`
                         }
                     </div>
@@ -1082,6 +1082,11 @@ function _flattenRules(grouped) {
 }
 
 function _ruleKey(kid, rule) { return `${kid || ''}||${rule}`; }
+function confirmDeleteHtml(onConfirmCall) {
+    return `<span style="font-size:11px;color:#c92a2a;white-space:nowrap;">Delete?</span>`
+         + `<button class="chore-btn approve-btn" title="Confirm delete" onclick="${onConfirmCall}">✓</button>`
+         + `<button class="chore-btn" title="Cancel" onclick="adminCancelDelete()">✕</button>`;
+}
 
 function renderHouseRulesSectionHtml() {
     const CONFIG = getConfig();
@@ -1135,7 +1140,7 @@ function renderHouseRulesSectionHtml() {
                         </div>
                         <div class="chores-admin-row-actions">
                             ${_confirmDeleteRuleKey === rKey
-                                ? `<span style="font-size:11px;color:#c92a2a;white-space:nowrap;">Delete?</span><button class="chore-btn approve-btn" title="Confirm delete" onclick="adminConfirmDeleteHouseRule('${safeKid}','${safeRule}')">✓</button><button class="chore-btn" title="Cancel" onclick="adminCancelDelete()">✕</button>`
+                                ? confirmDeleteHtml(`adminConfirmDeleteHouseRule('${safeKid}','${safeRule}')`)
                                 : `<button class="chore-btn" title="Edit rule" onclick="adminEditHouseRule('${safeKid}','${safeRule}')">✏️</button><button class="chore-btn reject-btn" title="Delete rule" onclick="adminDeleteHouseRule('${safeKid}','${safeRule}')">🗑</button>`
                             }
                         </div>
@@ -1286,7 +1291,7 @@ function renderKidsSectionHtml() {
                     </div>
                     <div class="chores-admin-row-actions">
                         ${_confirmDeleteKidKey === kidKey
-                            ? `<span style="font-size:11px;color:#c92a2a;white-space:nowrap;">Delete?</span><button class="chore-btn approve-btn" title="Confirm delete" onclick="adminConfirmDeleteKid('${kidKey}')">✓</button><button class="chore-btn" title="Cancel" onclick="adminCancelDelete()">✕</button>`
+                            ? confirmDeleteHtml(`adminConfirmDeleteKid('${kidKey}')`)
                             : `<button class="chore-btn" title="Edit" onclick="adminEditKid('${kidKey}')">✏️</button><button class="chore-btn reject-btn" title="Delete" onclick="adminDeleteKid('${kidKey}')">🗑</button>`
                         }
                     </div>
