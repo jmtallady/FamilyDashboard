@@ -6,7 +6,7 @@ import { showPinModal } from './auth.js';
 import { getIsUnlocked } from './state.js';
 import { getChores, setChores } from './state.js';
 import { getConfig } from './config.js';
-import { showMessage, parseEmoji } from './utils.js';
+import { showMessage, parseEmoji, emojiPickerHtml } from './utils.js';
 import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
 import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores,
@@ -969,9 +969,7 @@ function rewardEditForm(r) {
     return `
         <div class="chores-admin-add-form" id="${id}" style="flex-direction:column;gap:6px;">
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                <span class="admin-field-label">Icon</span>
-                <input id="rwd-icon-${isNew ? 'new' : r.id}" type="text" placeholder="🎁"
-                    value="${r?.icon || ''}" class="chores-admin-input" style="width:40px;" maxlength="4">
+                ${emojiPickerHtml(r?.icon || '', `rwd-icon-${isNew ? 'new' : r.id}`, `rwd-icon-btn-${isNew ? 'new' : r.id}`)}
                 <span class="admin-field-label">Name</span>
                 <input id="rwd-name-${isNew ? 'new' : r.id}" type="text" placeholder="Reward name"
                     value="${r?.name || ''}" class="chores-admin-input chores-admin-input-grow">
