@@ -13,7 +13,7 @@ import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChor
 import { endOfDayAll } from './points.js';
 import { renderMenuSectionHtml, toggleMenuSection, getMealForDate, setMealForDate,
          getRandomMeal, addMealToCache, approveDinnerRequest, dismissDinnerRequest } from './menu.js';
-import { renderChecklistsAdminSectionHtml } from './checklists.js';
+import { renderChecklistsAdminSectionHtml, getChecklists, addItemToChecklist } from './checklists.js';
 import { updateCalendar } from './calendar.js';
 
 const STORAGE_KEY = 'pending-approvals';
@@ -22,6 +22,7 @@ const STORAGE_KEY = 'pending-approvals';
 let choresSectionOpen = false;
 let endOfDaySectionOpen = false;
 let allChoresCache = null; // All chores including disabled (multiplier=0)
+let _movingChoreKey = null; // "kidId|choreId" when move-to-checklist form is open
 
 // ── Pending approvals list ────────────────────────────────────────────────────
 
@@ -366,9 +367,35 @@ function renderChoresSectionHtml() {
 function choreAdminRow(chore, kidId) {
     const safeName = chore.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     const isDisabled = chore.multiplier === 0;
+    const moveKey = `${kidId}|${chore.id}`;
+    const isMoving = _movingChoreKey === moveKey;
     const nameHtml = isDisabled
         ? `<span class="chore-name chores-admin-disabled-name">${chore.name}</span>`
         : `<span class="chore-name">${chore.name}</span>`;
+
+    const checklists = getChecklists().filter(l => l.enabled !== false);
+    const clOptions = checklists.length
+        ? checklists.map(l => `<option value="${l.id}">${l.icon ? l.icon + ' ' : ''}${l.name}</option>`).join('')
+        : `<option value="">No checklists available</option>`;
+
+    const kidName = kidId
+        ? (Object.values(getConfig() || {}).find(k => k.id?.toLowerCase() === kidId.toLowerCase())?.name || kidId)
+        : 'shared';
+
+    const moveForm = isMoving ? `
+        <div class="chores-admin-add-form cl-move-form">
+            <select id="move-cl-target-${chore.id}" class="chores-admin-input chores-admin-input-grow">
+                ${clOptions}
+            </select>
+            <label class="cl-move-bp-label">
+                <input type="checkbox" id="move-cl-bp-${chore.id}" checked>
+                Award ${chore.bp} BP to ${kidName}
+            </label>
+            <button class="chore-btn approve-btn" title="Confirm"
+                onclick="adminConfirmMoveChoreToChecklist('${kidId}','${chore.id}')">✓</button>
+            <button class="chore-btn" title="Cancel"
+                onclick="adminCancelMoveChore()">✕</button>
+        </div>` : '';
 
     return `
         <div class="chores-admin-row${isDisabled ? ' chores-admin-row-disabled' : ''}" id="chore-admin-${kidId}-${chore.id}">
@@ -382,9 +409,13 @@ function choreAdminRow(chore, kidId) {
                     class="chores-admin-input chores-admin-input-sm"
                     title="Multiplier — set to 0 to hide from dashboard"
                     onchange="adminSetMultiplier('${kidId}', '${chore.id}', this.value)">
-                <button class="chore-btn" title="Edit name/BP" onclick="adminEditChore('${kidId}', '${chore.id}', '${safeName}', ${chore.bp})">✏️</button>
+                <button class="chore-btn" title="Move to checklist"
+                    onclick="adminStartMoveChore('${kidId}','${chore.id}')">📋</button>
+                <button class="chore-btn" title="Edit name/BP"
+                    onclick="adminEditChore('${kidId}', '${chore.id}', '${safeName}', ${chore.bp})">✏️</button>
             </div>
-        </div>`;
+        </div>
+        ${moveForm}`;
 }
 
 // ── Chores Admin Actions ──────────────────────────────────────────────────────
@@ -497,6 +528,47 @@ export async function adminAddChore() {
 
     showMessage(`Chore added: ${choreName}`);
     renderParentDashboard();
+}
+
+export function adminStartMoveChore(kidId, choreId) {
+    _movingChoreKey = `${kidId}|${choreId}`;
+    renderParentDashboard();
+}
+
+export function adminCancelMoveChore() {
+    _movingChoreKey = null;
+    renderParentDashboard();
+}
+
+export function adminConfirmMoveChoreToChecklist(kidId, choreId) {
+    const listId   = document.getElementById(`move-cl-target-${choreId}`)?.value;
+    const awardBp  = document.getElementById(`move-cl-bp-${choreId}`)?.checked ?? true;
+
+    if (!listId) { showMessage('Select a checklist first'); return; }
+
+    const cacheList = kidId === ''
+        ? (allChoresCache?.shared || [])
+        : (allChoresCache?.individual?.[kidId.toLowerCase()] || []);
+    const chore = cacheList.find(c => c.id === choreId);
+    if (!chore) { showMessage('Chore not found'); return; }
+
+    const newItem = {
+        id: `ci-${Date.now()}`,
+        emoji: '',
+        title: chore.name,
+        detail: '',
+        deleteWhenDone: false,
+        bp: awardBp ? (chore.bp || 0) : 0,
+        awardTo: awardBp && kidId ? kidId : null,
+    };
+
+    if (!addItemToChecklist(listId, newItem)) {
+        showMessage('Checklist not found'); return;
+    }
+
+    adminSetMultiplier(kidId, choreId, 0);
+    _movingChoreKey = null;
+    showMessage(`📋 "${chore.name}" moved to checklist`);
 }
 
 // ── Menu Admin Actions ────────────────────────────────────────────────────────

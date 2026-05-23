@@ -331,7 +331,10 @@ window.toggleChoresAdmin = ParentDash.toggleChoresAdmin;
 window.adminAddChore = ParentDash.adminAddChore;
 window.adminEditChore = ParentDash.adminEditChore;
 window.adminSaveChoreEdit = ParentDash.adminSaveChoreEdit;
-window.adminSetMultiplier = ParentDash.adminSetMultiplier;
+window.adminSetMultiplier              = ParentDash.adminSetMultiplier;
+window.adminStartMoveChore             = ParentDash.adminStartMoveChore;
+window.adminCancelMoveChore            = ParentDash.adminCancelMoveChore;
+window.adminConfirmMoveChoreToChecklist = ParentDash.adminConfirmMoveChoreToChecklist;
 window.parentDashEndOfDayAll = ParentDash.parentDashEndOfDayAll;
 window.toggleEndOfDaySection = ParentDash.toggleEndOfDaySection;
 
