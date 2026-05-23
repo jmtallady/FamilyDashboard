@@ -983,9 +983,6 @@ function rewardEditForm(r) {
                 <select id="rwd-limit-type-${isNew ? 'new' : r.id}" class="chores-admin-input">${limitTypeOpts}</select>
                 <input id="rwd-limit-count-${isNew ? 'new' : r.id}" type="number" placeholder="#"
                     value="${r?.limitCount ?? ''}" min="1" class="chores-admin-input chores-admin-input-sm">
-                <span class="admin-field-label">Fallback</span>
-                <input id="rwd-fallback-${isNew ? 'new' : r.id}" type="text" placeholder="Text if emoji missing"
-                    value="${r?.text || r?.textFallback || ''}" class="chores-admin-input chores-admin-input-grow">
             </div>
             <div style="display:flex;flex-direction:column;gap:2px;">
                 <span class="admin-field-label">Guidelines</span>
@@ -1015,7 +1012,6 @@ export function adminSaveRewardEdit(rewardId) {
     const name = document.getElementById(`rwd-name-${key}`)?.value.trim();
     const cost = parseInt(document.getElementById(`rwd-cost-${key}`)?.value) || 0;
     const icon = document.getElementById(`rwd-icon-${key}`)?.value.trim() || '🎁';
-    const textFallback = document.getElementById(`rwd-fallback-${key}`)?.value.trim() || name;
     const limitType = document.getElementById(`rwd-limit-type-${key}`)?.value || '';
     const limitCountVal = document.getElementById(`rwd-limit-count-${key}`)?.value;
     const limitCount = limitCountVal ? parseInt(limitCountVal) : '';
@@ -1025,14 +1021,14 @@ export function adminSaveRewardEdit(rewardId) {
 
     if (isNew) {
         const newId = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Date.now().toString(36);
-        const newR = { id: newId, name, cost, icon, text: textFallback, textFallback, limitType, limitCount, guidelines };
+        const newR = { id: newId, name, cost, icon, limitType, limitCount, guidelines };
         if (!allRewardsCache) allRewardsCache = [];
         allRewardsCache.push(newR);
-        addRewardToSheets(newId, name, cost, icon, textFallback, limitType, limitCount, guidelines);
+        addRewardToSheets(newId, name, cost, icon, name, limitType, limitCount, guidelines);
     } else {
         const r = allRewardsCache?.find(x => x.id === rewardId);
-        if (r) Object.assign(r, { name, cost, icon, text: textFallback, textFallback, limitType, limitCount, guidelines });
-        updateRewardInSheets(rewardId, name, cost, icon, textFallback, limitType, limitCount, guidelines);
+        if (r) Object.assign(r, { name, cost, icon, limitType, limitCount, guidelines });
+        updateRewardInSheets(rewardId, name, cost, icon, name, limitType, limitCount, guidelines);
     }
 
     _editingRewardId = null;
