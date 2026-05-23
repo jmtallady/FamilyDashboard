@@ -594,7 +594,8 @@ export function adminEditChore(kidId, choreId, currentName, currentBP) {
     const rowEl = document.getElementById(`chore-admin-${kidId}-${choreId}`);
     if (!rowEl) return;
     rowEl.innerHTML = `
-        <input type="text" value="${currentName}" id="editChoreName-${kidId}-${choreId}" class="chores-admin-input chores-admin-input-grow">
+        <input type="text" value="${currentName}" id="editChoreName-${kidId}-${choreId}" class="chores-admin-input chores-admin-input-grow" placeholder="Chore name">
+        <span class="admin-field-label">BP</span>
         <input type="number" value="${currentBP}" id="editChoreBP-${kidId}-${choreId}" class="chores-admin-input chores-admin-input-sm">
         <button class="chore-btn approve-btn" onclick="adminSaveChoreEdit('${kidId}', '${choreId}')" title="Save">✓</button>
         <button class="chore-btn" onclick="renderParentDashboard()" title="Cancel">✗</button>
@@ -670,19 +671,25 @@ export async function adminAddChore() {
 }
 
 export function setChoresSearch(term) {
+    const pos = document.getElementById('chores-search')?.selectionStart ?? term.length;
     choresSearch = term;
     renderParentDashboard();
-    document.getElementById('chores-search')?.focus();
+    const el = document.getElementById('chores-search');
+    if (el) { el.focus(); el.setSelectionRange(pos, pos); }
 }
 export function setActivitiesSearch(term) {
+    const pos = document.getElementById('activities-search')?.selectionStart ?? term.length;
     activitiesSearch = term;
     renderParentDashboard();
-    document.getElementById('activities-search')?.focus();
+    const el = document.getElementById('activities-search');
+    if (el) { el.focus(); el.setSelectionRange(pos, pos); }
 }
 export function setRewardsSearch(term) {
+    const pos = document.getElementById('rewards-search')?.selectionStart ?? term.length;
     rewardsSearch = term;
     renderParentDashboard();
-    document.getElementById('rewards-search')?.focus();
+    const el = document.getElementById('rewards-search');
+    if (el) { el.focus(); el.setSelectionRange(pos, pos); }
 }
 
 export function adminStartMoveChore(kidId, choreId) {
@@ -844,9 +851,11 @@ export function adminEditActivity(kidId, actId, currentName, currentBP, currentM
     const rowEl = document.getElementById(`act-admin-${kidId}-${actId}`);
     if (!rowEl) return;
     rowEl.innerHTML = `
-        <input type="text" value="${currentName}" id="editActName-${kidId}-${actId}" class="chores-admin-input chores-admin-input-grow">
+        <input type="text" value="${currentName}" id="editActName-${kidId}-${actId}" class="chores-admin-input chores-admin-input-grow" placeholder="Activity name">
+        <span class="admin-field-label">BP</span>
         <input type="number" value="${currentBP}" id="editActBP-${kidId}-${actId}" class="chores-admin-input chores-admin-input-sm">
-        <input type="number" value="${currentMax || ''}" id="editActMax-${kidId}-${actId}" placeholder="Max/wk" min="1"
+        <span class="admin-field-label">Max/wk</span>
+        <input type="number" value="${currentMax || ''}" id="editActMax-${kidId}-${actId}" min="1"
             class="chores-admin-input chores-admin-input-sm" title="Max per week (blank = unlimited)">
         <button class="chore-btn approve-btn" onclick="adminSaveActivityEdit('${kidId}','${actId}')" title="Save">✓</button>
         <button class="chore-btn" onclick="renderParentDashboard()" title="Cancel">✗</button>
@@ -926,7 +935,9 @@ function renderRewardsSectionHtml() {
     if (!allRewardsCache) return html + `<div style="padding:12px;color:#999;font-size:12px;">Loading rewards…</div></div>`;
 
     const rq = rewardsSearch.toLowerCase();
-    const visibleRewards = allRewardsCache.filter(r => !rq || r.name.toLowerCase().includes(rq));
+    const visibleRewards = allRewardsCache
+        .filter(r => !rq || r.name.toLowerCase().includes(rq))
+        .sort((a, b) => a.name.localeCompare(b.name));
     html += `<div class="chores-admin-body">`;
     html += `<input id="rewards-search" type="search" placeholder="🔍 Search rewards…" value="${rewardsSearch.replace(/"/g,'&quot;')}"
         class="chores-admin-input chores-admin-input-grow admin-search-input"

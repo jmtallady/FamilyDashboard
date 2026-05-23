@@ -2980,6 +2980,14 @@ em-emoji-picker {
     box-sizing: border-box;
 }
 
+/* Inline field labels in edit rows */
+.admin-field-label {
+    font-size: 10px;
+    color: #888;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 /* ── Admin expansion styles ───────────────────────────────────────────────── */
 
 .settings-subsection-label {
