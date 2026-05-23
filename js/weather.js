@@ -2,6 +2,7 @@
 // Fetches and displays current weather conditions and hourly forecast
 
 import { getConfig } from './config.js';
+import { parseEmoji } from './utils.js';
 
 /**
  * Fetch weather data from Open-Meteo API
@@ -94,11 +95,5 @@ export async function updateWeather() {
 
     document.getElementById('weatherWidget').innerHTML = html;
 
-    // Parse emojis in weather widget
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(document.getElementById('weatherWidget'), {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(document.getElementById('weatherWidget'));
 }

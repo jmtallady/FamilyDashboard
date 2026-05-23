@@ -6,7 +6,7 @@ import { showPinModal } from './auth.js';
 import { getIsUnlocked } from './state.js';
 import { getChores, setChores } from './state.js';
 import { getConfig } from './config.js';
-import { showMessage } from './utils.js';
+import { showMessage, parseEmoji } from './utils.js';
 import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
 import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores,
@@ -184,9 +184,7 @@ export function renderParentDashboard() {
     html += renderEndOfDaySectionHtml();
     html += renderSettingsSectionHtml();
     container.innerHTML = html;
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(container, { folder: 'svg', ext: '.svg' });
-    }
+    parseEmoji(container);
 }
 
 // ── Approve / Reject from parent dash ────────────────────────────────────────

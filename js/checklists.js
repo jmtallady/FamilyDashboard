@@ -1,7 +1,7 @@
 // checklists.js — Custom checklists backed by Google Sheets (definitions permanent,
 // check state resets daily in localStorage)
 
-import { showMessage } from './utils.js';
+import { showMessage, parseEmoji } from './utils.js';
 import { fetchChecklistsFromSheets, saveChecklistsToSheets, saveDailyStatusToSheets, savePointsToSheets } from './api.js';
 import { getUseGoogleSheets } from './state.js';
 import { getConfig } from './config.js';
@@ -301,9 +301,7 @@ function _renderModal() {
     el.innerHTML = _viewId
         ? _renderListView(lists.find(l => l.id === _viewId))
         : _renderSelector(lists);
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(el, { folder: 'svg', ext: '.svg' });
-    }
+    parseEmoji(el);
 }
 
 function _renderSelector(lists) {

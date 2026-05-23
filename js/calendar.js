@@ -2,6 +2,7 @@
 // Displays 7-day calendar view with weather and events
 
 import { getConfig } from './config.js';
+import { parseEmoji } from './utils.js';
 import { fetchCalendarEvents } from './api.js';
 import { fetchWeatherData, getWeatherEmoji } from './weather.js';
 import { getMealForDate } from './menu.js';
@@ -192,11 +193,5 @@ export async function updateCalendar() {
 
     calendarWidget.innerHTML = html;
 
-    // Parse emojis in calendar widget
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(calendarWidget, {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(calendarWidget);
 }

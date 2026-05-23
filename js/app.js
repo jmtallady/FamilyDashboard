@@ -2,6 +2,7 @@
 
 // Import all modules
 import { fetchConfig, setConfig, getConfig } from './config.js';
+import { parseEmoji } from './utils.js';
 import { setUseGoogleSheets, setChores, setRewards, setActivities, getUseGoogleSheets, getChores, getActivities } from './state.js';
 import * as Theme from './theme.js';
 import * as Weather from './weather.js';
@@ -213,13 +214,7 @@ async function initialize() {
     ParentDash.updateParentBadge();
     await RecentActivity.renderRecentActivity(); // Load and display from Points Log
 
-    // Parse emojis with Twemoji (converts emoji to images)
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(document.body, {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(document.body);
 }
 
 // Modal open/close helpers for Rewards and Activities

@@ -2,6 +2,7 @@
 
 import { fetchHouseRules } from './api.js';
 import { getHouseRules, setHouseRules } from './state.js';
+import { parseEmoji } from './utils.js';
 
 // ── Type → visual style mapping ──────────────────────────────────────────────
 // Recognised type values (set in column D of the House Rules sheet):
@@ -121,13 +122,7 @@ export async function showHouseRules() {
 
     container.innerHTML = html;
 
-    // Parse emojis with Twemoji
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(container, {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(container);
 }
 
 /**
