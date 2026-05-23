@@ -382,6 +382,7 @@ window.closeActivitiesModal  = closeActivitiesModal;
 
 // Menu / meal planning functions
 window.adminToggleMenuSection      = ParentDash.adminToggleMenuSection;
+window.toggleMealLibrary           = ParentDash.adminToggleMealLibrary;
 window.adminSetMealForDate         = ParentDash.adminSetMealForDate;
 window.adminRandomMealForDate      = ParentDash.adminRandomMealForDate;
 window.adminApproveDinnerRequest   = ParentDash.adminApproveDinnerRequest;
@@ -530,6 +531,9 @@ window.adminSaveWeather            = ParentDash.adminSaveWeather;
 window.adminSaveCalendar           = ParentDash.adminSaveCalendar;
 
 // Activities admin
+window.setChoresSearch             = ParentDash.setChoresSearch;
+window.setActivitiesSearch         = ParentDash.setActivitiesSearch;
+window.setRewardsSearch            = ParentDash.setRewardsSearch;
 window.toggleActivitiesAdmin       = ParentDash.toggleActivitiesAdmin;
 window.adminAddActivity            = ParentDash.adminAddActivity;
 window.adminEditActivity           = ParentDash.adminEditActivity;

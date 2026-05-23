@@ -15,7 +15,7 @@ import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChor
          fetchHouseRules, addHouseRuleToSheets, updateHouseRuleInSheets, deleteHouseRuleFromSheets,
          saveConfigValue, deleteConfigKey } from './api.js';
 import { endOfDayAll } from './points.js';
-import { renderMenuSectionHtml, toggleMenuSection, getMealForDate, setMealForDate,
+import { renderMenuSectionHtml, toggleMenuSection, toggleMealLibrary, getMealForDate, setMealForDate,
          getRandomMeal, addMealToCache, approveDinnerRequest, dismissDinnerRequest } from './menu.js';
 import { renderChecklistsAdminSectionHtml, getChecklists, addItemToChecklist } from './checklists.js';
 import { updateCalendar } from './calendar.js';
@@ -37,6 +37,9 @@ let _movingChoreKey = null; // "kidId|choreId" when move-to-checklist form is op
 let _editingRewardId = null;
 let _editingRuleKey = null; // "kid||rule" when editing a rule inline
 let _editingKidKey = null; // "kid1", "kid2", etc.
+let choresSearch = '';
+let activitiesSearch = '';
+let rewardsSearch = '';
 
 // ── Pending approvals list ────────────────────────────────────────────────────
 
@@ -159,9 +162,9 @@ export function renderParentDashboard() {
                             </div>
                         </div>
                         <div class="parent-dash-item-actions">
-                            <button class="chore-btn approve-btn"
+                            <button class="chore-btn approve-btn" title="Approve"
                                 onclick="parentDashApprove('${item.type}', '${item.kidId}', '${item.itemId}', '${item.itemName}', ${item.bp}, ${item.multiplier || 1})">✓</button>
-                            <button class="chore-btn reject-btn"
+                            <button class="chore-btn reject-btn" title="Reject"
                                 onclick="parentDashReject('${item.type}', '${item.kidId}', '${item.itemId}', '${item.itemName}')">✗</button>
                         </div>
                     </div>`;
@@ -223,7 +226,7 @@ function renderEndOfDaySectionHtml() {
 
     let html = `
         <div class="chores-admin-section" style="margin-top:12px;">
-            <div class="chores-admin-header" onclick="toggleEndOfDaySection()">
+            <div class="chores-admin-header" onclick="toggleEndOfDaySection()" title="Click to expand/collapse">
                 <span>🌙 End of Day</span>
                 <span>${toggleIcon}</span>
             </div>`;
@@ -235,12 +238,14 @@ function renderEndOfDaySectionHtml() {
     kids.forEach(kid => {
         html += `<button class="chore-btn end-of-day-btn"
             style="flex:1;min-width:100px;font-size:12px;padding:5px 8px;height:auto;"
+            title="End of day for ${kid.name}"
             onclick="endOfDay('${kid.id}')">🌙 ${kid.name}</button>`;
     });
 
     html += `</div>
         <button class="reset-btn end-of-day-all-btn"
             style="width:100%;margin-bottom:8px;font-size:13px;padding:8px 10px;height:auto;border-radius:8px;"
+            title="Save daily BP and reset all kids"
             onclick="parentDashEndOfDayAll()">🌙 End Day for All Kids</button>
         </div>`;
 
@@ -270,7 +275,7 @@ function renderSettingsSectionHtml() {
 
     return `
         <div class="chores-admin-section" style="margin-top:12px;">
-            <div class="chores-admin-header" onclick="toggleSettingsSection()">
+            <div class="chores-admin-header" onclick="toggleSettingsSection()" title="Click to expand/collapse">
                 <span>⚙️ Settings</span>
                 <span id="settingsSectionToggle">▸</span>
             </div>
@@ -296,7 +301,7 @@ function renderSettingsSectionHtml() {
                         class="chores-admin-input chores-admin-input-sm" style="letter-spacing:4px;">
                     <input id="settings-confirm-pin" type="password" placeholder="Confirm" maxlength="6"
                         class="chores-admin-input chores-admin-input-sm" style="letter-spacing:4px;">
-                    <button class="chore-btn approve-btn" onclick="adminSaveParentPin()">Save</button>
+                    <button class="chore-btn approve-btn" onclick="adminSaveParentPin()" title="Save new parent PIN">Save</button>
                 </div>
 
                 <div class="settings-subsection-label" style="margin-top:12px;">Require PIN for Edits</div>
@@ -312,7 +317,7 @@ function renderSettingsSectionHtml() {
                     <span>BP =</span>
                     ${inp('conv-pc', 'number', conv.pc, 'min="1" style="width:60px;"')}
                     <span>Prize Coins</span>
-                    <button class="chore-btn approve-btn" onclick="adminSaveConversionRate()">Save</button>
+                    <button class="chore-btn approve-btn" onclick="adminSaveConversionRate()" title="Save BP-to-PC conversion rate">Save</button>
                 </div>
 
                 <div class="settings-subsection-label" style="margin-top:12px;">Weather Location</div>
@@ -320,7 +325,7 @@ function renderSettingsSectionHtml() {
                     ${inp('weather-lat', 'number', weather.latitude, 'placeholder="Latitude" step="any" style="width:90px;"')}
                     ${inp('weather-lng', 'number', weather.longitude, 'placeholder="Longitude" step="any" style="width:90px;"')}
                     ${inp('weather-tz', 'text', weather.timezone, 'placeholder="e.g. America/New_York" class="chores-admin-input chores-admin-input-grow"')}
-                    <button class="chore-btn approve-btn" onclick="adminSaveWeather()">Save</button>
+                    <button class="chore-btn approve-btn" onclick="adminSaveWeather()" title="Save weather location">Save</button>
                 </div>
 
                 <div class="settings-subsection-label" style="margin-top:12px;">Calendar</div>
@@ -333,7 +338,7 @@ function renderSettingsSectionHtml() {
                         Days ahead: <input type="number" id="cal-days" value="${calendar.daysAhead ?? 7}" min="1" max="30"
                             class="chores-admin-input chores-admin-input-sm">
                     </label>
-                    <button class="chore-btn approve-btn" onclick="adminSaveCalendar()">Save</button>
+                    <button class="chore-btn approve-btn" onclick="adminSaveCalendar()" title="Save calendar settings">Save</button>
                 </div>
 
             </div>
@@ -427,7 +432,7 @@ function renderChoresSectionHtml() {
     const toggleIcon = choresSectionOpen ? '▾' : '▸';
     let html = `
         <div class="chores-admin-section">
-            <div class="chores-admin-header" onclick="toggleChoresAdmin()">
+            <div class="chores-admin-header" onclick="toggleChoresAdmin()" title="Click to expand/collapse">
                 <span>📋 Manage Chores</span>
                 <span>${toggleIcon}</span>
             </div>`;
@@ -444,31 +449,38 @@ function renderChoresSectionHtml() {
 
     const CHORES = allChoresCache;
     const kidOptions = kids.map(k => `<option value="${k.id}">${k.name}</option>`).join('');
+    const sq = choresSearch.toLowerCase();
 
     html += `<div class="chores-admin-body">`;
+    html += `<input id="chores-search" type="search" placeholder="🔍 Search chores…" value="${choresSearch.replace(/"/g,'&quot;')}"
+        class="chores-admin-input chores-admin-input-grow admin-search-input"
+        oninput="setChoresSearch(this.value)" title="Filter chores by name">`;
 
     let hasAny = false;
 
     const byName = (a, b) => a.name.localeCompare(b.name);
+    const matchSearch = c => !sq || c.name.toLowerCase().includes(sq);
 
     // Shared chores
-    if (CHORES.shared && CHORES.shared.length > 0) {
+    const sharedFiltered = (CHORES.shared || []).filter(matchSearch);
+    if (sharedFiltered.length > 0) {
         hasAny = true;
         html += `<div class="chores-admin-group-label">Shared</div>`;
-        [...CHORES.shared].sort(byName).forEach(chore => { html += choreAdminRow(chore, ''); });
+        [...sharedFiltered].sort(byName).forEach(chore => { html += choreAdminRow(chore, ''); });
     }
 
     // Individual chores grouped by kid
     Object.entries(CHORES.individual || {}).forEach(([kidId, chores]) => {
-        if (!chores || !chores.length) return;
+        const filtered = (chores || []).filter(matchSearch);
+        if (!filtered.length) return;
         hasAny = true;
         const kid = kids.find(k => k.id.toLowerCase() === kidId.toLowerCase()) || { name: kidId };
         html += `<div class="chores-admin-group-label">${kid.name}</div>`;
-        [...chores].sort(byName).forEach(chore => { html += choreAdminRow(chore, kidId); });
+        [...filtered].sort(byName).forEach(chore => { html += choreAdminRow(chore, kidId); });
     });
 
     if (!hasAny) {
-        html += `<div style="color:#999;font-size:12px;padding:8px 0;">No chores yet.</div>`;
+        html += `<div style="color:#999;font-size:12px;padding:8px 0;">${sq ? 'No matches.' : 'No chores yet.'}</div>`;
     }
 
     // Add form
@@ -657,6 +669,22 @@ export async function adminAddChore() {
     renderParentDashboard();
 }
 
+export function setChoresSearch(term) {
+    choresSearch = term;
+    renderParentDashboard();
+    document.getElementById('chores-search')?.focus();
+}
+export function setActivitiesSearch(term) {
+    activitiesSearch = term;
+    renderParentDashboard();
+    document.getElementById('activities-search')?.focus();
+}
+export function setRewardsSearch(term) {
+    rewardsSearch = term;
+    renderParentDashboard();
+    document.getElementById('rewards-search')?.focus();
+}
+
 export function adminStartMoveChore(kidId, choreId) {
     _movingChoreKey = `${kidId}|${choreId}`;
     renderParentDashboard();
@@ -718,7 +746,7 @@ function renderActivitiesSectionHtml() {
 
     let html = `
         <div class="chores-admin-section">
-            <div class="chores-admin-header" onclick="toggleActivitiesAdmin()">
+            <div class="chores-admin-header" onclick="toggleActivitiesAdmin()" title="Click to expand/collapse">
                 <span>⭐ Manage Activities</span>
                 <span>${toggleIcon}</span>
             </div>`;
@@ -731,23 +759,30 @@ function renderActivitiesSectionHtml() {
 
     const kidOptions = kids.map(k => `<option value="${k.id}">${k.name}</option>`).join('');
     const byName = (a, b) => a.name.localeCompare(b.name);
+    const aq = activitiesSearch.toLowerCase();
+    const matchAct = a => !aq || a.name.toLowerCase().includes(aq);
     html += `<div class="chores-admin-body">`;
+    html += `<input id="activities-search" type="search" placeholder="🔍 Search activities…" value="${activitiesSearch.replace(/"/g,'&quot;')}"
+        class="chores-admin-input chores-admin-input-grow admin-search-input"
+        oninput="setActivitiesSearch(this.value)" title="Filter activities by name">`;
     let hasAny = false;
 
-    if (allActivitiesCache.shared && allActivitiesCache.shared.length > 0) {
+    const sharedActFiltered = (allActivitiesCache.shared || []).filter(matchAct);
+    if (sharedActFiltered.length > 0) {
         hasAny = true;
         html += `<div class="chores-admin-group-label">Shared</div>`;
-        [...allActivitiesCache.shared].sort(byName).forEach(act => { html += activityAdminRow(act, ''); });
+        [...sharedActFiltered].sort(byName).forEach(act => { html += activityAdminRow(act, ''); });
     }
     Object.entries(allActivitiesCache.individual || {}).forEach(([kidId, acts]) => {
-        if (!acts || !acts.length) return;
+        const filtered = (acts || []).filter(matchAct);
+        if (!filtered.length) return;
         hasAny = true;
         const kid = kids.find(k => k.id.toLowerCase() === kidId.toLowerCase()) || { name: kidId };
         html += `<div class="chores-admin-group-label">${kid.name}</div>`;
-        [...acts].sort(byName).forEach(act => { html += activityAdminRow(act, kidId); });
+        [...filtered].sort(byName).forEach(act => { html += activityAdminRow(act, kidId); });
     });
 
-    if (!hasAny) html += `<div style="color:#999;font-size:12px;padding:8px 0;">No activities yet.</div>`;
+    if (!hasAny) html += `<div style="color:#999;font-size:12px;padding:8px 0;">${aq ? 'No matches.' : 'No activities yet.'}</div>`;
 
     html += `
         <div class="chores-admin-add-form">
@@ -811,7 +846,7 @@ export function adminEditActivity(kidId, actId, currentName, currentBP, currentM
     rowEl.innerHTML = `
         <input type="text" value="${currentName}" id="editActName-${kidId}-${actId}" class="chores-admin-input chores-admin-input-grow">
         <input type="number" value="${currentBP}" id="editActBP-${kidId}-${actId}" class="chores-admin-input chores-admin-input-sm">
-        <input type="number" value="${currentMax || ''}" id="editActMax-${kidId}-${actId}" placeholder="Max/wk"
+        <input type="number" value="${currentMax || ''}" id="editActMax-${kidId}-${actId}" placeholder="Max/wk" min="1"
             class="chores-admin-input chores-admin-input-sm" title="Max per week (blank = unlimited)">
         <button class="chore-btn approve-btn" onclick="adminSaveActivityEdit('${kidId}','${actId}')" title="Save">✓</button>
         <button class="chore-btn" onclick="renderParentDashboard()" title="Cancel">✗</button>
@@ -823,7 +858,7 @@ export function adminSaveActivityEdit(kidId, actId) {
     const newName = document.getElementById(`editActName-${kidId}-${actId}`)?.value.trim();
     const newBP = parseInt(document.getElementById(`editActBP-${kidId}-${actId}`)?.value) || 1;
     const maxVal = document.getElementById(`editActMax-${kidId}-${actId}`)?.value;
-    const newMax = maxVal ? parseInt(maxVal) : null;
+    const newMax = maxVal ? Math.max(1, parseInt(maxVal)) : null;
     if (!newName) { showMessage('Activity name cannot be empty'); return; }
 
     const update = (list) => {
@@ -846,7 +881,7 @@ export function adminAddActivity() {
     const name = document.getElementById('newActName')?.value.trim() || '';
     const bp = parseInt(document.getElementById('newActBP')?.value) || 1;
     const maxVal = document.getElementById('newActMax')?.value;
-    const maxPerWeek = maxVal ? parseInt(maxVal) : null;
+    const maxPerWeek = maxVal ? Math.max(1, parseInt(maxVal)) : null;
 
     if (!name) { showMessage('Activity name is required'); return; }
 
@@ -882,7 +917,7 @@ function renderRewardsSectionHtml() {
     const toggleIcon = rewardsSectionOpen ? '▾' : '▸';
     let html = `
         <div class="chores-admin-section">
-            <div class="chores-admin-header" onclick="toggleRewardsAdmin()">
+            <div class="chores-admin-header" onclick="toggleRewardsAdmin()" title="Click to expand/collapse">
                 <span>🎁 Manage Rewards</span>
                 <span>${toggleIcon}</span>
             </div>`;
@@ -890,9 +925,14 @@ function renderRewardsSectionHtml() {
     if (!rewardsSectionOpen) return html + `</div>`;
     if (!allRewardsCache) return html + `<div style="padding:12px;color:#999;font-size:12px;">Loading rewards…</div></div>`;
 
+    const rq = rewardsSearch.toLowerCase();
+    const visibleRewards = allRewardsCache.filter(r => !rq || r.name.toLowerCase().includes(rq));
     html += `<div class="chores-admin-body">`;
+    html += `<input id="rewards-search" type="search" placeholder="🔍 Search rewards…" value="${rewardsSearch.replace(/"/g,'&quot;')}"
+        class="chores-admin-input chores-admin-input-grow admin-search-input"
+        oninput="setRewardsSearch(this.value)" title="Filter rewards by name">`;
 
-    allRewardsCache.forEach(r => {
+    visibleRewards.forEach(r => {
         const limitBadge = r.limitType ? `<span class="chores-admin-meta">${r.limitCount || '?'}/${r.limitType}</span>` : '';
         if (_editingRewardId === r.id) {
             html += rewardEditForm(r);
@@ -900,20 +940,21 @@ function renderRewardsSectionHtml() {
             html += `
                 <div class="chores-admin-row" id="reward-admin-${r.id}">
                     <div class="chores-admin-row-info">
-                        <span style="font-size:16px;">${r.icon || '🎁'}</span>
+                        <span style="font-size:14px;">${r.icon || '🎁'}</span>
                         <span class="chore-name">${r.name}</span>
                         <span class="chores-admin-meta">${r.cost} PC</span>
                         ${limitBadge}
                     </div>
                     <div class="chores-admin-row-actions">
-                        <button class="chore-btn" title="Edit" onclick="adminEditReward('${r.id}')">✏️</button>
-                        <button class="chore-btn reject-btn" title="Delete" onclick="adminDeleteReward('${r.id}')">🗑</button>
+                        <button class="chore-btn" title="Edit reward" onclick="adminEditReward('${r.id}')">✏️</button>
+                        <button class="chore-btn reject-btn" title="Delete reward" onclick="adminDeleteReward('${r.id}')">🗑</button>
                     </div>
                 </div>`;
         }
     });
 
     if (!allRewardsCache.length) html += `<div style="color:#999;font-size:12px;padding:8px 0;">No rewards yet.</div>`;
+    else if (!visibleRewards.length) html += `<div style="color:#999;font-size:12px;padding:8px 0;">No matches.</div>`;
 
     if (_editingRewardId === 'new') {
         html += rewardEditForm(null);
@@ -951,8 +992,8 @@ function rewardEditForm(r) {
             <textarea id="rwd-guidelines-${isNew ? 'new' : r.id}" placeholder="Guidelines (optional)"
                 class="chores-admin-input" style="width:100%;resize:vertical;min-height:36px;">${r?.guidelines || ''}</textarea>
             <div style="display:flex;gap:6px;">
-                <button class="chore-btn approve-btn" onclick="adminSaveRewardEdit('${isNew ? 'new' : r.id}')">✓ Save</button>
-                <button class="chore-btn" onclick="adminCancelRewardEdit()">✕ Cancel</button>
+                <button class="chore-btn approve-btn" title="Save reward" onclick="adminSaveRewardEdit('${isNew ? 'new' : r.id}')">✓</button>
+                <button class="chore-btn" title="Cancel" onclick="adminCancelRewardEdit()">✕</button>
             </div>
         </div>`;
 }
@@ -1042,7 +1083,7 @@ function renderHouseRulesSectionHtml() {
 
     let html = `
         <div class="chores-admin-section">
-            <div class="chores-admin-header" onclick="toggleRulesAdmin()">
+            <div class="chores-admin-header" onclick="toggleRulesAdmin()" title="Click to expand/collapse">
                 <span>📜 Manage House Rules</span>
                 <span>${toggleIcon}</span>
             </div>`;
@@ -1071,6 +1112,8 @@ function renderHouseRulesSectionHtml() {
         rules.forEach(r => {
             const rKey = _ruleKey(r.kid, r.rule);
             const color = TYPE_COLORS[r.type] || '#868e96';
+            const safeKid = (r.kid || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const safeRule = (r.rule || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             if (_editingRuleKey === rKey) {
                 html += ruleEditForm(r, kids);
             } else {
@@ -1084,10 +1127,10 @@ function renderHouseRulesSectionHtml() {
                             ${r.consequence ? `<div style="font-size:10px;color:#999;padding-left:14px;">${r.consequence}</div>` : ''}
                         </div>
                         <div class="chores-admin-row-actions">
-                            <button class="chore-btn" title="Edit"
-                                onclick="adminEditHouseRule(${JSON.stringify(r.kid)},${JSON.stringify(r.rule)})">✏️</button>
-                            <button class="chore-btn reject-btn" title="Delete"
-                                onclick="adminDeleteHouseRule(${JSON.stringify(r.kid)},${JSON.stringify(r.rule)})">🗑</button>
+                            <button class="chore-btn" title="Edit rule"
+                                onclick="adminEditHouseRule('${safeKid}','${safeRule}')">✏️</button>
+                            <button class="chore-btn reject-btn" title="Delete rule"
+                                onclick="adminDeleteHouseRule('${safeKid}','${safeRule}')">🗑</button>
                         </div>
                     </div>`;
             }
@@ -1108,8 +1151,8 @@ function renderHouseRulesSectionHtml() {
 
 function ruleEditForm(r, kids) {
     const isNew = !r;
-    const safeKid = JSON.stringify(r?.kid ?? '');
-    const safeRule = JSON.stringify(r?.rule ?? '');
+    const safeKid = (r?.kid ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeRule = (r?.rule ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const SPECIAL = ['', 'SPENDING', 'GROUNDED', 'BP SCALE'];
     const kidOpts = [
         ...SPECIAL.map(s => `<option value="${s}"${(r?.kid || '') === s ? ' selected' : ''}>${s || 'General'}</option>`),
@@ -1129,8 +1172,8 @@ function ruleEditForm(r, kids) {
             <input id="rule-consequence-edit" type="text" placeholder="Consequence (optional)"
                 value="${r?.consequence || ''}" class="chores-admin-input chores-admin-input-grow">
             <div style="display:flex;gap:6px;">
-                <button class="chore-btn approve-btn" onclick="adminSaveHouseRuleEdit(${safeKid},${safeRule})">✓ Save</button>
-                <button class="chore-btn" onclick="adminCancelRuleEdit()">✕</button>
+                <button class="chore-btn approve-btn" title="Save rule" onclick="adminSaveHouseRuleEdit('${safeKid}','${safeRule}')">✓</button>
+                <button class="chore-btn" title="Cancel" onclick="adminCancelRuleEdit()">✕</button>
             </div>
         </div>`;
 }
@@ -1194,7 +1237,7 @@ function renderKidsSectionHtml() {
 
     let html = `
         <div class="chores-admin-section">
-            <div class="chores-admin-header" onclick="toggleKidsAdmin()">
+            <div class="chores-admin-header" onclick="toggleKidsAdmin()" title="Click to expand/collapse">
                 <span>👦 Manage Kids</span>
                 <span>${toggleIcon}</span>
             </div>`;
@@ -1264,8 +1307,8 @@ function kidEditForm(kidKey, kid) {
                     class="chores-admin-input chores-admin-input-sm" maxlength="4">
             </div>
             <div style="display:flex;gap:6px;">
-                <button class="chore-btn approve-btn" onclick="adminSaveKidEdit('${kidKey}')">✓ Save</button>
-                <button class="chore-btn" onclick="adminCancelKidEdit()">✕</button>
+                <button class="chore-btn approve-btn" title="Save" onclick="adminSaveKidEdit('${kidKey}')">✓</button>
+                <button class="chore-btn" title="Cancel" onclick="adminCancelKidEdit()">✕</button>
             </div>
         </div>`;
 }
@@ -1333,6 +1376,11 @@ export function adminDeleteKid(kidKey) {
 
 export function adminToggleMenuSection() {
     toggleMenuSection();
+    renderParentDashboard();
+}
+
+export function adminToggleMealLibrary() {
+    toggleMealLibrary();
     renderParentDashboard();
 }
 

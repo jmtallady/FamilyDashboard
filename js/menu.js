@@ -10,6 +10,7 @@ import { fetchMeals, fetchMealPlan, saveMeal, saveDailyMeal,
 
 // ── Module state ──────────────────────────────────────────────────────────────
 let menuSectionOpen = false;
+let mealLibraryOpen = false;
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 
@@ -127,6 +128,7 @@ export async function initializeMeals() {
 // ── Admin panel toggle ────────────────────────────────────────────────────────
 
 export function toggleMenuSection() { menuSectionOpen = !menuSectionOpen; }
+export function toggleMealLibrary() { mealLibraryOpen = !mealLibraryOpen; }
 export function isMenuSectionOpen() { return menuSectionOpen; }
 
 // ── Admin panel HTML ──────────────────────────────────────────────────────────
@@ -136,7 +138,7 @@ export function renderMenuSectionHtml() {
 
     let html = `
         <div class="chores-admin-section">
-            <div class="chores-admin-header" onclick="adminToggleMenuSection()">
+            <div class="chores-admin-header" onclick="adminToggleMenuSection()" title="Click to expand/collapse">
                 <span>🍽️ Meal Planner</span>
                 <span>${toggleIcon}</span>
             </div>`;
@@ -201,16 +203,26 @@ export function renderMenuSectionHtml() {
 
     // ── Meal library ─────────────────────────────────────────────────────────
     const allMeals = [...getMealsCache()].sort((a, b) => a.name.localeCompare(b.name));
-    if (allMeals.length > 0) {
-        html += `<div class="chores-admin-group-label" style="margin-top:10px;">📚 Meal Library</div>`;
-        allMeals.forEach(meal => {
-            html += `
-                <div class="chores-admin-row">
-                    <div class="chores-admin-row-info">
-                        <span class="chore-name">${meal.name}</span>
-                    </div>
-                </div>`;
-        });
+    const libIcon = mealLibraryOpen ? '▾' : '▸';
+    html += `
+        <div class="chores-admin-header" style="margin-top:10px;font-size:12px;font-weight:600;padding:4px 0;background:none;border-radius:0;"
+            onclick="toggleMealLibrary()" title="Show/hide meal library">
+            <span>📚 Meal Library (${allMeals.length})</span>
+            <span>${libIcon}</span>
+        </div>`;
+    if (mealLibraryOpen) {
+        if (allMeals.length > 0) {
+            allMeals.forEach(meal => {
+                html += `
+                    <div class="chores-admin-row">
+                        <div class="chores-admin-row-info">
+                            <span class="chore-name">${meal.name}</span>
+                        </div>
+                    </div>`;
+            });
+        } else {
+            html += `<div style="color:#999;font-size:12px;padding:4px 0;">No meals in library yet.</div>`;
+        }
     }
 
     // ── Add to library ───────────────────────────────────────────────────────

@@ -504,7 +504,7 @@ export function renderChecklistsAdminSectionHtml() {
     const arrow = _adminOpen ? '▾' : '▸';
     let html = `
         <div class="chores-admin-section">
-            <div class="chores-admin-header" onclick="toggleChecklistsAdmin()">
+            <div class="chores-admin-header" onclick="toggleChecklistsAdmin()" title="Click to expand/collapse">
                 <span>✅ Checklists</span>
                 <span>${arrow}</span>
             </div>`;
