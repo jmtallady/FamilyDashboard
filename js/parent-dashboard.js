@@ -265,7 +265,6 @@ function renderSettingsSectionHtml() {
     const checkedAttr = settings.enabled ? 'checked' : '';
     const weather = CONFIG.weather || {};
     const calendar = CONFIG.calendar || { enabled: true, daysAhead: 7 };
-    const conv = CONFIG.conversionRate || { bp: 50, pc: 100 };
     const requirePin = CONFIG.requirePinForEdits ? 'checked' : '';
 
     const inp = (id, type, val, extra = '') =>
@@ -309,14 +308,7 @@ function renderSettingsSectionHtml() {
                     Require parent PIN before changes in admin panel
                 </label>
 
-                <div class="settings-subsection-label" style="margin-top:12px;">BP → Prize Coin Conversion</div>
-                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;">
-                    ${inp('conv-bp', 'number', conv.bp, 'min="1" style="width:60px;"')}
-                    <span>BP =</span>
-                    ${inp('conv-pc', 'number', conv.pc, 'min="1" style="width:60px;"')}
-                    <span>Prize Coins</span>
-                    <button class="chore-btn approve-btn" onclick="adminSaveConversionRate()" title="Save BP-to-PC conversion rate">Save</button>
-                </div>
+
 
                 <div class="settings-subsection-label" style="margin-top:12px;">Weather Location</div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -378,15 +370,6 @@ export function adminSaveRequirePin() {
     const CONFIG = getConfig();
     if (CONFIG) CONFIG.requirePinForEdits = val;
     saveConfigValue('requirePinForEdits', val);
-}
-
-export function adminSaveConversionRate() {
-    const bp = parseInt(document.getElementById('conv-bp')?.value) || 50;
-    const pc = parseInt(document.getElementById('conv-pc')?.value) || 100;
-    const CONFIG = getConfig();
-    if (CONFIG) CONFIG.conversionRate = { bp, pc };
-    saveConfigValue('conversionRate', { bp, pc });
-    showMessage(`Conversion rate saved: ${bp} BP = ${pc} PC`);
 }
 
 export function adminSaveWeather() {
@@ -1359,7 +1342,7 @@ export function adminSaveKidEdit(kidKey) {
         kidKey = `kid${n}`;
     }
 
-    const kidObj = { name, id, defaultDailyBP: isNaN(dailyBP) ? 5 : dailyBP, defaultTotalBP: 0, defaultPrizeCoins: 0 };
+    const kidObj = { name, id, defaultDailyBP: isNaN(dailyBP) ? 5 : dailyBP, defaultTotalBP: 0 };
     if (pin) kidObj.pin = pin;
 
     CONFIG[kidKey] = kidObj;

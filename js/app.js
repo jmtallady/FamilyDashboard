@@ -521,7 +521,6 @@ window.toggleSettingsSection       = ParentDash.toggleSettingsSection;
 window.saveModalTimeoutSettings    = ParentDash.saveModalTimeoutSettings;
 window.adminSaveParentPin          = ParentDash.adminSaveParentPin;
 window.adminSaveRequirePin         = ParentDash.adminSaveRequirePin;
-window.adminSaveConversionRate     = ParentDash.adminSaveConversionRate;
 window.adminSaveWeather            = ParentDash.adminSaveWeather;
 window.adminSaveCalendar           = ParentDash.adminSaveCalendar;
 

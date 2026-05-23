@@ -96,7 +96,7 @@ export async function showHouseRules() {
         }
     );
 
-    const spendingSection = section('Before Spending Prize Coins', rules.spendingRequirements,
+    const spendingSection = section('Spending Rules', rules.spendingRequirements,
         { bg: '#fff9db', border: '#f59f00', emoji: '' },
         (req, style) => ruleBox(`✓ ${req.rule}`, style)
     );
