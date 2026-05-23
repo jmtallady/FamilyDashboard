@@ -535,3 +535,113 @@ export function saveConfigValue(key, value) {
         body: JSON.stringify({ action: 'saveConfig', key, value })
     }).catch(console.error);
 }
+
+export function deleteConfigKey(key) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deleteConfigKey', key })
+    }).catch(console.error);
+}
+
+// ── Activities ────────────────────────────────────────────────────────────────
+
+export async function fetchAllActivities() {
+    if (!SHEETS_API_URL) return null;
+    try {
+        const response = await fetch(`${SHEETS_API_URL}?action=getActivities&includeDisabled=true&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data.success ? data.activities : null;
+    } catch (error) {
+        console.error('Error fetching all activities:', error);
+        return null;
+    }
+}
+
+export function addActivityToSheets(kidId, activityId, name, bp, multiplier, maxPerWeek) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'addActivity', kidId: kidId || '', activityId, activityName: name, bp, multiplier, maxPerWeek })
+    }).catch(console.error);
+}
+
+export function updateActivityInSheets(kidId, activityId, name, bp, maxPerWeek) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateActivity', kidId: kidId || '', activityId, activityName: name, bp, maxPerWeek })
+    }).catch(console.error);
+}
+
+export function setActivityMultiplier(kidId, activityId, multiplier) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setActivityMultiplier', kidId: kidId || '', activityId, multiplier })
+    }).catch(console.error);
+}
+
+// ── Rewards ───────────────────────────────────────────────────────────────────
+
+export function addRewardToSheets(rewardId, name, cost, icon, textFallback, limitType, limitCount, guidelines) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'addReward', rewardId, rewardName: name, cost, icon, textFallback, limitType, limitCount, guidelines })
+    }).catch(console.error);
+}
+
+export function updateRewardInSheets(rewardId, name, cost, icon, textFallback, limitType, limitCount, guidelines) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateReward', rewardId, rewardName: name, cost, icon, textFallback, limitType, limitCount, guidelines })
+    }).catch(console.error);
+}
+
+export function deleteRewardFromSheets(rewardId) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deleteReward', rewardId })
+    }).catch(console.error);
+}
+
+// ── House Rules ───────────────────────────────────────────────────────────────
+
+export function addHouseRuleToSheets(kid, rule, consequence, type) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'addHouseRule', kid: kid || '', rule, consequence, type })
+    }).catch(console.error);
+}
+
+export function updateHouseRuleInSheets(originalKid, originalRule, kid, rule, consequence, type) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateHouseRule', originalKid: originalKid || '', originalRule, kid: kid || '', rule, consequence, type })
+    }).catch(console.error);
+}
+
+export function deleteHouseRuleFromSheets(kid, rule) {
+    if (!SHEETS_API_URL) return;
+    fetch(SHEETS_API_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deleteHouseRule', kid: kid || '', rule })
+    }).catch(console.error);
+}

@@ -9,7 +9,11 @@ import { getConfig } from './config.js';
 import { showMessage } from './utils.js';
 import { approveChore, rejectChore } from './chores.js';
 import { approveActivity, rejectActivity } from './activities.js';
-import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores } from './api.js';
+import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChores,
+         fetchAllActivities, addActivityToSheets, updateActivityInSheets, setActivityMultiplier,
+         fetchRewards, addRewardToSheets, updateRewardInSheets, deleteRewardFromSheets,
+         fetchHouseRules, addHouseRuleToSheets, updateHouseRuleInSheets, deleteHouseRuleFromSheets,
+         saveConfigValue, deleteConfigKey } from './api.js';
 import { endOfDayAll } from './points.js';
 import { renderMenuSectionHtml, toggleMenuSection, getMealForDate, setMealForDate,
          getRandomMeal, addMealToCache, approveDinnerRequest, dismissDinnerRequest } from './menu.js';
@@ -20,9 +24,19 @@ const STORAGE_KEY = 'pending-approvals';
 
 // Module-level state
 let choresSectionOpen = false;
+let activitiesSectionOpen = false;
+let rewardsSectionOpen = false;
+let rulesSectionOpen = false;
+let kidsSectionOpen = false;
 let endOfDaySectionOpen = false;
-let allChoresCache = null; // All chores including disabled (multiplier=0)
+let allChoresCache = null;
+let allActivitiesCache = null;
+let allRewardsCache = null;
+let allRulesCache = null; // flat array: [{ kid, rule, consequence, type }]
 let _movingChoreKey = null; // "kidId|choreId" when move-to-checklist form is open
+let _editingRewardId = null;
+let _editingRuleKey = null; // "kid||rule" when editing a rule inline
+let _editingKidKey = null; // "kid1", "kid2", etc.
 
 // ── Pending approvals list ────────────────────────────────────────────────────
 
@@ -159,7 +173,11 @@ export function renderParentDashboard() {
 
     html += renderMenuSectionHtml();
     html += renderChoresSectionHtml();
+    html += renderActivitiesSectionHtml();
     html += renderChecklistsAdminSectionHtml();
+    html += renderRewardsSectionHtml();
+    html += renderHouseRulesSectionHtml();
+    html += renderKidsSectionHtml();
     html += renderEndOfDaySectionHtml();
     html += renderSettingsSectionHtml();
     container.innerHTML = html;
@@ -237,10 +255,18 @@ export async function parentDashEndOfDayAll() {
 // ── Settings Section ─────────────────────────────────────────────────────────
 
 function renderSettingsSectionHtml() {
+    const CONFIG = getConfig() || {};
     const settings = typeof window.getModalTimeoutSettings === 'function'
         ? window.getModalTimeoutSettings()
         : { enabled: true, minutes: 2 };
     const checkedAttr = settings.enabled ? 'checked' : '';
+    const weather = CONFIG.weather || {};
+    const calendar = CONFIG.calendar || { enabled: true, daysAhead: 7 };
+    const conv = CONFIG.conversionRate || { bp: 50, pc: 100 };
+    const requirePin = CONFIG.requirePinForEdits ? 'checked' : '';
+
+    const inp = (id, type, val, extra = '') =>
+        `<input id="${id}" type="${type}" value="${val ?? ''}" class="chores-admin-input" ${extra}>`;
 
     return `
         <div class="chores-admin-section" style="margin-top:12px;">
@@ -249,21 +275,67 @@ function renderSettingsSectionHtml() {
                 <span id="settingsSectionToggle">▸</span>
             </div>
             <div id="settingsSectionBody" style="display:none;padding:8px 0 4px;">
-                <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Modal Auto-Close</div>
+
+                <div class="settings-subsection-label">Modal Auto-Close</div>
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                     <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
                         <input type="checkbox" id="modalTimeoutEnabled" ${checkedAttr}
                             onchange="saveModalTimeoutSettings()">
                         Auto-close after inactivity
                     </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+                        Minutes: <input type="number" id="modalTimeoutMinutes" min="1" max="60"
+                            value="${settings.minutes}" class="chores-admin-input chores-admin-input-sm"
+                            onchange="saveModalTimeoutSettings()">
+                    </label>
                 </div>
-                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;">
-                    <label for="modalTimeoutMinutes">Minutes:</label>
-                    <input type="number" id="modalTimeoutMinutes" min="1" max="60"
-                        value="${settings.minutes}"
-                        style="width:60px;padding:4px 6px;border-radius:6px;border:1px solid var(--primary-color);font-size:13px;"
-                        onchange="saveModalTimeoutSettings()">
+
+                <div class="settings-subsection-label" style="margin-top:12px;">Parent PIN</div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <input id="settings-new-pin" type="password" placeholder="New PIN" maxlength="6"
+                        class="chores-admin-input chores-admin-input-sm" style="letter-spacing:4px;">
+                    <input id="settings-confirm-pin" type="password" placeholder="Confirm" maxlength="6"
+                        class="chores-admin-input chores-admin-input-sm" style="letter-spacing:4px;">
+                    <button class="chore-btn approve-btn" onclick="adminSaveParentPin()">Save</button>
                 </div>
+
+                <div class="settings-subsection-label" style="margin-top:12px;">Require PIN for Edits</div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                    <input type="checkbox" id="settings-require-pin" ${requirePin}
+                        onchange="adminSaveRequirePin()">
+                    Require parent PIN before changes in admin panel
+                </label>
+
+                <div class="settings-subsection-label" style="margin-top:12px;">BP → Prize Coin Conversion</div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;">
+                    ${inp('conv-bp', 'number', conv.bp, 'min="1" style="width:60px;"')}
+                    <span>BP =</span>
+                    ${inp('conv-pc', 'number', conv.pc, 'min="1" style="width:60px;"')}
+                    <span>Prize Coins</span>
+                    <button class="chore-btn approve-btn" onclick="adminSaveConversionRate()">Save</button>
+                </div>
+
+                <div class="settings-subsection-label" style="margin-top:12px;">Weather Location</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    ${inp('weather-lat', 'number', weather.latitude, 'placeholder="Latitude" step="any" style="width:90px;"')}
+                    ${inp('weather-lng', 'number', weather.longitude, 'placeholder="Longitude" step="any" style="width:90px;"')}
+                    ${inp('weather-tz', 'text', weather.timezone, 'placeholder="e.g. America/New_York" class="chores-admin-input chores-admin-input-grow"')}
+                    <button class="chore-btn approve-btn" onclick="adminSaveWeather()">Save</button>
+                </div>
+
+                <div class="settings-subsection-label" style="margin-top:12px;">Calendar</div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                        <input type="checkbox" id="cal-enabled" ${calendar.enabled ? 'checked' : ''}>
+                        Show upcoming events
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        Days ahead: <input type="number" id="cal-days" value="${calendar.daysAhead ?? 7}" min="1" max="30"
+                            class="chores-admin-input chores-admin-input-sm">
+                    </label>
+                    <button class="chore-btn approve-btn" onclick="adminSaveCalendar()">Save</button>
+                </div>
+
             </div>
         </div>`;
 }
@@ -283,6 +355,57 @@ export function saveModalTimeoutSettings() {
     if (typeof window.applyModalTimeout === 'function') {
         window.applyModalTimeout(enabled, isNaN(minutes) || minutes < 1 ? 2 : minutes);
     }
+}
+
+export function adminSaveParentPin() {
+    const pin = document.getElementById('settings-new-pin')?.value.trim();
+    const confirm2 = document.getElementById('settings-confirm-pin')?.value.trim();
+    if (!pin) { showMessage('Enter a new PIN'); return; }
+    if (pin !== confirm2) { showMessage('PINs do not match'); return; }
+    const CONFIG = getConfig();
+    if (CONFIG) CONFIG.pin = pin;
+    saveConfigValue('pin', pin);
+    document.getElementById('settings-new-pin').value = '';
+    document.getElementById('settings-confirm-pin').value = '';
+    showMessage('Parent PIN updated');
+}
+
+export function adminSaveRequirePin() {
+    const val = document.getElementById('settings-require-pin')?.checked ?? true;
+    const CONFIG = getConfig();
+    if (CONFIG) CONFIG.requirePinForEdits = val;
+    saveConfigValue('requirePinForEdits', val);
+}
+
+export function adminSaveConversionRate() {
+    const bp = parseInt(document.getElementById('conv-bp')?.value) || 50;
+    const pc = parseInt(document.getElementById('conv-pc')?.value) || 100;
+    const CONFIG = getConfig();
+    if (CONFIG) CONFIG.conversionRate = { bp, pc };
+    saveConfigValue('conversionRate', { bp, pc });
+    showMessage(`Conversion rate saved: ${bp} BP = ${pc} PC`);
+}
+
+export function adminSaveWeather() {
+    const lat = parseFloat(document.getElementById('weather-lat')?.value);
+    const lng = parseFloat(document.getElementById('weather-lng')?.value);
+    const tz = document.getElementById('weather-tz')?.value.trim();
+    if (isNaN(lat) || isNaN(lng)) { showMessage('Enter valid latitude and longitude'); return; }
+    const val = { latitude: lat, longitude: lng, timezone: tz || 'America/New_York' };
+    const CONFIG = getConfig();
+    if (CONFIG) CONFIG.weather = val;
+    saveConfigValue('weather', val);
+    showMessage('Weather location saved');
+}
+
+export function adminSaveCalendar() {
+    const enabled = document.getElementById('cal-enabled')?.checked ?? true;
+    const daysAhead = parseInt(document.getElementById('cal-days')?.value) || 7;
+    const val = { enabled, daysAhead };
+    const CONFIG = getConfig();
+    if (CONFIG) CONFIG.calendar = val;
+    saveConfigValue('calendar', val);
+    showMessage('Calendar settings saved');
 }
 
 // ── Chores Admin Section ──────────────────────────────────────────────────────
@@ -574,6 +697,636 @@ export function adminConfirmMoveChoreToChecklist(kidId, choreId) {
     _movingChoreKey = null;
     adminSetMultiplier(kidId, choreId, 0);
     showMessage(`📋 "${chore.name}" moved to checklist`);
+}
+
+// ── Activities Admin Section ──────────────────────────────────────────────────
+
+export async function toggleActivitiesAdmin() {
+    activitiesSectionOpen = !activitiesSectionOpen;
+    if (activitiesSectionOpen && !allActivitiesCache) {
+        renderParentDashboard();
+        allActivitiesCache = await fetchAllActivities();
+    }
+    renderParentDashboard();
+}
+
+function renderActivitiesSectionHtml() {
+    const CONFIG = getConfig();
+    if (!CONFIG) return '';
+    const kids = Object.values(CONFIG).filter(k => k.id);
+    const toggleIcon = activitiesSectionOpen ? '▾' : '▸';
+
+    let html = `
+        <div class="chores-admin-section">
+            <div class="chores-admin-header" onclick="toggleActivitiesAdmin()">
+                <span>⭐ Manage Activities</span>
+                <span>${toggleIcon}</span>
+            </div>`;
+
+    if (!activitiesSectionOpen) return html + `</div>`;
+
+    if (!allActivitiesCache) {
+        return html + `<div style="padding:12px;color:#999;font-size:12px;">Loading activities…</div></div>`;
+    }
+
+    const kidOptions = kids.map(k => `<option value="${k.id}">${k.name}</option>`).join('');
+    const byName = (a, b) => a.name.localeCompare(b.name);
+    html += `<div class="chores-admin-body">`;
+    let hasAny = false;
+
+    if (allActivitiesCache.shared && allActivitiesCache.shared.length > 0) {
+        hasAny = true;
+        html += `<div class="chores-admin-group-label">Shared</div>`;
+        [...allActivitiesCache.shared].sort(byName).forEach(act => { html += activityAdminRow(act, ''); });
+    }
+    Object.entries(allActivitiesCache.individual || {}).forEach(([kidId, acts]) => {
+        if (!acts || !acts.length) return;
+        hasAny = true;
+        const kid = kids.find(k => k.id.toLowerCase() === kidId.toLowerCase()) || { name: kidId };
+        html += `<div class="chores-admin-group-label">${kid.name}</div>`;
+        [...acts].sort(byName).forEach(act => { html += activityAdminRow(act, kidId); });
+    });
+
+    if (!hasAny) html += `<div style="color:#999;font-size:12px;padding:8px 0;">No activities yet.</div>`;
+
+    html += `
+        <div class="chores-admin-add-form">
+            <select id="newActKid" class="chores-admin-input">
+                <option value="">Shared</option>
+                ${kidOptions}
+            </select>
+            <input id="newActName" type="text" placeholder="Activity name" class="chores-admin-input chores-admin-input-grow">
+            <input id="newActBP" type="number" placeholder="BP" value="1" min="1" class="chores-admin-input chores-admin-input-sm">
+            <input id="newActMax" type="number" placeholder="Max/wk" min="1" class="chores-admin-input chores-admin-input-sm" title="Max per week (blank = unlimited)">
+            <button class="chore-btn approve-btn" onclick="adminAddActivity()" title="Add activity">+</button>
+        </div>
+    </div></div>`;
+    return html;
+}
+
+function activityAdminRow(act, kidId) {
+    const safeName = act.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const isDisabled = act.multiplier === 0;
+    const nameHtml = isDisabled
+        ? `<span class="chore-name chores-admin-disabled-name">${act.name}</span>`
+        : `<span class="chore-name">${act.name}</span>`;
+    const maxBadge = act.maxPerWeek ? `<span class="chores-admin-meta">${act.maxPerWeek}/wk</span>` : '';
+
+    return `
+        <div class="chores-admin-row${isDisabled ? ' chores-admin-row-disabled' : ''}" id="act-admin-${kidId}-${act.id}">
+            <div class="chores-admin-row-info">
+                ${nameHtml}
+                <span class="chores-admin-meta">${act.bp} BP</span>
+                ${maxBadge}
+            </div>
+            <div class="chores-admin-row-actions">
+                <label class="chores-admin-mult-label">×</label>
+                <input type="number" value="${act.multiplier}" min="0" max="99"
+                    class="chores-admin-input chores-admin-input-sm"
+                    title="Set to 0 to hide from dashboard"
+                    onchange="adminSetActivityMultiplier('${kidId}','${act.id}',this.value)">
+                <button class="chore-btn" title="Edit"
+                    onclick="adminEditActivity('${kidId}','${act.id}','${safeName}',${act.bp},${act.maxPerWeek ?? ''})">✏️</button>
+            </div>
+        </div>`;
+}
+
+export function adminSetActivityMultiplier(kidId, actId, rawValue) {
+    const multiplier = parseInt(rawValue);
+    if (isNaN(multiplier) || multiplier < 0) return;
+
+    const cacheList = kidId === ''
+        ? (allActivitiesCache?.shared || [])
+        : (allActivitiesCache?.individual?.[kidId.toLowerCase()] || []);
+    const cached = cacheList.find(a => a.id === actId);
+    if (cached) cached.multiplier = multiplier;
+
+    setActivityMultiplier(kidId, actId, multiplier);
+    renderParentDashboard();
+}
+
+export function adminEditActivity(kidId, actId, currentName, currentBP, currentMax) {
+    const rowEl = document.getElementById(`act-admin-${kidId}-${actId}`);
+    if (!rowEl) return;
+    rowEl.innerHTML = `
+        <input type="text" value="${currentName}" id="editActName-${kidId}-${actId}" class="chores-admin-input chores-admin-input-grow">
+        <input type="number" value="${currentBP}" id="editActBP-${kidId}-${actId}" class="chores-admin-input chores-admin-input-sm">
+        <input type="number" value="${currentMax || ''}" id="editActMax-${kidId}-${actId}" placeholder="Max/wk"
+            class="chores-admin-input chores-admin-input-sm" title="Max per week (blank = unlimited)">
+        <button class="chore-btn approve-btn" onclick="adminSaveActivityEdit('${kidId}','${actId}')" title="Save">✓</button>
+        <button class="chore-btn" onclick="renderParentDashboard()" title="Cancel">✗</button>
+    `;
+    rowEl.style.cssText = 'display:flex;gap:6px;align-items:center;';
+}
+
+export function adminSaveActivityEdit(kidId, actId) {
+    const newName = document.getElementById(`editActName-${kidId}-${actId}`)?.value.trim();
+    const newBP = parseInt(document.getElementById(`editActBP-${kidId}-${actId}`)?.value) || 1;
+    const maxVal = document.getElementById(`editActMax-${kidId}-${actId}`)?.value;
+    const newMax = maxVal ? parseInt(maxVal) : null;
+    if (!newName) { showMessage('Activity name cannot be empty'); return; }
+
+    const update = (list) => {
+        const act = (list || []).find(a => a.id === actId);
+        if (act) { act.name = newName; act.bp = newBP; act.maxPerWeek = newMax; }
+    };
+    if (kidId === '') {
+        update(allActivitiesCache?.shared);
+    } else {
+        update(allActivitiesCache?.individual?.[kidId.toLowerCase()]);
+    }
+
+    updateActivityInSheets(kidId, actId, newName, newBP, newMax ?? '');
+    showMessage(`Activity updated: ${newName}`);
+    renderParentDashboard();
+}
+
+export function adminAddActivity() {
+    const kidId = document.getElementById('newActKid')?.value || '';
+    const name = document.getElementById('newActName')?.value.trim() || '';
+    const bp = parseInt(document.getElementById('newActBP')?.value) || 1;
+    const maxVal = document.getElementById('newActMax')?.value;
+    const maxPerWeek = maxVal ? parseInt(maxVal) : null;
+
+    if (!name) { showMessage('Activity name is required'); return; }
+
+    const actId = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Date.now().toString(36);
+    const newAct = { id: actId, name, bp, multiplier: 1, maxPerWeek };
+
+    if (!allActivitiesCache) allActivitiesCache = { shared: [], individual: {} };
+    if (kidId === '') {
+        allActivitiesCache.shared.push({ ...newAct });
+    } else {
+        const kid = kidId.toLowerCase();
+        if (!allActivitiesCache.individual[kid]) allActivitiesCache.individual[kid] = [];
+        allActivitiesCache.individual[kid].push({ ...newAct });
+    }
+
+    addActivityToSheets(kidId, actId, name, bp, 1, maxPerWeek ?? '');
+    showMessage(`Activity added: ${name}`);
+    renderParentDashboard();
+}
+
+// ── Rewards Admin Section ─────────────────────────────────────────────────────
+
+export async function toggleRewardsAdmin() {
+    rewardsSectionOpen = !rewardsSectionOpen;
+    if (rewardsSectionOpen && !allRewardsCache) {
+        renderParentDashboard();
+        allRewardsCache = await fetchRewards() || [];
+    }
+    renderParentDashboard();
+}
+
+function renderRewardsSectionHtml() {
+    const toggleIcon = rewardsSectionOpen ? '▾' : '▸';
+    let html = `
+        <div class="chores-admin-section">
+            <div class="chores-admin-header" onclick="toggleRewardsAdmin()">
+                <span>🎁 Manage Rewards</span>
+                <span>${toggleIcon}</span>
+            </div>`;
+
+    if (!rewardsSectionOpen) return html + `</div>`;
+    if (!allRewardsCache) return html + `<div style="padding:12px;color:#999;font-size:12px;">Loading rewards…</div></div>`;
+
+    html += `<div class="chores-admin-body">`;
+
+    allRewardsCache.forEach(r => {
+        const limitBadge = r.limitType ? `<span class="chores-admin-meta">${r.limitCount || '?'}/${r.limitType}</span>` : '';
+        if (_editingRewardId === r.id) {
+            html += rewardEditForm(r);
+        } else {
+            html += `
+                <div class="chores-admin-row" id="reward-admin-${r.id}">
+                    <div class="chores-admin-row-info">
+                        <span style="font-size:16px;">${r.icon || '🎁'}</span>
+                        <span class="chore-name">${r.name}</span>
+                        <span class="chores-admin-meta">${r.cost} PC</span>
+                        ${limitBadge}
+                    </div>
+                    <div class="chores-admin-row-actions">
+                        <button class="chore-btn" title="Edit" onclick="adminEditReward('${r.id}')">✏️</button>
+                        <button class="chore-btn reject-btn" title="Delete" onclick="adminDeleteReward('${r.id}')">🗑</button>
+                    </div>
+                </div>`;
+        }
+    });
+
+    if (!allRewardsCache.length) html += `<div style="color:#999;font-size:12px;padding:8px 0;">No rewards yet.</div>`;
+
+    if (_editingRewardId === 'new') {
+        html += rewardEditForm(null);
+    } else {
+        html += `<button class="chore-btn approve-btn" style="margin-top:6px;width:100%;" onclick="adminEditReward('new')">+ Add Reward</button>`;
+    }
+
+    html += `</div></div>`;
+    return html;
+}
+
+function rewardEditForm(r) {
+    const id = r ? `reward-form-${r.id}` : 'reward-form-new';
+    const isNew = !r;
+    const limitTypeOpts = ['', 'daily', 'weekly', 'monthly']
+        .map(t => `<option value="${t}"${(r?.limitType || '') === t ? ' selected' : ''}>${t || '— no limit —'}</option>`)
+        .join('');
+    return `
+        <div class="chores-admin-add-form" id="${id}" style="flex-direction:column;gap:6px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <input id="rwd-icon-${isNew ? 'new' : r.id}" type="text" placeholder="🎁 icon"
+                    value="${r?.icon || ''}" class="chores-admin-input" style="width:48px;" maxlength="4">
+                <input id="rwd-name-${isNew ? 'new' : r.id}" type="text" placeholder="Reward name"
+                    value="${r?.name || ''}" class="chores-admin-input chores-admin-input-grow">
+                <input id="rwd-cost-${isNew ? 'new' : r.id}" type="number" placeholder="Cost (PC)"
+                    value="${r?.cost ?? ''}" min="0" class="chores-admin-input chores-admin-input-sm">
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <select id="rwd-limit-type-${isNew ? 'new' : r.id}" class="chores-admin-input">${limitTypeOpts}</select>
+                <input id="rwd-limit-count-${isNew ? 'new' : r.id}" type="number" placeholder="Limit #"
+                    value="${r?.limitCount ?? ''}" min="1" class="chores-admin-input chores-admin-input-sm">
+                <input id="rwd-fallback-${isNew ? 'new' : r.id}" type="text" placeholder="Text fallback"
+                    value="${r?.text || r?.textFallback || ''}" class="chores-admin-input chores-admin-input-grow">
+            </div>
+            <textarea id="rwd-guidelines-${isNew ? 'new' : r.id}" placeholder="Guidelines (optional)"
+                class="chores-admin-input" style="width:100%;resize:vertical;min-height:36px;">${r?.guidelines || ''}</textarea>
+            <div style="display:flex;gap:6px;">
+                <button class="chore-btn approve-btn" onclick="adminSaveRewardEdit('${isNew ? 'new' : r.id}')">✓ Save</button>
+                <button class="chore-btn" onclick="adminCancelRewardEdit()">✕ Cancel</button>
+            </div>
+        </div>`;
+}
+
+export function adminEditReward(rewardId) {
+    _editingRewardId = rewardId;
+    renderParentDashboard();
+}
+
+export function adminCancelRewardEdit() {
+    _editingRewardId = null;
+    renderParentDashboard();
+}
+
+export function adminSaveRewardEdit(rewardId) {
+    const isNew = rewardId === 'new';
+    const key = isNew ? 'new' : rewardId;
+    const name = document.getElementById(`rwd-name-${key}`)?.value.trim();
+    const cost = parseInt(document.getElementById(`rwd-cost-${key}`)?.value) || 0;
+    const icon = document.getElementById(`rwd-icon-${key}`)?.value.trim() || '🎁';
+    const textFallback = document.getElementById(`rwd-fallback-${key}`)?.value.trim() || name;
+    const limitType = document.getElementById(`rwd-limit-type-${key}`)?.value || '';
+    const limitCountVal = document.getElementById(`rwd-limit-count-${key}`)?.value;
+    const limitCount = limitCountVal ? parseInt(limitCountVal) : '';
+    const guidelines = document.getElementById(`rwd-guidelines-${key}`)?.value.trim() || '';
+
+    if (!name) { showMessage('Reward name is required'); return; }
+
+    if (isNew) {
+        const newId = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Date.now().toString(36);
+        const newR = { id: newId, name, cost, icon, text: textFallback, textFallback, limitType, limitCount, guidelines };
+        if (!allRewardsCache) allRewardsCache = [];
+        allRewardsCache.push(newR);
+        addRewardToSheets(newId, name, cost, icon, textFallback, limitType, limitCount, guidelines);
+    } else {
+        const r = allRewardsCache?.find(x => x.id === rewardId);
+        if (r) Object.assign(r, { name, cost, icon, text: textFallback, textFallback, limitType, limitCount, guidelines });
+        updateRewardInSheets(rewardId, name, cost, icon, textFallback, limitType, limitCount, guidelines);
+    }
+
+    _editingRewardId = null;
+    showMessage(isNew ? `Reward added: ${name}` : `Reward updated: ${name}`);
+    renderParentDashboard();
+}
+
+export function adminDeleteReward(rewardId) {
+    if (!allRewardsCache) return;
+    const r = allRewardsCache.find(x => x.id === rewardId);
+    if (!r) return;
+    if (!confirm(`Delete reward "${r.name}"?`)) return;
+    allRewardsCache = allRewardsCache.filter(x => x.id !== rewardId);
+    deleteRewardFromSheets(rewardId);
+    showMessage(`Reward deleted: ${r.name}`);
+    renderParentDashboard();
+}
+
+// ── House Rules Admin Section ─────────────────────────────────────────────────
+
+export async function toggleRulesAdmin() {
+    rulesSectionOpen = !rulesSectionOpen;
+    if (rulesSectionOpen && !allRulesCache) {
+        renderParentDashboard();
+        const grouped = await fetchHouseRules();
+        allRulesCache = _flattenRules(grouped);
+    }
+    renderParentDashboard();
+}
+
+function _flattenRules(grouped) {
+    if (!grouped) return [];
+    const flat = [];
+    (grouped.general || []).forEach(r => flat.push({ kid: '', ...r }));
+    Object.entries(grouped.kidSpecific || {}).forEach(([kid, rules]) =>
+        rules.forEach(r => flat.push({ kid, ...r })));
+    (grouped.spendingRequirements || []).forEach(r => flat.push({ kid: 'SPENDING', ...r }));
+    (grouped.grounding || []).forEach(r => flat.push({ kid: 'GROUNDED', ...r }));
+    (grouped.consequenceScale || []).forEach(r => flat.push({ kid: 'BP SCALE', ...r }));
+    return flat;
+}
+
+function _ruleKey(kid, rule) { return `${kid || ''}||${rule}`; }
+
+function renderHouseRulesSectionHtml() {
+    const CONFIG = getConfig();
+    const kids = CONFIG ? Object.values(CONFIG).filter(k => k.id) : [];
+    const toggleIcon = rulesSectionOpen ? '▾' : '▸';
+
+    let html = `
+        <div class="chores-admin-section">
+            <div class="chores-admin-header" onclick="toggleRulesAdmin()">
+                <span>📜 Manage House Rules</span>
+                <span>${toggleIcon}</span>
+            </div>`;
+
+    if (!rulesSectionOpen) return html + `</div>`;
+    if (!allRulesCache) return html + `<div style="padding:12px;color:#999;font-size:12px;">Loading rules…</div></div>`;
+
+    const TYPE_COLORS = { good: '#51cf66', warning: '#f59f00', bad: '#ff6b6b', info: '#339af0' };
+    const SECTION_LABELS = {
+        '': 'General', 'SPENDING': 'Spending Rules', 'GROUNDED': 'Grounded Rules', 'BP SCALE': 'BP Scale'
+    };
+
+    // Group for display
+    const groups = {};
+    allRulesCache.forEach(r => {
+        const groupKey = r.kid || '';
+        if (!groups[groupKey]) groups[groupKey] = [];
+        groups[groupKey].push(r);
+    });
+
+    html += `<div class="chores-admin-body">`;
+
+    Object.entries(groups).forEach(([groupKey, rules]) => {
+        const label = SECTION_LABELS[groupKey] || groupKey;
+        html += `<div class="chores-admin-group-label">${label}</div>`;
+        rules.forEach(r => {
+            const rKey = _ruleKey(r.kid, r.rule);
+            const color = TYPE_COLORS[r.type] || '#868e96';
+            if (_editingRuleKey === rKey) {
+                html += ruleEditForm(r, kids);
+            } else {
+                html += `
+                    <div class="chores-admin-row">
+                        <div class="chores-admin-row-info" style="flex-direction:column;align-items:flex-start;gap:2px;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+                                <span class="chore-name" style="font-size:11px;">${r.rule}</span>
+                            </div>
+                            ${r.consequence ? `<div style="font-size:10px;color:#999;padding-left:14px;">${r.consequence}</div>` : ''}
+                        </div>
+                        <div class="chores-admin-row-actions">
+                            <button class="chore-btn" title="Edit"
+                                onclick="adminEditHouseRule(${JSON.stringify(r.kid)},${JSON.stringify(r.rule)})">✏️</button>
+                            <button class="chore-btn reject-btn" title="Delete"
+                                onclick="adminDeleteHouseRule(${JSON.stringify(r.kid)},${JSON.stringify(r.rule)})">🗑</button>
+                        </div>
+                    </div>`;
+            }
+        });
+    });
+
+    if (!allRulesCache.length) html += `<div style="color:#999;font-size:12px;padding:8px 0;">No rules yet.</div>`;
+
+    if (_editingRuleKey === 'new') {
+        html += ruleEditForm(null, kids);
+    } else {
+        html += `<button class="chore-btn approve-btn" style="margin-top:6px;width:100%;" onclick="adminEditHouseRule('__new__','')">+ Add Rule</button>`;
+    }
+
+    html += `</div></div>`;
+    return html;
+}
+
+function ruleEditForm(r, kids) {
+    const isNew = !r;
+    const safeKid = JSON.stringify(r?.kid ?? '');
+    const safeRule = JSON.stringify(r?.rule ?? '');
+    const SPECIAL = ['', 'SPENDING', 'GROUNDED', 'BP SCALE'];
+    const kidOpts = [
+        ...SPECIAL.map(s => `<option value="${s}"${(r?.kid || '') === s ? ' selected' : ''}>${s || 'General'}</option>`),
+        ...kids.map(k => `<option value="${k.name}"${r?.kid === k.name ? ' selected' : ''}>${k.name}</option>`)
+    ].join('');
+    const typeOpts = ['', 'good', 'warning', 'bad', 'info']
+        .map(t => `<option value="${t}"${(r?.type || '') === t ? ' selected' : ''}>${t || '— default —'}</option>`)
+        .join('');
+    return `
+        <div class="chores-admin-add-form" style="flex-direction:column;gap:6px;margin:4px 0;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <select id="rule-kid-edit" class="chores-admin-input">${kidOpts}</select>
+                <select id="rule-type-edit" class="chores-admin-input">${typeOpts}</select>
+            </div>
+            <textarea id="rule-text-edit" placeholder="Rule text" class="chores-admin-input"
+                style="width:100%;resize:vertical;min-height:40px;">${r?.rule || ''}</textarea>
+            <input id="rule-consequence-edit" type="text" placeholder="Consequence (optional)"
+                value="${r?.consequence || ''}" class="chores-admin-input chores-admin-input-grow">
+            <div style="display:flex;gap:6px;">
+                <button class="chore-btn approve-btn" onclick="adminSaveHouseRuleEdit(${safeKid},${safeRule})">✓ Save</button>
+                <button class="chore-btn" onclick="adminCancelRuleEdit()">✕</button>
+            </div>
+        </div>`;
+}
+
+export function adminEditHouseRule(kid, rule) {
+    _editingRuleKey = kid === '__new__' ? 'new' : _ruleKey(kid, rule);
+    renderParentDashboard();
+}
+
+export function adminCancelRuleEdit() {
+    _editingRuleKey = null;
+    renderParentDashboard();
+}
+
+export function adminSaveHouseRuleEdit(originalKid, originalRule) {
+    const newKid = document.getElementById('rule-kid-edit')?.value ?? '';
+    const newRule = document.getElementById('rule-text-edit')?.value.trim() || '';
+    const newConsequence = document.getElementById('rule-consequence-edit')?.value.trim() || '';
+    const newType = document.getElementById('rule-type-edit')?.value || '';
+
+    if (!newRule) { showMessage('Rule text is required'); return; }
+
+    const isNew = _editingRuleKey === 'new';
+    if (isNew) {
+        if (!allRulesCache) allRulesCache = [];
+        allRulesCache.push({ kid: newKid, rule: newRule, consequence: newConsequence, type: newType });
+        addHouseRuleToSheets(newKid, newRule, newConsequence, newType);
+        showMessage('Rule added');
+    } else {
+        const entry = allRulesCache?.find(r => r.kid === (originalKid || '') && r.rule === originalRule);
+        if (entry) Object.assign(entry, { kid: newKid, rule: newRule, consequence: newConsequence, type: newType });
+        updateHouseRuleInSheets(originalKid, originalRule, newKid, newRule, newConsequence, newType);
+        showMessage('Rule updated');
+    }
+
+    _editingRuleKey = null;
+    renderParentDashboard();
+}
+
+export function adminDeleteHouseRule(kid, rule) {
+    if (!allRulesCache) return;
+    const entry = allRulesCache.find(r => r.kid === (kid || '') && r.rule === rule);
+    if (!entry) return;
+    if (!confirm(`Delete rule: "${rule}"?`)) return;
+    allRulesCache = allRulesCache.filter(r => !(r.kid === (kid || '') && r.rule === rule));
+    deleteHouseRuleFromSheets(kid, rule);
+    showMessage('Rule deleted');
+    renderParentDashboard();
+}
+
+// ── Kids Admin Section ────────────────────────────────────────────────────────
+
+export function toggleKidsAdmin() {
+    kidsSectionOpen = !kidsSectionOpen;
+    renderParentDashboard();
+}
+
+function renderKidsSectionHtml() {
+    const CONFIG = getConfig();
+    const toggleIcon = kidsSectionOpen ? '▾' : '▸';
+
+    let html = `
+        <div class="chores-admin-section">
+            <div class="chores-admin-header" onclick="toggleKidsAdmin()">
+                <span>👦 Manage Kids</span>
+                <span>${toggleIcon}</span>
+            </div>`;
+
+    if (!kidsSectionOpen) return html + `</div>`;
+    if (!CONFIG) return html + `<div style="padding:12px;color:#999;font-size:12px;">Config not loaded.</div></div>`;
+
+    const kidEntries = Object.entries(CONFIG)
+        .filter(([k]) => /^kid\d+$/.test(k))
+        .sort(([a], [b]) => a.localeCompare(b));
+
+    html += `<div class="chores-admin-body">`;
+
+    kidEntries.forEach(([kidKey, kid]) => {
+        if (_editingKidKey === kidKey) {
+            html += kidEditForm(kidKey, kid);
+        } else {
+            const initials = (kid.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            const pinDisplay = kid.pin ? '••••' : '—';
+            html += `
+                <div class="chores-admin-row" id="kid-admin-${kidKey}">
+                    <div class="chores-admin-row-info">
+                        <div class="kid-admin-avatar">${initials}</div>
+                        <div style="display:flex;flex-direction:column;gap:1px;">
+                            <span class="chore-name">${kid.name}</span>
+                            <span class="chores-admin-meta">ID: ${kid.id} · ${kid.defaultDailyBP ?? 5} BP/day · PIN: ${pinDisplay}</span>
+                        </div>
+                    </div>
+                    <div class="chores-admin-row-actions">
+                        <button class="chore-btn" title="Edit" onclick="adminEditKid('${kidKey}')">✏️</button>
+                        <button class="chore-btn reject-btn" title="Delete" onclick="adminDeleteKid('${kidKey}')">🗑</button>
+                    </div>
+                </div>`;
+        }
+    });
+
+    if (!kidEntries.length) html += `<div style="color:#999;font-size:12px;padding:8px 0;">No kids configured.</div>`;
+
+    if (_editingKidKey === 'new') {
+        html += kidEditForm('new', null);
+    } else {
+        html += `<button class="chore-btn approve-btn" style="margin-top:6px;width:100%;" onclick="adminEditKid('new')">+ Add Kid</button>`;
+    }
+
+    html += `</div></div>`;
+    return html;
+}
+
+function kidEditForm(kidKey, kid) {
+    const isNew = kidKey === 'new';
+    return `
+        <div class="chores-admin-add-form" style="flex-direction:column;gap:6px;margin:4px 0;" id="kid-form-${kidKey}">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <input id="kid-name-${kidKey}" type="text" placeholder="Name" value="${kid?.name || ''}"
+                    class="chores-admin-input chores-admin-input-grow"
+                    oninput="adminAutoFillKidId('${kidKey}')">
+                <input id="kid-id-${kidKey}" type="text" placeholder="id (e.g. clara)"
+                    value="${kid?.id || ''}" class="chores-admin-input chores-admin-input-grow"
+                    title="Unique ID — lowercase, no spaces">
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <label style="font-size:12px;white-space:nowrap;">Daily BP default:</label>
+                <input id="kid-dailybp-${kidKey}" type="number" value="${kid?.defaultDailyBP ?? 5}" min="0"
+                    class="chores-admin-input chores-admin-input-sm">
+                <label style="font-size:12px;white-space:nowrap;">PIN (optional):</label>
+                <input id="kid-pin-${kidKey}" type="number" value="${kid?.pin || ''}" placeholder="4-digit"
+                    class="chores-admin-input chores-admin-input-sm" maxlength="4">
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button class="chore-btn approve-btn" onclick="adminSaveKidEdit('${kidKey}')">✓ Save</button>
+                <button class="chore-btn" onclick="adminCancelKidEdit()">✕</button>
+            </div>
+        </div>`;
+}
+
+export function adminAutoFillKidId(kidKey) {
+    const nameEl = document.getElementById(`kid-name-${kidKey}`);
+    const idEl = document.getElementById(`kid-id-${kidKey}`);
+    if (!nameEl || !idEl || idEl.dataset.userEdited) return;
+    idEl.value = nameEl.value.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+}
+
+export function adminEditKid(kidKey) {
+    _editingKidKey = kidKey;
+    renderParentDashboard();
+}
+
+export function adminCancelKidEdit() {
+    _editingKidKey = null;
+    renderParentDashboard();
+}
+
+export function adminSaveKidEdit(kidKey) {
+    const isNew = kidKey === 'new';
+    const name = document.getElementById(`kid-name-${kidKey}`)?.value.trim();
+    const id = document.getElementById(`kid-id-${kidKey}`)?.value.trim().toLowerCase();
+    const dailyBP = parseInt(document.getElementById(`kid-dailybp-${kidKey}`)?.value) ?? 5;
+    const pinVal = document.getElementById(`kid-pin-${kidKey}`)?.value.trim();
+    const pin = pinVal || undefined;
+
+    if (!name) { showMessage('Kid name is required'); return; }
+    if (!id) { showMessage('Kid ID is required'); return; }
+
+    const CONFIG = getConfig();
+
+    if (isNew) {
+        // Find next available kidN slot
+        let n = 1;
+        while (CONFIG[`kid${n}`]) n++;
+        kidKey = `kid${n}`;
+    }
+
+    const kidObj = { name, id, defaultDailyBP: isNaN(dailyBP) ? 5 : dailyBP, defaultTotalBP: 0, defaultPrizeCoins: 0 };
+    if (pin) kidObj.pin = pin;
+
+    CONFIG[kidKey] = kidObj;
+    saveConfigValue(kidKey, JSON.stringify(kidObj));
+
+    _editingKidKey = null;
+    showMessage(isNew ? `Kid added: ${name}` : `Kid updated: ${name}`);
+    renderParentDashboard();
+}
+
+export function adminDeleteKid(kidKey) {
+    const CONFIG = getConfig();
+    const kid = CONFIG?.[kidKey];
+    if (!kid) return;
+    if (!confirm(`Remove "${kid.name}" from the dashboard? Point history is preserved.`)) return;
+    delete CONFIG[kidKey];
+    deleteConfigKey(kidKey);
+    showMessage(`${kid.name} removed`);
+    renderParentDashboard();
 }
 
 // ── Menu Admin Actions ────────────────────────────────────────────────────────

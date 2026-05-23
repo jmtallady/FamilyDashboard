@@ -53,7 +53,7 @@ function doGet(e) {
   } else if (action === 'getRewards') {
     return getRewards();
   } else if (action === 'getActivities') {
-    return getActivities();
+    return getActivities(e.parameter.includeDisabled === 'true');
   } else if (action === 'getRecentPointsLog') {
     return getRecentPointsLog();
   } else if (action === 'getHouseRules') {
@@ -102,6 +102,26 @@ function doPost(e) {
       return saveChecklistsData(params);
     } else if (action === 'saveConfig') {
       return saveConfigValue(params);
+    } else if (action === 'deleteConfigKey') {
+      return deleteConfigKey(params);
+    } else if (action === 'addActivity') {
+      return addActivity(params);
+    } else if (action === 'updateActivity') {
+      return updateActivity(params);
+    } else if (action === 'setActivityMultiplier') {
+      return setActivityMultiplier(params);
+    } else if (action === 'addReward') {
+      return addReward(params);
+    } else if (action === 'updateReward') {
+      return updateReward(params);
+    } else if (action === 'deleteReward') {
+      return deleteReward(params);
+    } else if (action === 'addHouseRule') {
+      return addHouseRule(params);
+    } else if (action === 'updateHouseRule') {
+      return updateHouseRule(params);
+    } else if (action === 'deleteHouseRule') {
+      return deleteHouseRule(params);
     }
 
     return jsonResponse({ error: 'Invalid action' }, 400);
@@ -340,6 +360,240 @@ function saveConfigValue(params) {
   }
 }
 
+// ====== DELETE CONFIG KEY ======
+// Removes a key-value row from the Config sheet (used for deleting kids)
+function deleteConfigKey(params) {
+  try {
+    const { key } = params;
+    if (!key) return jsonResponse({ error: 'Missing key' }, 400);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Config');
+    if (!sheet) return jsonResponse({ error: 'Config sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === key) {
+        sheet.deleteRow(i + 1);
+        return jsonResponse({ success: true });
+      }
+    }
+    return jsonResponse({ success: true }); // idempotent — not found is fine
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== ADD ACTIVITY ======
+function addActivity(params) {
+  try {
+    const { kidId, activityId, activityName, bp, multiplier, maxPerWeek } = params;
+    if (!activityId || !activityName) return jsonResponse({ error: 'Missing activityId or activityName' }, 400);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Activities');
+    if (!sheet) return jsonResponse({ error: 'Activities sheet not found' }, 404);
+
+    sheet.appendRow([
+      kidId || '',
+      activityId.toString().toLowerCase(),
+      activityName,
+      parseInt(bp) || 1,
+      parseInt(multiplier) || 1,
+      maxPerWeek !== undefined && maxPerWeek !== '' ? parseInt(maxPerWeek) : ''
+    ]);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== UPDATE ACTIVITY ======
+function updateActivity(params) {
+  try {
+    const { kidId, activityId, activityName, bp, maxPerWeek } = params;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Activities');
+    if (!sheet) return jsonResponse({ error: 'Activities sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rowKid = data[i][0] ? data[i][0].toString().toLowerCase().trim() : '';
+      const rowActId = data[i][1] ? data[i][1].toString().toLowerCase().trim() : '';
+      const kidMatch = (!kidId || kidId === '') ? rowKid === '' : rowKid === kidId.toString().toLowerCase().trim();
+      if (rowActId === activityId.toString().toLowerCase().trim() && kidMatch) {
+        if (activityName) sheet.getRange(i + 1, 3).setValue(activityName);
+        if (bp !== undefined) sheet.getRange(i + 1, 4).setValue(parseInt(bp) || 1);
+        if (maxPerWeek !== undefined) sheet.getRange(i + 1, 6).setValue(maxPerWeek !== '' ? parseInt(maxPerWeek) : '');
+        return jsonResponse({ success: true, row: i + 1 });
+      }
+    }
+    return jsonResponse({ error: 'Activity not found' }, 404);
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== SET ACTIVITY MULTIPLIER ======
+function setActivityMultiplier(params) {
+  try {
+    const { kidId, activityId, multiplier } = params;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Activities');
+    if (!sheet) return jsonResponse({ error: 'Activities sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rowKid = data[i][0] ? data[i][0].toString().toLowerCase().trim() : '';
+      const rowActId = data[i][1] ? data[i][1].toString().toLowerCase().trim() : '';
+      const kidMatch = (!kidId || kidId === '') ? rowKid === '' : rowKid === kidId.toString().toLowerCase().trim();
+      if (rowActId === activityId.toString().toLowerCase().trim() && kidMatch) {
+        sheet.getRange(i + 1, 5).setValue(parseInt(multiplier));
+        return jsonResponse({ success: true });
+      }
+    }
+    return jsonResponse({ error: 'Activity not found' }, 404);
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== ADD REWARD ======
+function addReward(params) {
+  try {
+    const { rewardId, rewardName, cost, icon, textFallback, limitType, limitCount, guidelines } = params;
+    if (!rewardId || !rewardName) return jsonResponse({ error: 'Missing rewardId or rewardName' }, 400);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Rewards');
+    if (!sheet) return jsonResponse({ error: 'Rewards sheet not found' }, 404);
+
+    sheet.appendRow([
+      rewardId.toString().toLowerCase(),
+      rewardName,
+      parseInt(cost) || 0,
+      icon || '🎁',
+      textFallback || rewardName,
+      limitType || '',
+      limitCount !== undefined && limitCount !== '' ? parseInt(limitCount) : '',
+      guidelines || ''
+    ]);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== UPDATE REWARD ======
+function updateReward(params) {
+  try {
+    const { rewardId, rewardName, cost, icon, textFallback, limitType, limitCount, guidelines } = params;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Rewards');
+    if (!sheet) return jsonResponse({ error: 'Rewards sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]?.toString().toLowerCase().trim() === rewardId.toString().toLowerCase().trim()) {
+        sheet.getRange(i + 1, 1, 1, 8).setValues([[
+          rewardId.toString().toLowerCase(),
+          rewardName || data[i][1],
+          parseInt(cost) || 0,
+          icon || data[i][3] || '🎁',
+          textFallback !== undefined ? textFallback : data[i][4],
+          limitType !== undefined ? limitType : data[i][5],
+          limitCount !== undefined && limitCount !== '' ? parseInt(limitCount) : '',
+          guidelines !== undefined ? guidelines : data[i][7]
+        ]]);
+        return jsonResponse({ success: true });
+      }
+    }
+    return jsonResponse({ error: 'Reward not found' }, 404);
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== DELETE REWARD ======
+function deleteReward(params) {
+  try {
+    const { rewardId } = params;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Rewards');
+    if (!sheet) return jsonResponse({ error: 'Rewards sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]?.toString().toLowerCase().trim() === rewardId.toString().toLowerCase().trim()) {
+        sheet.deleteRow(i + 1);
+        return jsonResponse({ success: true });
+      }
+    }
+    return jsonResponse({ success: true }); // idempotent
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== ADD HOUSE RULE ======
+function addHouseRule(params) {
+  try {
+    const { kid, rule, consequence, type } = params;
+    if (!rule) return jsonResponse({ error: 'Missing rule text' }, 400);
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('House Rules');
+    if (!sheet) return jsonResponse({ error: 'House Rules sheet not found' }, 404);
+
+    sheet.appendRow([kid || '', rule, consequence || '', type || '']);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== UPDATE HOUSE RULE ======
+// Identified by originalKid + originalRule (composite key — no ID column)
+function updateHouseRule(params) {
+  try {
+    const { originalKid, originalRule, kid, rule, consequence, type } = params;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('House Rules');
+    if (!sheet) return jsonResponse({ error: 'House Rules sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rowKid = data[i][0] ? data[i][0].toString().trim() : '';
+      const rowRule = data[i][1] ? data[i][1].toString().trim() : '';
+      if (rowKid === (originalKid || '') && rowRule === originalRule) {
+        sheet.getRange(i + 1, 1, 1, 4).setValues([[
+          kid !== undefined ? kid : rowKid,
+          rule !== undefined ? rule : rowRule,
+          consequence !== undefined ? consequence : data[i][2],
+          type !== undefined ? type : data[i][3]
+        ]]);
+        return jsonResponse({ success: true });
+      }
+    }
+    return jsonResponse({ error: 'House rule not found' }, 404);
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+// ====== DELETE HOUSE RULE ======
+function deleteHouseRule(params) {
+  try {
+    const { kid, rule } = params;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('House Rules');
+    if (!sheet) return jsonResponse({ error: 'House Rules sheet not found' }, 404);
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rowKid = data[i][0] ? data[i][0].toString().trim() : '';
+      const rowRule = data[i][1] ? data[i][1].toString().trim() : '';
+      if (rowKid === (kid || '') && rowRule === rule) {
+        sheet.deleteRow(i + 1);
+        return jsonResponse({ success: true });
+      }
+    }
+    return jsonResponse({ success: true }); // idempotent
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
 // ====== GET CALENDAR EVENTS ======
 // Returns upcoming calendar events from primary calendar
 function getCalendarEvents(daysParam) {
@@ -484,7 +738,7 @@ function getRewards() {
 
 // ====== GET ACTIVITIES ======
 // Returns activities configuration from the Activities sheet
-function getActivities() {
+function getActivities(includeDisabled) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Activities');
 
@@ -507,8 +761,8 @@ function getActivities() {
 
       const rawMultiplier = parseInt(multiplier);
 
-      // Skip activities with multiplier <= 0 (disabled activities)
-      if (!isNaN(rawMultiplier) && rawMultiplier <= 0) continue;
+      // Skip activities with multiplier <= 0 unless includeDisabled is requested
+      if (!includeDisabled && !isNaN(rawMultiplier) && rawMultiplier <= 0) continue;
 
       const rawMaxPerWeek = parseInt(maxPerWeek);
 

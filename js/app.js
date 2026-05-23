@@ -521,8 +521,42 @@ window.adminMoveChecklistItem       = Checklists.adminMoveChecklistItem;
 window.applyModalTimeout = ModalTimeout.applyModalTimeout;
 window.getModalTimeoutSettings = ModalTimeout.getModalTimeoutSettings;
 
-window.toggleSettingsSection = ParentDash.toggleSettingsSection;
-window.saveModalTimeoutSettings = ParentDash.saveModalTimeoutSettings;
+window.toggleSettingsSection       = ParentDash.toggleSettingsSection;
+window.saveModalTimeoutSettings    = ParentDash.saveModalTimeoutSettings;
+window.adminSaveParentPin          = ParentDash.adminSaveParentPin;
+window.adminSaveRequirePin         = ParentDash.adminSaveRequirePin;
+window.adminSaveConversionRate     = ParentDash.adminSaveConversionRate;
+window.adminSaveWeather            = ParentDash.adminSaveWeather;
+window.adminSaveCalendar           = ParentDash.adminSaveCalendar;
+
+// Activities admin
+window.toggleActivitiesAdmin       = ParentDash.toggleActivitiesAdmin;
+window.adminAddActivity            = ParentDash.adminAddActivity;
+window.adminEditActivity           = ParentDash.adminEditActivity;
+window.adminSaveActivityEdit       = ParentDash.adminSaveActivityEdit;
+window.adminSetActivityMultiplier  = ParentDash.adminSetActivityMultiplier;
+
+// Rewards admin
+window.toggleRewardsAdmin          = ParentDash.toggleRewardsAdmin;
+window.adminEditReward             = ParentDash.adminEditReward;
+window.adminCancelRewardEdit       = ParentDash.adminCancelRewardEdit;
+window.adminSaveRewardEdit         = ParentDash.adminSaveRewardEdit;
+window.adminDeleteReward           = ParentDash.adminDeleteReward;
+
+// House Rules admin
+window.toggleRulesAdmin            = ParentDash.toggleRulesAdmin;
+window.adminEditHouseRule          = ParentDash.adminEditHouseRule;
+window.adminCancelRuleEdit         = ParentDash.adminCancelRuleEdit;
+window.adminSaveHouseRuleEdit      = ParentDash.adminSaveHouseRuleEdit;
+window.adminDeleteHouseRule        = ParentDash.adminDeleteHouseRule;
+
+// Kids admin
+window.toggleKidsAdmin             = ParentDash.toggleKidsAdmin;
+window.adminEditKid                = ParentDash.adminEditKid;
+window.adminCancelKidEdit          = ParentDash.adminCancelKidEdit;
+window.adminSaveKidEdit            = ParentDash.adminSaveKidEdit;
+window.adminDeleteKid              = ParentDash.adminDeleteKid;
+window.adminAutoFillKidId          = ParentDash.adminAutoFillKidId;
 
 // Rewards functions
 window.showKidSelector = Rewards.showKidSelector;
