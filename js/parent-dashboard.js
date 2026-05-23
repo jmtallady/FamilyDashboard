@@ -37,6 +37,9 @@ let _movingChoreKey = null; // "kidId|choreId" when move-to-checklist form is op
 let _editingRewardId = null;
 let _editingRuleKey = null; // "kid||rule" when editing a rule inline
 let _editingKidKey = null; // "kid1", "kid2", etc.
+let _confirmDeleteRewardId = null;
+let _confirmDeleteRuleKey = null;
+let _confirmDeleteKidKey = null;
 let choresSearch = '';
 let activitiesSearch = '';
 let rewardsSearch = '';
@@ -940,8 +943,10 @@ function renderRewardsSectionHtml() {
                         ${limitBadge}
                     </div>
                     <div class="chores-admin-row-actions">
-                        <button class="chore-btn" title="Edit reward" onclick="adminEditReward('${r.id}')">✏️</button>
-                        <button class="chore-btn reject-btn" title="Delete reward" onclick="adminDeleteReward('${r.id}')">🗑</button>
+                        ${_confirmDeleteRewardId === r.id
+                            ? `<span style="font-size:11px;color:#c92a2a;white-space:nowrap;">Delete?</span><button class="chore-btn approve-btn" title="Confirm delete" onclick="adminConfirmDeleteReward('${r.id}')">✓</button><button class="chore-btn" title="Cancel" onclick="adminCancelDelete()">✕</button>`
+                            : `<button class="chore-btn" title="Edit reward" onclick="adminEditReward('${r.id}')">✏️</button><button class="chore-btn reject-btn" title="Delete reward" onclick="adminDeleteReward('${r.id}')">🗑</button>`
+                        }
                     </div>
                 </div>`;
         }
@@ -1037,12 +1042,17 @@ export function adminSaveRewardEdit(rewardId) {
 }
 
 export function adminDeleteReward(rewardId) {
+    _confirmDeleteRewardId = rewardId;
+    renderParentDashboard();
+}
+
+export function adminConfirmDeleteReward(rewardId) {
     if (!allRewardsCache) return;
     const r = allRewardsCache.find(x => x.id === rewardId);
     if (!r) return;
-    if (!confirm(`Delete reward "${r.name}"?`)) return;
     allRewardsCache = allRewardsCache.filter(x => x.id !== rewardId);
     deleteRewardFromSheets(rewardId);
+    _confirmDeleteRewardId = null;
     showMessage(`Reward deleted: ${r.name}`);
     renderParentDashboard();
 }
@@ -1124,10 +1134,10 @@ function renderHouseRulesSectionHtml() {
                             ${r.consequence ? `<div style="font-size:10px;color:#999;padding-left:14px;">${r.consequence}</div>` : ''}
                         </div>
                         <div class="chores-admin-row-actions">
-                            <button class="chore-btn" title="Edit rule"
-                                onclick="adminEditHouseRule('${safeKid}','${safeRule}')">✏️</button>
-                            <button class="chore-btn reject-btn" title="Delete rule"
-                                onclick="adminDeleteHouseRule('${safeKid}','${safeRule}')">🗑</button>
+                            ${_confirmDeleteRuleKey === rKey
+                                ? `<span style="font-size:11px;color:#c92a2a;white-space:nowrap;">Delete?</span><button class="chore-btn approve-btn" title="Confirm delete" onclick="adminConfirmDeleteHouseRule('${safeKid}','${safeRule}')">✓</button><button class="chore-btn" title="Cancel" onclick="adminCancelDelete()">✕</button>`
+                                : `<button class="chore-btn" title="Edit rule" onclick="adminEditHouseRule('${safeKid}','${safeRule}')">✏️</button><button class="chore-btn reject-btn" title="Delete rule" onclick="adminDeleteHouseRule('${safeKid}','${safeRule}')">🗑</button>`
+                            }
                         </div>
                     </div>`;
             }
@@ -1219,12 +1229,15 @@ export function adminSaveHouseRuleEdit(originalKid, originalRule) {
 }
 
 export function adminDeleteHouseRule(kid, rule) {
+    _confirmDeleteRuleKey = _ruleKey(kid, rule);
+    renderParentDashboard();
+}
+
+export function adminConfirmDeleteHouseRule(kid, rule) {
     if (!allRulesCache) return;
-    const entry = allRulesCache.find(r => r.kid === (kid || '') && r.rule === rule);
-    if (!entry) return;
-    if (!confirm(`Delete rule: "${rule}"?`)) return;
     allRulesCache = allRulesCache.filter(r => !(r.kid === (kid || '') && r.rule === rule));
     deleteHouseRuleFromSheets(kid, rule);
+    _confirmDeleteRuleKey = null;
     showMessage('Rule deleted');
     renderParentDashboard();
 }
@@ -1272,8 +1285,10 @@ function renderKidsSectionHtml() {
                         </div>
                     </div>
                     <div class="chores-admin-row-actions">
-                        <button class="chore-btn" title="Edit" onclick="adminEditKid('${kidKey}')">✏️</button>
-                        <button class="chore-btn reject-btn" title="Delete" onclick="adminDeleteKid('${kidKey}')">🗑</button>
+                        ${_confirmDeleteKidKey === kidKey
+                            ? `<span style="font-size:11px;color:#c92a2a;white-space:nowrap;">Delete?</span><button class="chore-btn approve-btn" title="Confirm delete" onclick="adminConfirmDeleteKid('${kidKey}')">✓</button><button class="chore-btn" title="Cancel" onclick="adminCancelDelete()">✕</button>`
+                            : `<button class="chore-btn" title="Edit" onclick="adminEditKid('${kidKey}')">✏️</button><button class="chore-btn reject-btn" title="Delete" onclick="adminDeleteKid('${kidKey}')">🗑</button>`
+                        }
                     </div>
                 </div>`;
         }
@@ -1367,13 +1382,25 @@ export function adminSaveKidEdit(kidKey) {
 }
 
 export function adminDeleteKid(kidKey) {
+    _confirmDeleteKidKey = kidKey;
+    renderParentDashboard();
+}
+
+export function adminConfirmDeleteKid(kidKey) {
     const CONFIG = getConfig();
     const kid = CONFIG?.[kidKey];
     if (!kid) return;
-    if (!confirm(`Remove "${kid.name}" from the dashboard? Point history is preserved.`)) return;
     delete CONFIG[kidKey];
     deleteConfigKey(kidKey);
+    _confirmDeleteKidKey = null;
     showMessage(`${kid.name} removed`);
+    renderParentDashboard();
+}
+
+export function adminCancelDelete() {
+    _confirmDeleteRewardId = null;
+    _confirmDeleteRuleKey = null;
+    _confirmDeleteKidKey = null;
     renderParentDashboard();
 }
 

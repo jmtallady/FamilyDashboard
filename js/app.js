@@ -540,6 +540,7 @@ window.adminEditReward             = ParentDash.adminEditReward;
 window.adminCancelRewardEdit       = ParentDash.adminCancelRewardEdit;
 window.adminSaveRewardEdit         = ParentDash.adminSaveRewardEdit;
 window.adminDeleteReward           = ParentDash.adminDeleteReward;
+window.adminConfirmDeleteReward    = ParentDash.adminConfirmDeleteReward;
 
 // House Rules admin
 window.toggleRulesAdmin            = ParentDash.toggleRulesAdmin;
@@ -547,6 +548,7 @@ window.adminEditHouseRule          = ParentDash.adminEditHouseRule;
 window.adminCancelRuleEdit         = ParentDash.adminCancelRuleEdit;
 window.adminSaveHouseRuleEdit      = ParentDash.adminSaveHouseRuleEdit;
 window.adminDeleteHouseRule        = ParentDash.adminDeleteHouseRule;
+window.adminConfirmDeleteHouseRule = ParentDash.adminConfirmDeleteHouseRule;
 
 // Kids admin
 window.toggleKidsAdmin             = ParentDash.toggleKidsAdmin;
@@ -554,6 +556,8 @@ window.adminEditKid                = ParentDash.adminEditKid;
 window.adminCancelKidEdit          = ParentDash.adminCancelKidEdit;
 window.adminSaveKidEdit            = ParentDash.adminSaveKidEdit;
 window.adminDeleteKid              = ParentDash.adminDeleteKid;
+window.adminConfirmDeleteKid       = ParentDash.adminConfirmDeleteKid;
+window.adminCancelDelete           = ParentDash.adminCancelDelete;
 window.adminAutoFillKidId          = ParentDash.adminAutoFillKidId;
 
 // Rewards functions
