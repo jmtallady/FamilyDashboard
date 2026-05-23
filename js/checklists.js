@@ -1,24 +1,12 @@
 // checklists.js — Custom checklists backed by Google Sheets (definitions permanent,
 // check state resets daily in localStorage)
 
-import { showMessage } from './utils.js';
+import { showMessage, parseEmoji, emojiPickerHtml } from './utils.js';
 import { fetchChecklistsFromSheets, saveChecklistsToSheets, saveDailyStatusToSheets, savePointsToSheets } from './api.js';
 import { getUseGoogleSheets } from './state.js';
 import { getConfig } from './config.js';
 import { renderRecentActivity } from './recent-activity.js';
 
-function _emojiPickerHtml(current, inputId, btnId) {
-    const stored = current ?? '';
-    const btnLabel = stored || '—';
-    return `<div class="emoji-pick-wrap">` +
-        `<button type="button" class="emoji-pick-btn" id="${btnId}" ` +
-            `onclick="toggleEmojiPicker('${inputId}','${btnId}')">${btnLabel}</button>` +
-        `<button type="button" class="emoji-clear-btn" id="${btnId}-clr" ` +
-            `style="display:${stored ? 'flex' : 'none'}" ` +
-            `onclick="clearEmoji('${inputId}','${btnId}')">✕</button>` +
-        `<input type="hidden" id="${inputId}" value="${stored}">` +
-        `</div>`;
-}
 
 const LIST_KEY  = 'checklists';
 const CLEAR_KEY = 'checklist-last-cleared';
@@ -301,9 +289,7 @@ function _renderModal() {
     el.innerHTML = _viewId
         ? _renderListView(lists.find(l => l.id === _viewId))
         : _renderSelector(lists);
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(el, { folder: 'svg', ext: '.svg' });
-    }
+    parseEmoji(el);
 }
 
 function _renderSelector(lists) {
@@ -504,7 +490,7 @@ export function renderChecklistsAdminSectionHtml() {
     const arrow = _adminOpen ? '▾' : '▸';
     let html = `
         <div class="chores-admin-section">
-            <div class="chores-admin-header" onclick="toggleChecklistsAdmin()">
+            <div class="chores-admin-header" onclick="toggleChecklistsAdmin()" title="Click to expand/collapse">
                 <span>✅ Checklists</span>
                 <span>${arrow}</span>
             </div>`;
@@ -521,7 +507,7 @@ export function renderChecklistsAdminSectionHtml() {
         if (_editingListId === list.id) {
             html += `
                 <div class="chores-admin-add-form" style="margin:4px 0;flex-wrap:wrap;">
-                    ${_emojiPickerHtml(list.icon, `cl-li-${list.id}`, `cl-li-btn-${list.id}`, `cl-li-pick-${list.id}`)}
+                    ${emojiPickerHtml(list.icon, `cl-li-${list.id}`, `cl-li-btn-${list.id}`, `cl-li-pick-${list.id}`)}
                     <input id="cl-ln-${list.id}" type="text" value="${safeName}"
                         class="chores-admin-input chores-admin-input-grow">
                     <input id="cl-cbp-${list.id}" type="number" min="0" value="${list.completionBp || 0}"
@@ -569,7 +555,7 @@ export function renderChecklistsAdminSectionHtml() {
                     const dwdChecked = item.deleteWhenDone ? 'checked' : '';
                     html += `
                         <div class="chores-admin-add-form" style="margin:4px 0;flex-wrap:wrap;">
-                            ${_emojiPickerHtml(item.emoji, `cl-ee-${item.id}`, `cl-ee-btn-${item.id}`, `cl-ee-pick-${item.id}`)}
+                            ${emojiPickerHtml(item.emoji, `cl-ee-${item.id}`, `cl-ee-btn-${item.id}`, `cl-ee-pick-${item.id}`)}
                             <input id="cl-te-${item.id}" type="text" value="${safeTitle}"
                                 class="chores-admin-input chores-admin-input-grow">
                             <input id="cl-de-${item.id}" type="text" value="${safeDetail}"
@@ -618,7 +604,7 @@ export function renderChecklistsAdminSectionHtml() {
 
             html += `
                 <div class="chores-admin-add-form" style="margin:4px 0 10px;flex-wrap:wrap;">
-                    ${_emojiPickerHtml('📌', `cl-ei-${list.id}`, `cl-ei-btn-${list.id}`, `cl-ei-pick-${list.id}`)}
+                    ${emojiPickerHtml('📌', `cl-ei-${list.id}`, `cl-ei-btn-${list.id}`, `cl-ei-pick-${list.id}`)}
                     <input id="cl-ti-${list.id}" type="text" placeholder="Item title"
                         class="chores-admin-input chores-admin-input-grow">
                     <input id="cl-di-${list.id}" type="text" placeholder="Detail (optional)"
@@ -641,7 +627,7 @@ export function renderChecklistsAdminSectionHtml() {
 
     html += `
         <div class="chores-admin-add-form" style="margin-top:8px;">
-            ${_emojiPickerHtml('📋', 'cl-new-icon', 'cl-new-icon-btn', 'cl-new-icon-pick')}
+            ${emojiPickerHtml('📋', 'cl-new-icon', 'cl-new-icon-btn', 'cl-new-icon-pick')}
             <input id="cl-new-name" type="text" placeholder="New checklist name"
                 class="chores-admin-input chores-admin-input-grow">
             <button class="chore-btn approve-btn" onclick="adminAddChecklist()">+</button>

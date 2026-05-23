@@ -47,7 +47,7 @@ FamilyDashboard/
 | Sheet | Columns |
 |-------|---------|
 | Config | Key \| Value |
-| Points Log | Date \| Kid \| Daily BP \| Total BP \| Prize Coins \| Type \| Note |
+| Points Log | Date \| Kid \| Daily BP \| Total BP \| Type \| Note |
 | Chores | Kid \| Chore ID \| Chore Name \| BP \| Multiplier |
 | Activities | Kid \| Activity ID \| Activity Name \| BP \| Multiplier \| Max Per Week |
 | Rewards | ID \| Name \| Cost \| Icon \| Text Fallback |

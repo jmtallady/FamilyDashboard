@@ -1,6 +1,7 @@
 // theme.js - Theme & Dark Mode Management
 
 import { getConfig } from './config.js';
+import { parseEmoji } from './utils.js';
 
 /**
  * Toggle dark mode on/off
@@ -12,13 +13,7 @@ export function toggleDarkMode() {
     const iconElement = document.getElementById('darkModeIcon');
     iconElement.textContent = isDark ? '☀️' : '🌙';
 
-    // Re-parse the emoji with Twemoji after changing it
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(iconElement, {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(iconElement);
 }
 
 /**
@@ -31,13 +26,7 @@ export function loadDarkMode() {
         const iconElement = document.getElementById('darkModeIcon');
         iconElement.textContent = '☀️';
 
-        // Parse the emoji with Twemoji
-        if (typeof twemoji !== 'undefined') {
-            twemoji.parse(iconElement, {
-                folder: 'svg',
-                ext: '.svg'
-            });
-        }
+        parseEmoji(iconElement);
     }
 }
 

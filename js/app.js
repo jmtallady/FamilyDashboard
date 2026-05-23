@@ -2,6 +2,7 @@
 
 // Import all modules
 import { fetchConfig, setConfig, getConfig } from './config.js';
+import { parseEmoji } from './utils.js';
 import { setUseGoogleSheets, setChores, setRewards, setActivities, getUseGoogleSheets, getChores, getActivities } from './state.js';
 import * as Theme from './theme.js';
 import * as Weather from './weather.js';
@@ -213,13 +214,7 @@ async function initialize() {
     ParentDash.updateParentBadge();
     await RecentActivity.renderRecentActivity(); // Load and display from Points Log
 
-    // Parse emojis with Twemoji (converts emoji to images)
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(document.body, {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(document.body);
 }
 
 // Modal open/close helpers for Rewards and Activities
@@ -382,6 +377,7 @@ window.closeActivitiesModal  = closeActivitiesModal;
 
 // Menu / meal planning functions
 window.adminToggleMenuSection      = ParentDash.adminToggleMenuSection;
+window.toggleMealLibrary           = ParentDash.adminToggleMealLibrary;
 window.adminSetMealForDate         = ParentDash.adminSetMealForDate;
 window.adminRandomMealForDate      = ParentDash.adminRandomMealForDate;
 window.adminApproveDinnerRequest   = ParentDash.adminApproveDinnerRequest;
@@ -521,8 +517,48 @@ window.adminMoveChecklistItem       = Checklists.adminMoveChecklistItem;
 window.applyModalTimeout = ModalTimeout.applyModalTimeout;
 window.getModalTimeoutSettings = ModalTimeout.getModalTimeoutSettings;
 
-window.toggleSettingsSection = ParentDash.toggleSettingsSection;
-window.saveModalTimeoutSettings = ParentDash.saveModalTimeoutSettings;
+window.toggleSettingsSection       = ParentDash.toggleSettingsSection;
+window.saveModalTimeoutSettings    = ParentDash.saveModalTimeoutSettings;
+window.adminSaveParentPin          = ParentDash.adminSaveParentPin;
+window.adminSaveRequirePin         = ParentDash.adminSaveRequirePin;
+window.adminSaveWeather            = ParentDash.adminSaveWeather;
+window.adminSaveCalendar           = ParentDash.adminSaveCalendar;
+
+// Activities admin
+window.setChoresSearch             = ParentDash.setChoresSearch;
+window.setActivitiesSearch         = ParentDash.setActivitiesSearch;
+window.setRewardsSearch            = ParentDash.setRewardsSearch;
+window.toggleActivitiesAdmin       = ParentDash.toggleActivitiesAdmin;
+window.adminAddActivity            = ParentDash.adminAddActivity;
+window.adminEditActivity           = ParentDash.adminEditActivity;
+window.adminSaveActivityEdit       = ParentDash.adminSaveActivityEdit;
+window.adminSetActivityMultiplier  = ParentDash.adminSetActivityMultiplier;
+
+// Rewards admin
+window.toggleRewardsAdmin          = ParentDash.toggleRewardsAdmin;
+window.adminEditReward             = ParentDash.adminEditReward;
+window.adminCancelRewardEdit       = ParentDash.adminCancelRewardEdit;
+window.adminSaveRewardEdit         = ParentDash.adminSaveRewardEdit;
+window.adminDeleteReward           = ParentDash.adminDeleteReward;
+window.adminConfirmDeleteReward    = ParentDash.adminConfirmDeleteReward;
+
+// House Rules admin
+window.toggleRulesAdmin            = ParentDash.toggleRulesAdmin;
+window.adminEditHouseRule          = ParentDash.adminEditHouseRule;
+window.adminCancelRuleEdit         = ParentDash.adminCancelRuleEdit;
+window.adminSaveHouseRuleEdit      = ParentDash.adminSaveHouseRuleEdit;
+window.adminDeleteHouseRule        = ParentDash.adminDeleteHouseRule;
+window.adminConfirmDeleteHouseRule = ParentDash.adminConfirmDeleteHouseRule;
+
+// Kids admin
+window.toggleKidsAdmin             = ParentDash.toggleKidsAdmin;
+window.adminEditKid                = ParentDash.adminEditKid;
+window.adminCancelKidEdit          = ParentDash.adminCancelKidEdit;
+window.adminSaveKidEdit            = ParentDash.adminSaveKidEdit;
+window.adminDeleteKid              = ParentDash.adminDeleteKid;
+window.adminConfirmDeleteKid       = ParentDash.adminConfirmDeleteKid;
+window.adminCancelDelete           = ParentDash.adminCancelDelete;
+window.adminAutoFillKidId          = ParentDash.adminAutoFillKidId;
 
 // Rewards functions
 window.showKidSelector = Rewards.showKidSelector;

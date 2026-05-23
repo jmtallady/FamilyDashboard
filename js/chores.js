@@ -5,7 +5,7 @@ import { getConfig, SHEETS_API_URL } from './config.js';
 import { getChores, setChores, getIsUnlocked, getUseGoogleSheets } from './state.js';
 import { adjustDailyBP } from './points.js';
 import { showPinModal } from './auth.js';
-import { getKidByID, showMessage } from './utils.js';
+import { getKidByID, showMessage, parseEmoji } from './utils.js';
 import { savePointsToSheets, setChoreMultiplier, fetchChores, saveDailyStatusToSheets } from './api.js';
 import { addPendingApproval, removePendingApproval } from './parent-dashboard.js';
 import { renderRecentActivity } from './recent-activity.js';
@@ -217,13 +217,7 @@ export function renderChores() {
     html += '</div>';
     container.innerHTML = html;
 
-    // Parse emojis in chores section
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(document.getElementById('choresContainer'), {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(document.getElementById('choresContainer'));
 }
 
 // Module-level variables

@@ -4,7 +4,7 @@ import { fetchRecentPointsLog, savePointsToSheets } from './api.js';
 import { getConfig, SHEETS_API_URL } from './config.js';
 import { getIsUnlocked, getUseGoogleSheets } from './state.js';
 import { showPinModal } from './auth.js';
-import { getKidByName, showMessage } from './utils.js';
+import { getKidByName, showMessage, parseEmoji } from './utils.js';
 
 // ── BP delta parsing ──────────────────────────────────────────────────────────
 // Returns the signed delta that was applied to totalBP for this entry,
@@ -173,6 +173,7 @@ export async function renderRecentActivity() {
 
     html += '</div>';
     container.innerHTML = html;
+    parseEmoji(container);
 }
 
 // ── Undo ──────────────────────────────────────────────────────────────────────

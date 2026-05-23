@@ -659,10 +659,11 @@ body.dark-mode .reward-guidelines {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 8px;
+    padding: 4px 6px;
     border-radius: 6px;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     background: #f8f9fa;
+    font-size: 12px;
 }
 
 .chores-admin-row-disabled {
@@ -2947,4 +2948,65 @@ em-emoji-picker {
     --border-radius: 10px;
     height: 380px;
     width: 340px;
+}
+
+/* ── Admin panel global sizing ────────────────────────────────────────────── */
+
+/* Smaller buttons throughout the parent dashboard admin sections */
+.chores-admin-section .chore-btn {
+    padding: 3px 7px;
+    font-size: 12px;
+    min-height: 24px;
+    height: unset;
+    width: unset;
+    min-width: unset;
+    line-height: 1.4;
+}
+
+.chores-admin-section .chore-btn.approve-btn,
+.chores-admin-section .chore-btn.reject-btn {
+    min-height: 24px;
+}
+
+/* Smaller emoji/icon in section headers */
+.chores-admin-header {
+    font-size: 13px;
+}
+
+/* Search input */
+.admin-search-input {
+    width: 100%;
+    margin-bottom: 6px;
+    box-sizing: border-box;
+}
+
+/* Inline field labels in edit rows */
+.admin-field-label {
+    font-size: 10px;
+    color: #888;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Admin expansion styles ───────────────────────────────────────────────── */
+
+.settings-subsection-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin-bottom: 6px;
+}
+
+.kid-admin-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
 }

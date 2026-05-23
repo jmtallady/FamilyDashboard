@@ -5,7 +5,7 @@ import { getConfig, SHEETS_API_URL } from './config.js';
 import { getActivities, setActivities, getIsUnlocked, getUseGoogleSheets } from './state.js';
 import { adjustDailyBP } from './points.js';
 import { showPinModal } from './auth.js';
-import { getKidByID, showMessage } from './utils.js';
+import { getKidByID, showMessage, parseEmoji } from './utils.js';
 import { savePointsToSheets, saveDailyStatusToSheets } from './api.js';
 import { addPendingApproval, removePendingApproval } from './parent-dashboard.js';
 import { renderRecentActivity } from './recent-activity.js';
@@ -428,13 +428,7 @@ export function renderActivities() {
     html += '</div>';
     container.innerHTML = html;
 
-    // Parse emojis in activities section
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(document.getElementById('activitiesContainer'), {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(document.getElementById('activitiesContainer'));
 }
 
 // Helper functions to safely call activity functions from button data attributes

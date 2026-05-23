@@ -2,6 +2,7 @@
 
 import { fetchHouseRules } from './api.js';
 import { getHouseRules, setHouseRules } from './state.js';
+import { parseEmoji } from './utils.js';
 
 // ── Type → visual style mapping ──────────────────────────────────────────────
 // Recognised type values (set in column D of the House Rules sheet):
@@ -95,7 +96,7 @@ export async function showHouseRules() {
         }
     );
 
-    const spendingSection = section('Before Spending Prize Coins', rules.spendingRequirements,
+    const spendingSection = section('Spending Rules', rules.spendingRequirements,
         { bg: '#fff9db', border: '#f59f00', emoji: '' },
         (req, style) => ruleBox(`✓ ${req.rule}`, style)
     );
@@ -121,13 +122,7 @@ export async function showHouseRules() {
 
     container.innerHTML = html;
 
-    // Parse emojis with Twemoji
-    if (typeof twemoji !== 'undefined') {
-        twemoji.parse(container, {
-            folder: 'svg',
-            ext: '.svg'
-        });
-    }
+    parseEmoji(container);
 }
 
 /**
