@@ -966,30 +966,49 @@ function getDailyStatuses() {
       return jsonResponse({ success: true, statuses: [] });
     }
 
+    const tz = Session.getScriptTimeZone();
     const today = new Date();
-    const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    const todayStr = Utilities.formatDate(today, tz, 'yyyy-MM-dd');
+
+    // Look back 7 days so pending items from previous days remain visible
+    // until a parent approves or rejects them.
+    const cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffStr = Utilities.formatDate(cutoff, tz, 'yyyy-MM-dd');
 
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return jsonResponse({ success: true, statuses: [] });
 
     const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
 
-    // Build map of most recent status per (type, kidId, itemId) for today
+    // Build map of most recent status per (type, kidId, itemId) across the window.
+    // Rows are append-only (oldest first), so iterating in order means the last
+    // write for each key is always the most recent status — today's entries
+    // naturally override older ones.
     const statusMap = {};
-    data.forEach(row => {
-      const rowDate = row[0] ? Utilities.formatDate(new Date(row[0]), Session.getScriptTimeZone(), 'yyyy-MM-dd') : '';
-      if (rowDate !== todayStr) return;
+    data.forEach(function(row) {
+      var rowDate = row[0] ? Utilities.formatDate(new Date(row[0]), tz, 'yyyy-MM-dd') : '';
+      if (rowDate < cutoffStr || rowDate > todayStr) return;
 
-      const type = row[1] ? row[1].toString() : '';
-      const kidId = row[2] ? row[2].toString() : '';
-      const itemId = row[3] ? row[3].toString() : '';
-      const status = row[4] ? row[4].toString() : '';
+      var type   = row[1] ? row[1].toString() : '';
+      var kidId  = row[2] ? row[2].toString() : '';
+      var itemId = row[3] ? row[3].toString() : '';
+      var status = row[4] ? row[4].toString() : '';
+      if (!type || !kidId || !itemId || !status) return;
 
-      const key = `${type}-${kidId}-${itemId}`;
-      statusMap[key] = { type, kidId, itemId, status }; // last write wins
+      var key = type + '-' + kidId + '-' + itemId;
+      statusMap[key] = { type: type, kidId: kidId, itemId: itemId, status: status, date: rowDate };
     });
 
-    return jsonResponse({ success: true, statuses: Object.values(statusMap) });
+    // Return today's entries (all statuses, for chore/activity display) plus
+    // previous-day entries that are still pending (never approved or rejected).
+    // Entries that were resolved on a prior day are omitted so they don't
+    // incorrectly appear as done/approved in today's fresh slate.
+    var statuses = Object.values(statusMap)
+      .filter(function(s) { return s.date === todayStr || s.status === 'pending'; })
+      .map(function(s) { return { type: s.type, kidId: s.kidId, itemId: s.itemId, status: s.status }; });
+
+    return jsonResponse({ success: true, statuses: statuses });
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);
   }
