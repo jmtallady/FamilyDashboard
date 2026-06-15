@@ -98,6 +98,8 @@ function doPost(e) {
       return setDailyMeal(params);
     } else if (action === 'addMealRequest') {
       return addMealRequest(params);
+    } else if (action === 'deleteMealRequest') {
+      return deleteMealRequest(params);
     } else if (action === 'saveChecklists') {
       return saveChecklistsData(params);
     } else if (action === 'saveConfig') {
@@ -1392,6 +1394,28 @@ function addMealRequest(params) {
       sheet.getRange(1, 1, 1, 4).setValues([['Date', 'KidName', 'MealName', 'Timestamp']]);
     }
     sheet.appendRow([params.date, params.kidName, params.mealName, new Date().toISOString()]);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+function deleteMealRequest(params) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Meal Requests');
+    if (!sheet) return jsonResponse({ success: true });
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return jsonResponse({ success: true });
+    const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    for (var i = data.length - 1; i >= 0; i--) {
+      const rowDate = data[i][0] instanceof Date
+        ? Utilities.formatDate(data[i][0], Session.getScriptTimeZone(), 'yyyy-MM-dd')
+        : String(data[i][0]);
+      if (rowDate === params.date && String(data[i][1]) === params.kidName && String(data[i][2]) === params.mealName) {
+        sheet.deleteRow(i + 2);
+      }
+    }
     return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);

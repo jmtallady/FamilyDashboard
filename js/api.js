@@ -453,6 +453,23 @@ export async function saveMealRequest(date, kidName, mealName) {
 }
 
 /**
+ * Delete a meal request by matching date + kid + meal (fire-and-forget)
+ */
+export async function deleteMealRequest(date, kidName, mealName) {
+    if (!SHEETS_API_URL) return;
+    try {
+        await fetch(SHEETS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'deleteMealRequest', date, kidName, mealName })
+        });
+    } catch (error) {
+        console.error('Error deleting meal request:', error);
+    }
+}
+
+/**
  * Fetch pending meal requests from Google Sheets
  */
 export async function fetchMealRequests() {

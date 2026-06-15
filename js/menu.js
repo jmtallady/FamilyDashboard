@@ -6,7 +6,7 @@
 import { SHEETS_API_URL, getConfig } from './config.js';
 import { getMeals, setMeals, getUseGoogleSheets } from './state.js';
 import { fetchMeals, fetchMealPlan, saveMeal, saveDailyMeal,
-         fetchMealRequests, saveMealRequest } from './api.js';
+         fetchMealRequests, saveMealRequest, deleteMealRequest } from './api.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
 let menuSectionOpen = false;
@@ -19,6 +19,11 @@ function planKey(date) {
 }
 
 const REQUESTS_KEY = 'dinnerRequests';
+
+// Deterministic ID so the same request maps to the same ID across devices.
+function _requestId(kidName, mealName, dateStr) {
+    return `${kidName}-${mealName}-${dateStr}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
+}
 
 // ── Public meal accessors ─────────────────────────────────────────────────────
 
@@ -82,11 +87,13 @@ function _saveRequests(requests) {
 /** Adds a new dinner request; syncs to Sheets fire-and-forget. */
 export function addDinnerRequest(kidId, kidName, mealName, dateStr) {
     const req = {
-        id: Date.now().toString(36),
+        id: _requestId(kidName, mealName, dateStr),
         kidId, kidName, mealName, dateStr,
         requestedAt: new Date().toISOString()
     };
-    _saveRequests([...getDinnerRequests(), req]);
+    const existing = getDinnerRequests();
+    if (existing.some(r => r.id === req.id)) return req; // deduplicate
+    _saveRequests([...existing, req]);
     if (getUseGoogleSheets() && SHEETS_API_URL) {
         saveMealRequest(dateStr, kidName, mealName);
     }
@@ -100,11 +107,19 @@ export function approveDinnerRequest(id) {
     if (!req) return;
     setMealForDate(new Date(req.dateStr + 'T12:00:00'), req.mealName);
     _saveRequests(all.filter(r => r.id !== id));
+    if (getUseGoogleSheets() && SHEETS_API_URL) {
+        deleteMealRequest(req.dateStr, req.kidName, req.mealName);
+    }
 }
 
 /** Dismisses a request without approving. */
 export function dismissDinnerRequest(id) {
-    _saveRequests(getDinnerRequests().filter(r => r.id !== id));
+    const all = getDinnerRequests();
+    const req = all.find(r => r.id === id);
+    _saveRequests(all.filter(r => r.id !== id));
+    if (req && getUseGoogleSheets() && SHEETS_API_URL) {
+        deleteMealRequest(req.dateStr, req.kidName, req.mealName);
+    }
 }
 
 // ── Initialization ────────────────────────────────────────────────────────────
@@ -113,7 +128,9 @@ export async function initializeMeals() {
     if (!getUseGoogleSheets() || !SHEETS_API_URL) return;
 
     const daysAhead = Math.min(getConfig()?.calendar?.daysAhead ?? 7, 14);
-    const [meals, plan] = await Promise.all([fetchMeals(), fetchMealPlan(daysAhead)]);
+    const [meals, plan, sheetsRequests] = await Promise.all([
+        fetchMeals(), fetchMealPlan(daysAhead), fetchMealRequests()
+    ]);
 
     if (meals) setMeals(meals);
 
@@ -124,6 +141,21 @@ export async function initializeMeals() {
             if (!isNaN(d)) localStorage.setItem(planKey(d), mealName);
         }
     });
+
+    // Populate dinner requests from Sheets so all devices see the same pending list.
+    // Normalise the Sheets shape ({ date, kidName, mealName, requestedAt }) to the
+    // local shape ({ id, kidId, kidName, mealName, dateStr, requestedAt }).
+    if (sheetsRequests.length > 0) {
+        const normalised = sheetsRequests.map(r => ({
+            id: _requestId(r.kidName, r.mealName, r.date),
+            kidId: null,
+            kidName: r.kidName,
+            mealName: r.mealName,
+            dateStr: r.date,
+            requestedAt: r.requestedAt || ''
+        }));
+        _saveRequests(normalised);
+    }
 }
 
 // ── Admin panel toggle ────────────────────────────────────────────────────────
