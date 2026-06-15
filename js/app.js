@@ -498,6 +498,7 @@ window.viewChecklist          = Checklists.viewChecklist;
 window.viewChecklistSelector  = Checklists.viewChecklistSelector;
 window.toggleCheckItem        = Checklists.toggleCheckItem;
 window.resetChecklist         = Checklists.resetChecklist;
+window.quickAddChecklistItem  = Checklists.quickAddChecklistItem;
 // Checklists — admin
 window.toggleChecklistsAdmin      = Checklists.toggleChecklistsAdmin;
 window.toggleChecklistExpand      = Checklists.toggleChecklistExpand;

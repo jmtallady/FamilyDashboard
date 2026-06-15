@@ -90,15 +90,17 @@ function _awardChecklistBP(kidId, bp, note, type) {
     const kid = Object.values(CONFIG).find(k => k.id === kidId);
     if (!kid) return;
 
-    const totalEl = document.getElementById(`${kidId}-total-bp`);
-    const dailyEl = document.getElementById(`${kidId}-daily-bp`);
-    if (!totalEl) return;
+    // Read authoritative value from localStorage, not DOM — the DOM element may
+    // show defaultTotalBP (from config) if the page hasn't fully initialised yet.
+    const currentTotal  = parseInt(localStorage.getItem(`${kidId}-total-bp`))  || 0;
+    const currentDailyBP = parseInt(localStorage.getItem(`${kidId}-daily-bp`)) || 0;
+    const newTotalBP = currentTotal + bp;
 
-    const newTotalBP = (parseInt(totalEl.textContent) || 0) + bp;
-    const currentDailyBP = parseInt(dailyEl?.textContent) || 0;
-
-    totalEl.textContent = newTotalBP;
     localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
+    // Update DOM if the kid card is visible
+    const totalEl = document.getElementById(`${kidId}-total-bp`);
+    if (totalEl) totalEl.textContent = newTotalBP;
+
     savePointsToSheets(kidId, currentDailyBP, newTotalBP, type, note);
     renderRecentActivity();
 }
@@ -227,6 +229,16 @@ function updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDon
     saveChecklists(lists);
 }
 
+/** Add a pre-built item object to a checklist. Returns false if list not found. */
+export function addItemToChecklist(listId, item) {
+    const lists = getChecklists();
+    const list = lists.find(l => l.id === listId);
+    if (!list) return false;
+    list.items.push(item);
+    saveChecklists(lists);
+    return true;
+}
+
 function deleteChecklistItem(listId, itemId) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
@@ -346,6 +358,7 @@ function _renderListView(list) {
                     <div class="cl-item-title">${item.title}</div>
                     ${item.detail ? `<div class="cl-item-detail">${item.detail}</div>` : ''}
                 </div>
+                ${item.bp > 0 ? `<div class="cl-item-bp">+${item.bp} BP</div>` : ''}
             </div>`;
     }).join('');
 
@@ -363,7 +376,22 @@ function _renderListView(list) {
             ${items || '<div class="cl-empty">No items in this list yet.</div>'}
         </div>
         ${full ? '<div class="cl-banner">🏆 All done!</div>' : ''}
+        <div class="cl-quick-add">
+            <input id="cl-qa-${list.id}" type="text" class="cl-qa-input" placeholder="Add a task…"
+                onkeydown="if(event.key==='Enter')quickAddChecklistItem('${list.id}')">
+            <button class="cl-qa-btn" onclick="quickAddChecklistItem('${list.id}')">+</button>
+        </div>
         ${total > 0 ? `<button class="cl-reset-btn" onclick="resetChecklist('${list.id}')">↺ Reset</button>` : ''}`;
+}
+
+/** Quick-add a plain task from the list view. No points, auto-deletes when checked. */
+export function quickAddChecklistItem(listId) {
+    const input = document.getElementById(`cl-qa-${listId}`);
+    const title = input?.value.trim();
+    if (!title) return;
+    addChecklistItem(listId, '', title, '', true, 0, null);
+    if (input) input.value = '';
+    _renderModal();
 }
 
 // ── Admin panel (rendered inside parent dashboard) ────────────────────────────

@@ -139,20 +139,14 @@ export async function updateCalendar() {
         const hasHoliday = usHolidayName || hasCalendarHoliday;
         const holidayLabel = usHolidayName || '';
 
-        // Build events HTML for this day
+        // Build events HTML for this day — show all events, no cap
         let eventsHtml = '';
         if (dayEvents.length > 0) {
-            const eventsList = dayEvents.slice(0, 3).map(event => {
+            eventsHtml = dayEvents.map(event => {
                 const title = event.title.length > 100 ? event.title.substring(0, 100) + '...' : event.title;
                 const timeStr = event.allDay ? '' : new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
                 return `<div class="day-event">${timeStr ? timeStr + ' ' : ''}${title}</div>`;
             }).join('');
-
-            if (dayEvents.length > 3) {
-                eventsHtml = eventsList + `<div class="day-event-more">+${dayEvents.length - 3} more</div>`;
-            } else {
-                eventsHtml = eventsList;
-            }
         }
 
         const isToday = i === 0;

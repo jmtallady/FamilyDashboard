@@ -3,7 +3,7 @@
 // Per-day planned meals: "Daily Meal" sheet (date | mealName) + localStorage.
 // Kid dinner requests: "Meal Requests" sheet + localStorage.
 
-import { SHEETS_API_URL } from './config.js';
+import { SHEETS_API_URL, getConfig } from './config.js';
 import { getMeals, setMeals, getUseGoogleSheets } from './state.js';
 import { fetchMeals, fetchMealPlan, saveMeal, saveDailyMeal,
          fetchMealRequests, saveMealRequest } from './api.js';
@@ -112,7 +112,8 @@ export function dismissDinnerRequest(id) {
 export async function initializeMeals() {
     if (!getUseGoogleSheets() || !SHEETS_API_URL) return;
 
-    const [meals, plan] = await Promise.all([fetchMeals(), fetchMealPlan(8)]);
+    const daysAhead = Math.min(getConfig()?.calendar?.daysAhead ?? 7, 14);
+    const [meals, plan] = await Promise.all([fetchMeals(), fetchMealPlan(daysAhead)]);
 
     if (meals) setMeals(meals);
 

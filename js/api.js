@@ -310,14 +310,14 @@ export async function setChoreMultiplier(choreId, kidId, multiplier) {
 /**
  * Add a new chore to Google Sheets
  */
-export async function addChoreToSheets(kidId, choreId, choreName, bp, multiplier) {
+export async function addChoreToSheets(kidId, choreId, choreName, bp, multiplier, schedule = '') {
     if (!SHEETS_API_URL) return false;
     try {
         await fetch(SHEETS_API_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'addChore', kidId: kidId || '', choreId, choreName, bp, multiplier })
+            body: JSON.stringify({ action: 'addChore', kidId: kidId || '', choreId, choreName, bp, multiplier, schedule })
         });
         return true;
     } catch (error) {
@@ -327,16 +327,16 @@ export async function addChoreToSheets(kidId, choreId, choreName, bp, multiplier
 }
 
 /**
- * Update a chore's name and BP in Google Sheets
+ * Update a chore's name, BP, and schedule in Google Sheets
  */
-export async function updateChoreInSheets(choreId, kidId, choreName, bp) {
+export async function updateChoreInSheets(choreId, kidId, choreName, bp, schedule = '') {
     if (!SHEETS_API_URL) return false;
     try {
         await fetch(SHEETS_API_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'updateChore', choreId, kidId: kidId || '', choreName, bp })
+            body: JSON.stringify({ action: 'updateChore', choreId, kidId: kidId || '', choreName, bp, schedule })
         });
         return true;
     } catch (error) {

@@ -5,7 +5,7 @@ import { getConfig, SHEETS_API_URL } from './config.js';
 import { getRewards, getUseGoogleSheets, setPinContext, resetPinContext } from './state.js';
 import { savePointsToSheets } from './api.js';
 import { showPinModal } from './auth.js';
-import { getKidByID, showMessage } from './utils.js';
+import { getKidByID, showMessage, parseEmoji } from './utils.js';
 import { generateKidCards } from './ui.js';
 import { renderRecentActivity } from './recent-activity.js';
 
@@ -83,7 +83,9 @@ export function showKidSelector(rewardId, rewardName, cost, icon) {
 
     html += '</div>';
 
-    document.getElementById('kidSelectorContent').innerHTML = html;
+    const selectorContent = document.getElementById('kidSelectorContent');
+    selectorContent.innerHTML = html;
+    parseEmoji(selectorContent);
     document.getElementById('kidSelectorModal').classList.add('active');
 }
 
@@ -206,4 +208,5 @@ export function renderRewards() {
 
     html += '</div>';
     container.innerHTML = html;
+    parseEmoji(container);
 }
