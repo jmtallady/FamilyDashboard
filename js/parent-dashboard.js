@@ -536,7 +536,10 @@ function choreAdminRow(chore, kidId) {
 
     const checklists = getChecklists().filter(l => l.enabled !== false);
     const clOptions = checklists.length
-        ? checklists.map(l => `<option value="${l.id}">${l.icon ? l.icon + ' ' : ''}${l.name}</option>`).join('')
+        ? checklists.map(l => {
+            const lKidName = l.assignedKid ? Object.values(getConfig() || {}).find(k => k.id === l.assignedKid)?.name : null;
+            return `<option value="${l.id}">${l.icon ? l.icon + ' ' : ''}${l.name}${lKidName ? ` (${lKidName})` : ''}</option>`;
+        }).join('')
         : `<option value="">No checklists available</option>`;
 
     const kidName = kidId
