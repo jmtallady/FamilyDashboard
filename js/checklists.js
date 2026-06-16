@@ -6,6 +6,7 @@ import { fetchChecklistsFromSheets, saveChecklistsToSheets, saveDailyStatusToShe
 import { getUseGoogleSheets } from './state.js';
 import { getConfig } from './config.js';
 import { renderRecentActivity } from './recent-activity.js';
+import { addPendingApproval, removePendingApproval, getPendingApprovals } from './parent-dashboard.js';
 
 
 const LIST_KEY  = 'checklists';
@@ -88,55 +89,82 @@ function toggleCheck(listId, itemId) {
     saveChecks(listId, c);
     saveDailyStatusToSheets('checklist', listId, itemId, nowChecked ? 'checked' : 'unchecked');
 
-    if (!nowChecked) return;
-
     const lists = getChecklists();
     const list  = lists.find(l => l.id === listId);
     if (!list) return;
     const item  = list.items.find(it => it.id === itemId);
-    const today = todayStr();
 
-    // Award per-item BP (once per day)
+    // Per-item BP: queue for parent approval (same flow as chores)
     if (item?.bp > 0 && item.awardTo) {
-        const ptsKey = `checklist-pts-${listId}-${itemId}-${today}`;
-        if (!localStorage.getItem(ptsKey)) {
-            _awardChecklistBP(item.awardTo, item.bp,
-                `Checked '${item.title}' — added ${item.bp} BP to bank`, 'checklist-item');
-            localStorage.setItem(ptsKey, 'awarded');
+        if (nowChecked) {
+            const CONFIG = getConfig();
+            const kid = Object.values(CONFIG || {}).find(k => k.id === item.awardTo);
+            addPendingApproval({
+                type: 'checklist-item',
+                kidId: item.awardTo,
+                kidName: kid?.name || item.awardTo,
+                itemId: item.id,
+                itemName: item.title,
+                bp: item.bp,
+                multiplier: 1
+            });
+        } else {
+            removePendingApproval(item.awardTo, item.id, 'checklist-item');
         }
     }
 
-    // Award list-completion bonus (once per day, only when all items checked)
+    if (!nowChecked) return;
+
+    // Completion bonus: direct to bank (no approval — bonus for finishing the whole list)
+    const today = todayStr();
     if (list.completionBp > 0 && list.completionAwardTo) {
         const completeKey = `checklist-pts-complete-${listId}-${today}`;
         const allChecked  = list.items.filter(it => _shouldShowToday(it.schedule)).every(it => c.includes(it.id));
         if (allChecked && !localStorage.getItem(completeKey)) {
-            _awardChecklistBP(list.completionAwardTo, list.completionBp,
+            _awardToBank(list.completionAwardTo, list.completionBp,
                 `Completed checklist '${list.name}' — added ${list.completionBp} BP to bank`, 'checklist-complete');
             localStorage.setItem(completeKey, 'awarded');
         }
     }
 }
 
-function _awardChecklistBP(kidId, bp, note, type) {
+// Awards BP directly to the bank (total-bp). Used for the list-completion bonus
+// and for parent-approved per-item BP (same pattern as approveChore).
+function _awardToBank(kidId, bp, note, type) {
     const CONFIG = getConfig();
     if (!CONFIG) return;
     const kid = Object.values(CONFIG).find(k => k.id === kidId);
     if (!kid) return;
 
-    // Add to daily-bp (same as chore approval) — not directly to the bank.
-    // Read from localStorage, not DOM, so the value is accurate even if
-    // the kid card rendered before points initialised.
-    const currentDailyBP = parseInt(localStorage.getItem(`${kidId}-daily-bp`)) || 0;
     const currentTotalBP = parseInt(localStorage.getItem(`${kidId}-total-bp`)) || 0;
-    const newDailyBP = currentDailyBP + bp;
+    const currentDailyBP = parseInt(localStorage.getItem(`${kidId}-daily-bp`)) || 0;
+    const newTotalBP = currentTotalBP + bp;
 
-    localStorage.setItem(`${kidId}-daily-bp`, newDailyBP.toString());
-    const dailyEl = document.getElementById(`${kidId}-daily-bp`);
-    if (dailyEl) dailyEl.textContent = newDailyBP;
+    localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
+    const totalEl = document.getElementById(`${kidId}-total-bp`);
+    if (totalEl) totalEl.textContent = newTotalBP;
 
-    savePointsToSheets(kidId, newDailyBP, currentTotalBP, type, note);
+    savePointsToSheets(kidId, currentDailyBP, newTotalBP, type, note);
     renderRecentActivity();
+}
+
+/** Called by the parent dashboard when a pending checklist-item BP is approved. */
+export function approveChecklistItem(kidId, itemId, bp, itemName) {
+    const kid = Object.values(getConfig() || {}).find(k => k.id === kidId);
+    if (!kid) return;
+    _awardToBank(kidId, bp, `Approved task: ${itemName} (+${bp} BP to bank)`, 'checklist-approved');
+    showMessage(`✅ Approved! ${kid.name} earned ${bp} BP for: ${itemName}`);
+}
+
+/** Called by the parent dashboard when a pending checklist-item BP is rejected. */
+export function rejectChecklistItem(kidId, itemId) {
+    // Find which list contains this item and un-check it
+    const lists = getChecklists();
+    const list = lists.find(l => l.items.some(it => it.id === itemId));
+    if (!list) return;
+    const checks = getChecks(list.id).filter(id => id !== itemId);
+    saveChecks(list.id, checks);
+    if (_viewId === list.id) _renderModal();
 }
 
 function _kidOptions(selectedId = '') {
@@ -384,12 +412,18 @@ function _renderListView(list) {
     const pct    = total ? Math.round(done / total * 100) : 0;
     const full   = total > 0 && done === total;
 
+    const pendingIds = new Set(
+        getPendingApprovals().filter(p => p.type === 'checklist-item').map(p => p.itemId)
+    );
+
     const items = visibleItems.map(item => {
         const isDone = checks.includes(item.id);
+        const isPending = isDone && pendingIds.has(item.id);
+        const checkIcon = isPending ? '⏳' : (isDone ? '✓' : '');
         return `
             <div class="cl-item${isDone ? ' cl-item-done' : ''}"
                 onclick="toggleCheckItem('${list.id}','${item.id}')">
-                <div class="cl-check-circle${isDone ? ' cl-checked' : ''}">${isDone ? '✓' : ''}</div>
+                <div class="cl-check-circle${isDone ? ' cl-checked' : ''}">${checkIcon}</div>
                 <div class="cl-item-emoji">${item.emoji}</div>
                 <div class="cl-item-body">
                     <div class="cl-item-title">${item.title}</div>

@@ -17,7 +17,8 @@ import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChor
 import { endOfDayAll } from './points.js';
 import { renderMenuSectionHtml, toggleMenuSection, toggleMealLibrary, getMealForDate, setMealForDate,
          getRandomMeal, addMealToCache, approveDinnerRequest, dismissDinnerRequest } from './menu.js';
-import { renderChecklistsAdminSectionHtml, getChecklists, addItemToChecklist } from './checklists.js';
+import { renderChecklistsAdminSectionHtml, getChecklists, addItemToChecklist,
+         approveChecklistItem, rejectChecklistItem } from './checklists.js';
 import { updateCalendar } from './calendar.js';
 
 const STORAGE_KEY = 'pending-approvals';
@@ -152,7 +153,7 @@ export function renderParentDashboard() {
                 const bpDisplay = item.multiplier > 1
                     ? `${item.bp}×${item.multiplier} = ${totalBP} BP`
                     : `${totalBP} BP`;
-                const typeIcon = item.type === 'chore' ? '🧹' : '⭐';
+                const typeIcon = item.type === 'chore' ? '🧹' : item.type === 'checklist-item' ? '✅' : '⭐';
                 const age = formatAge(item.markedAt);
 
                 html += `
@@ -195,6 +196,8 @@ export function renderParentDashboard() {
 export async function parentDashApprove(type, kidId, itemId, itemName, bp, multiplier) {
     if (type === 'chore') {
         await approveChore(kidId, itemId, itemName, bp, multiplier);
+    } else if (type === 'checklist-item') {
+        approveChecklistItem(kidId, itemId, bp, itemName);
     } else {
         await approveActivity(kidId, itemId, itemName, bp, multiplier);
     }
@@ -205,6 +208,8 @@ export async function parentDashApprove(type, kidId, itemId, itemName, bp, multi
 export function parentDashReject(type, kidId, itemId, itemName) {
     if (type === 'chore') {
         rejectChore(kidId, itemId, itemName);
+    } else if (type === 'checklist-item') {
+        rejectChecklistItem(kidId, itemId);
     } else {
         rejectActivity(kidId, itemId, itemName);
     }
