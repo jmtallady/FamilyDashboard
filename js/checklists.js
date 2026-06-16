@@ -109,7 +109,7 @@ function toggleCheck(listId, itemId) {
     // Award list-completion bonus (once per day, only when all items checked)
     if (list.completionBp > 0 && list.completionAwardTo) {
         const completeKey = `checklist-pts-complete-${listId}-${today}`;
-        const allChecked  = list.items.every(it => c.includes(it.id));
+        const allChecked  = list.items.filter(it => _shouldShowToday(it.schedule)).every(it => c.includes(it.id));
         if (allChecked && !localStorage.getItem(completeKey)) {
             _awardChecklistBP(list.completionAwardTo, list.completionBp,
                 `Completed checklist '${list.name}' — added ${list.completionBp} BP to bank`, 'checklist-complete');
@@ -124,18 +124,18 @@ function _awardChecklistBP(kidId, bp, note, type) {
     const kid = Object.values(CONFIG).find(k => k.id === kidId);
     if (!kid) return;
 
-    // Read authoritative value from localStorage, not DOM — the DOM element may
-    // show defaultTotalBP (from config) if the page hasn't fully initialised yet.
-    const currentTotal  = parseInt(localStorage.getItem(`${kidId}-total-bp`))  || 0;
+    // Add to daily-bp (same as chore approval) — not directly to the bank.
+    // Read from localStorage, not DOM, so the value is accurate even if
+    // the kid card rendered before points initialised.
     const currentDailyBP = parseInt(localStorage.getItem(`${kidId}-daily-bp`)) || 0;
-    const newTotalBP = currentTotal + bp;
+    const currentTotalBP = parseInt(localStorage.getItem(`${kidId}-total-bp`)) || 0;
+    const newDailyBP = currentDailyBP + bp;
 
-    localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
-    // Update DOM if the kid card is visible
-    const totalEl = document.getElementById(`${kidId}-total-bp`);
-    if (totalEl) totalEl.textContent = newTotalBP;
+    localStorage.setItem(`${kidId}-daily-bp`, newDailyBP.toString());
+    const dailyEl = document.getElementById(`${kidId}-daily-bp`);
+    if (dailyEl) dailyEl.textContent = newDailyBP;
 
-    savePointsToSheets(kidId, currentDailyBP, newTotalBP, type, note);
+    savePointsToSheets(kidId, newDailyBP, currentTotalBP, type, note);
     renderRecentActivity();
 }
 
