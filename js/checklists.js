@@ -15,6 +15,7 @@ const CLEAR_KEY = 'checklist-last-cleared';
 // ── Schedule helpers (mirrors chore scheduling in apps-script.js) ─────────────
 
 function _shouldShowToday(schedule) {
+    if (schedule === 'none') return false;
     if (!schedule || schedule === 'daily') return true;
     const abbrevs = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const today = abbrevs[new Date().getDay()];
@@ -40,6 +41,7 @@ function _scheduleSelect(id, current) {
         ['Mon', 'Mon only'], ['Tue', 'Tue only'], ['Wed', 'Wed only'],
         ['Thu', 'Thu only'], ['Fri', 'Fri only'],
         ['Sat', 'Sat only'], ['Sun', 'Sun only'],
+        ['none', 'None (disabled)'],
     ];
     return `<select id="${id}" class="chores-admin-input" title="Schedule">`
         + opts.map(([v, l]) => `<option value="${v}"${v === current ? ' selected' : ''}>${l}</option>`).join('')
@@ -94,22 +96,24 @@ function toggleCheck(listId, itemId) {
     if (!list) return;
     const item  = list.items.find(it => it.id === itemId);
 
-    // Per-item BP: queue for parent approval (same flow as chores)
-    if (item?.bp > 0 && item.awardTo) {
+    // Per-item BP: queue for parent approval (same flow as chores).
+    // Falls back to list.assignedKid when the item has no explicit awardTo.
+    const effectiveKidId = item?.awardTo || list.assignedKid;
+    if (item?.bp > 0 && effectiveKidId) {
         if (nowChecked) {
             const CONFIG = getConfig();
-            const kid = Object.values(CONFIG || {}).find(k => k.id === item.awardTo);
+            const kid = Object.values(CONFIG || {}).find(k => k.id === effectiveKidId);
             addPendingApproval({
                 type: 'checklist-item',
-                kidId: item.awardTo,
-                kidName: kid?.name || item.awardTo,
+                kidId: effectiveKidId,
+                kidName: kid?.name || effectiveKidId,
                 itemId: item.id,
                 itemName: item.title,
                 bp: item.bp,
                 multiplier: 1
             });
         } else {
-            removePendingApproval(item.awardTo, item.id, 'checklist-item');
+            removePendingApproval(effectiveKidId, item.id, 'checklist-item');
         }
     }
 
@@ -231,7 +235,7 @@ function addChecklist(name, icon) {
     const lists = getChecklists();
     const id = `cl-${Date.now()}`;
     lists.push({ id, name: name.trim(), icon: (icon ?? '').trim(), items: [], enabled: true,
-        completionBp: 0, completionAwardTo: null });
+        assignedKid: null, completionBp: 0, completionAwardTo: null });
     saveChecklists(lists);
     return id;
 }
@@ -247,12 +251,13 @@ function deleteChecklist(id) {
     saveChecklists(getChecklists().filter(l => l.id !== id));
 }
 
-function updateChecklist(listId, name, icon, completionBp, completionAwardTo) {
+function updateChecklist(listId, name, icon, assignedKid, completionBp, completionAwardTo) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
     if (list) {
         list.name = name.trim();
         list.icon = (icon ?? '').trim();
+        list.assignedKid = assignedKid || null;
         list.completionBp = parseInt(completionBp) || 0;
         list.completionAwardTo = completionAwardTo || null;
     }
@@ -517,10 +522,11 @@ export function adminEditChecklist(listId) {
 export function adminSaveChecklist(listId) {
     const name          = document.getElementById(`cl-ln-${listId}`)?.value.trim();
     const icon          = (document.getElementById(`cl-li-${listId}`)?.value ?? '').trim();
+    const assignedKid   = document.getElementById(`cl-akid-${listId}`)?.value || '';
     const completionBp  = document.getElementById(`cl-cbp-${listId}`)?.value || '0';
     const completionAwardTo = document.getElementById(`cl-ckid-${listId}`)?.value || '';
     if (!name) { showMessage('Enter a checklist name'); return; }
-    updateChecklist(listId, name, icon, completionBp, completionAwardTo);
+    updateChecklist(listId, name, icon, assignedKid, completionBp, completionAwardTo);
     _editingListId = null;
     _rerender();
 }
@@ -602,6 +608,12 @@ export function renderChecklistsAdminSectionHtml() {
                     ${emojiPickerHtml(list.icon, `cl-li-${list.id}`, `cl-li-btn-${list.id}`, `cl-li-pick-${list.id}`)}
                     <input id="cl-ln-${list.id}" type="text" value="${safeName}"
                         class="chores-admin-input chores-admin-input-grow">
+                    <select id="cl-akid-${list.id}" class="chores-admin-input" title="Kid this list belongs to">
+                        <option value=""${!list.assignedKid ? ' selected' : ''}>— any kid —</option>
+                        ${Object.values(getConfig() || {}).filter(k => k.id).map(k =>
+                            `<option value="${k.id}"${list.assignedKid === k.id ? ' selected' : ''}>${k.name}</option>`
+                        ).join('')}
+                    </select>
                     <input id="cl-cbp-${list.id}" type="number" min="0" value="${list.completionBp || 0}"
                         class="chores-admin-input chores-admin-input-sm" placeholder="Bonus BP" title="BP awarded on full completion">
                     <select id="cl-ckid-${list.id}" class="chores-admin-input" title="Kid who earns the completion bonus">
@@ -623,6 +635,7 @@ export function renderChecklistsAdminSectionHtml() {
                     onclick="toggleChecklistExpand('${list.id}')">
                     <span>${list.icon} ${list.name}
                         <span class="chores-admin-meta">${list.items.length} items</span>
+                        ${list.assignedKid ? `<span class="chores-admin-meta" style="color:var(--primary-color)">${Object.values(getConfig()||{}).find(k=>k.id===list.assignedKid)?.name||list.assignedKid}</span>` : ''}
                         ${!isEnabled ? `<span class="chores-admin-meta cl-dwd-tag">disabled</span>` : ''}
                     </span>
                     <div style="display:flex;gap:4px;align-items:center;">
@@ -654,9 +667,10 @@ export function renderChecklistsAdminSectionHtml() {
                                 class="chores-admin-input chores-admin-input-grow" placeholder="Detail (optional)">
                             <input id="cl-bp-e-${item.id}" type="number" min="0" value="${item.bp || 0}"
                                 class="chores-admin-input chores-admin-input-sm" placeholder="BP" title="BP awarded on check">
-                            <select id="cl-kid-e-${item.id}" class="chores-admin-input" title="Kid who earns the BP">
-                                ${_kidOptions(item.awardTo || '')}
-                            </select>
+                            ${list.assignedKid
+                                ? `<input type="hidden" id="cl-kid-e-${item.id}" value="${list.assignedKid}">
+                                   <span class="chores-admin-input" style="background:none;color:var(--primary-color);pointer-events:none;">${Object.values(getConfig()||{}).find(k=>k.id===list.assignedKid)?.name||'?'}</span>`
+                                : `<select id="cl-kid-e-${item.id}" class="chores-admin-input" title="Kid who earns the BP">${_kidOptions(item.awardTo || '')}</select>`}
                             ${_scheduleSelect(`cl-sch-e-${item.id}`, item.schedule || '')}
                             <input type="checkbox" id="cl-dwd-e-${item.id}" style="display:none" ${dwdChecked}>
                             <button type="button" id="cl-dwd-btn-e-${item.id}"
@@ -705,9 +719,10 @@ export function renderChecklistsAdminSectionHtml() {
                         class="chores-admin-input chores-admin-input-grow">
                     <input id="cl-bp-${list.id}" type="number" min="0" value="0"
                         class="chores-admin-input chores-admin-input-sm" placeholder="BP" title="BP awarded on check">
-                    <select id="cl-kid-${list.id}" class="chores-admin-input" title="Kid who earns the BP">
-                        ${_kidOptions('')}
-                    </select>
+                    ${list.assignedKid
+                        ? `<input type="hidden" id="cl-kid-${list.id}" value="${list.assignedKid}">
+                           <span class="chores-admin-input" style="background:none;color:var(--primary-color);pointer-events:none;">${Object.values(getConfig()||{}).find(k=>k.id===list.assignedKid)?.name||'?'}</span>`
+                        : `<select id="cl-kid-${list.id}" class="chores-admin-input" title="Kid who earns the BP">${_kidOptions('')}</select>`}
                     ${_scheduleSelect(`cl-sch-${list.id}`, '')}
                     <input type="checkbox" id="cl-dwd-${list.id}" style="display:none">
                     <button type="button" id="cl-dwd-btn-${list.id}"
