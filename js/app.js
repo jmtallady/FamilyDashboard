@@ -95,6 +95,14 @@ function syncPendingApprovalsFromStatuses(statuses) {
                     if (item) break;
                 }
             }
+        } else if (s.type === 'checklist-item') {
+            for (const list of Checklists.getChecklists()) {
+                const found = list.items.find(it => it.id === s.itemId);
+                if (found) {
+                    item = { name: found.title, bp: found.bp || 0, multiplier: 1 };
+                    break;
+                }
+            }
         }
         if (!item) return;
 
