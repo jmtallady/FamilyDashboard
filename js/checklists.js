@@ -500,15 +500,6 @@ export function adminDeleteChecklistItem(listId, itemId) {
     _rerender();
 }
 
-export function addItemToChecklist(listId, item) {
-    const lists = getChecklists();
-    const list = lists.find(l => l.id === listId);
-    if (!list) return false;
-    list.items.push(item);
-    saveChecklists(lists);
-    return true;
-}
-
 export function adminMoveChecklistItem(listId, itemId, dir) {
     moveChecklistItem(listId, itemId, dir);
     _rerender();
