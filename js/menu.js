@@ -206,10 +206,11 @@ export function renderMenuSectionHtml() {
         });
     }
 
-    // ── 7-day meal planner ───────────────────────────────────────────────────
-    html += `<div class="chores-admin-group-label" style="margin-top:10px;">📅 This Week's Plan</div>`;
+    // ── Meal planner (daysAhead days) ────────────────────────────────────────
+    const daysAhead = Math.min(getConfig()?.calendar?.daysAhead ?? 7, 14);
+    html += `<div class="chores-admin-group-label" style="margin-top:10px;">📅 Next ${daysAhead} Days</div>`;
     const today = new Date();
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < daysAhead; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
         const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

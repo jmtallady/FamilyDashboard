@@ -8,7 +8,7 @@ import { parseEmoji } from './utils.js';
  * Fetch weather data from Open-Meteo API
  * @returns {Object|null} Weather data or null if unavailable
  */
-export async function fetchWeatherData() {
+export async function fetchWeatherData(days = 8) {
     const CONFIG = getConfig();
     if (!CONFIG.weather || !CONFIG.weather.latitude || !CONFIG.weather.longitude) {
         console.log('Weather location not configured');
@@ -17,7 +17,8 @@ export async function fetchWeatherData() {
 
     try {
         const { latitude, longitude, timezone } = CONFIG.weather;
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=${timezone}&temperature_unit=fahrenheit&forecast_days=8`;
+        const forecastDays = Math.max(8, Math.min(days, 16)); // open-meteo supports up to 16
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=${timezone}&temperature_unit=fahrenheit&forecast_days=${forecastDays}`;
 
         const response = await fetch(url);
         if (!response.ok) {

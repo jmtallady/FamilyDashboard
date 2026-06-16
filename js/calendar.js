@@ -87,9 +87,11 @@ export async function updateCalendar() {
     const CONFIG = getConfig();
     const calendarWidget = document.getElementById('calendarWidget');
 
+    const daysAhead = Math.min(CONFIG.calendar?.daysAhead ?? 7, 14);
+
     // Fetch weather and calendar data in parallel
     const [weatherData, events] = await Promise.all([
-        fetchWeatherData(),
+        fetchWeatherData(daysAhead),
         CONFIG.calendar && CONFIG.calendar.enabled ? fetchCalendarEvents() : Promise.resolve(null)
     ]);
 
@@ -98,17 +100,16 @@ export async function updateCalendar() {
         return;
     }
 
-    // Build 8-day view
     const today = new Date();
     const daysHtml = [];
 
-    // Pre-build US holiday map for the years covered by our 7-day window
+    // Pre-build US holiday map for the years covered by our window
     const usHolidays = new Map([
         ...getUSHolidays(today.getFullYear()),
         ...getUSHolidays(today.getFullYear() + 1)
     ]);
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < daysAhead; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
 
