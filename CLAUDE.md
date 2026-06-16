@@ -55,6 +55,14 @@ FamilyDashboard/
 | Daily Status | Date \| Type \| KidId \| ItemId \| Status |
 | Recent Activity | Timestamp \| Type \| Kid Name \| Item Name \| Icon |
 
+## Cross-Device Sync Rule
+**All user-facing data must be cross-device compatible** — any state a kid or parent creates on one device must be visible on every other device after the next sync (load or 2-min poll). The only exceptions are UI preferences (theme, dark mode, modal open/closed state).
+
+Practically this means:
+- Every write that changes shared state (check, complete, approve, reject, request, etc.) must also call `saveDailyStatusToSheets` or the appropriate Sheets write so other devices pick it up.
+- `syncPendingApprovalsFromStatuses` in `app.js` must handle every approval `type` (`chore`, `activity`, `checklist-item`, …) so the rebuild from Sheets is complete.
+- When adding a new approval type, add it to **both** the write path (status → Sheets on check/uncheck) and the read path (`syncPendingApprovalsFromStatuses`).
+
 ## Key Patterns
 - **Status keys**: `chore-{kidId}-{choreId}-{today}` and `activity-{kidId}-{activityId}-{today}` in localStorage
 - **Weekly count keys**: `activity-week-{kidId}-{activityId}-{weekStart}` in localStorage
@@ -62,6 +70,7 @@ FamilyDashboard/
 - **Global onclick handlers**: functions must be on `window.*` (see bottom of app.js)
 - **Type styles in house rules**: `good` / `warning` / `bad` / `info` mapped in `TYPE_STYLES` (house-rules.js)
 - **Chore removal after approval**: set multiplier to 0 in Sheets → re-fetch chores list
+- **Daily Status types**: `chore`, `activity`, `checklist` (check marks), `checklist-item` (BP approvals)
 
 ## Apps Script Deployment
 After any change to `apps-script.js`:

@@ -112,8 +112,10 @@ function toggleCheck(listId, itemId) {
                 bp: item.bp,
                 multiplier: 1
             });
+            saveDailyStatusToSheets('checklist-item', effectiveKidId, item.id, 'pending');
         } else {
             removePendingApproval(effectiveKidId, item.id, 'checklist-item');
+            saveDailyStatusToSheets('checklist-item', effectiveKidId, item.id, 'unchecked');
         }
     }
 
@@ -157,6 +159,7 @@ export function approveChecklistItem(kidId, itemId, bp, itemName) {
     const kid = Object.values(getConfig() || {}).find(k => k.id === kidId);
     if (!kid) return;
     _awardToBank(kidId, bp, `Approved task: ${itemName} (+${bp} BP to bank)`, 'checklist-approved');
+    saveDailyStatusToSheets('checklist-item', kidId, itemId, 'approved');
     showMessage(`✅ Approved! ${kid.name} earned ${bp} BP for: ${itemName}`);
 }
 
@@ -168,6 +171,7 @@ export function rejectChecklistItem(kidId, itemId) {
     if (!list) return;
     const checks = getChecks(list.id).filter(id => id !== itemId);
     saveChecks(list.id, checks);
+    saveDailyStatusToSheets('checklist-item', kidId, itemId, 'rejected');
     if (_viewId === list.id) _renderModal();
 }
 
