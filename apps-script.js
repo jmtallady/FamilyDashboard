@@ -98,6 +98,8 @@ function doPost(e) {
       return setDailyMeal(params);
     } else if (action === 'addMealRequest') {
       return addMealRequest(params);
+    } else if (action === 'deleteMealRequest') {
+      return deleteMealRequest(params);
     } else if (action === 'saveChecklists') {
       return saveChecklistsData(params);
     } else if (action === 'saveConfig') {
@@ -631,9 +633,25 @@ function getCalendarEvents(daysParam) {
   }
 }
 
+// ====== CHORE SCHEDULE HELPERS ======
+// Schedule column (F) values:
+//   ""  or "daily"          → every day (default)
+//   "Weekdays"              → Mon–Fri
+//   "Weekends"              → Sat–Sun
+//   "Mon,Wed,Fri"  etc.     → comma-separated 3-letter day abbreviations
+function _shouldShowChoreToday(schedule) {
+  if (!schedule || schedule === 'daily') return true;
+  var dayAbbrevs = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var todayAbbr  = dayAbbrevs[new Date().getDay()];
+  if (schedule === 'Weekdays') return ['Mon','Tue','Wed','Thu','Fri'].indexOf(todayAbbr) !== -1;
+  if (schedule === 'Weekends') return ['Sat','Sun'].indexOf(todayAbbr) !== -1;
+  return schedule.split(',').map(function(s){ return s.trim(); }).indexOf(todayAbbr) !== -1;
+}
+
 // ====== GET CHORES ======
 // Returns chores configuration from the Chores sheet
 // Pass includeDisabled=true to include rows with multiplier <= 0 (for admin panel)
+// Sheet columns: Kid | Chore ID | Chore Name | BP | Multiplier | Schedule
 function getChores(includeDisabled) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chores');
@@ -649,22 +667,27 @@ function getChores(includeDisabled) {
     };
 
     // Skip header row, read chore data
-    // Expected columns: Kid | Chore ID | Chore Name | BP | Multiplier
+    // Expected columns: Kid | Chore ID | Chore Name | BP | Multiplier | Schedule (optional col F)
     for (let i = 1; i < data.length; i++) {
-      const [kid, choreId, choreName, bp, multiplier] = data[i];
+      const [kid, choreId, choreName, bp, multiplier, scheduleRaw] = data[i];
 
       if (!choreId || !choreName) continue; // Skip empty rows
 
       const rawMultiplier = parseInt(multiplier);
+      const schedule = scheduleRaw ? scheduleRaw.toString().trim() : '';
 
-      // Skip chores with multiplier <= 0 (disabled chores) unless admin view
+      // Skip chores with multiplier <= 0 (disabled) unless admin view
       if (!includeDisabled && !isNaN(rawMultiplier) && rawMultiplier <= 0) continue;
+
+      // Skip chores not scheduled for today (admin sees all regardless)
+      if (!includeDisabled && !_shouldShowChoreToday(schedule)) continue;
 
       const chore = {
         id: choreId.toString().toLowerCase(),
         name: choreName,
         bp: parseInt(bp) || 1,
-        multiplier: isNaN(rawMultiplier) ? 1 : rawMultiplier
+        multiplier: isNaN(rawMultiplier) ? 1 : rawMultiplier,
+        schedule: schedule
       };
 
       // If kid column is blank, add to shared list
@@ -877,21 +900,23 @@ function getHouseRules() {
 
 // ====== ADD CHORE ======
 // Appends a new row to the Chores sheet
+// Sheet columns: Kid | Chore ID | Chore Name | BP | Multiplier | Schedule
 function addChore(params) {
   try {
-    const { kidId, choreId, choreName, bp, multiplier } = params;
+    const { kidId, choreId, choreName, bp, multiplier, schedule } = params;
     if (!choreId || !choreName) return jsonResponse({ error: 'Missing choreId or choreName' }, 400);
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chores');
     if (!sheet) return jsonResponse({ error: 'Chores sheet not found' }, 404);
 
     const newRow = sheet.getLastRow() + 1;
-    sheet.getRange(newRow, 1, 1, 5).setValues([[
+    sheet.getRange(newRow, 1, 1, 6).setValues([[
       kidId || '',
       choreId.toString().toLowerCase(),
       choreName,
       parseInt(bp) || 1,
-      parseInt(multiplier) || 1
+      parseInt(multiplier) || 1,
+      schedule || ''
     ]]);
 
     return jsonResponse({ success: true, row: newRow });
@@ -901,10 +926,10 @@ function addChore(params) {
 }
 
 // ====== UPDATE CHORE ======
-// Updates name and BP for an existing chore row
+// Updates name, BP, and schedule for an existing chore row
 function updateChore(params) {
   try {
-    const { choreId, kidId, choreName, bp } = params;
+    const { choreId, kidId, choreName, bp, schedule } = params;
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chores');
     if (!sheet) return jsonResponse({ error: 'Chores sheet not found' }, 404);
 
@@ -918,6 +943,7 @@ function updateChore(params) {
       if (choreMatch && kidMatch) {
         if (choreName) sheet.getRange(i + 1, 3).setValue(choreName);
         if (bp !== undefined) sheet.getRange(i + 1, 4).setValue(parseInt(bp) || 1);
+        if (schedule !== undefined) sheet.getRange(i + 1, 6).setValue(schedule || '');
         return jsonResponse({ success: true, row: i + 1 });
       }
     }
@@ -1368,6 +1394,28 @@ function addMealRequest(params) {
       sheet.getRange(1, 1, 1, 4).setValues([['Date', 'KidName', 'MealName', 'Timestamp']]);
     }
     sheet.appendRow([params.date, params.kidName, params.mealName, new Date().toISOString()]);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ error: error.toString() }, 500);
+  }
+}
+
+function deleteMealRequest(params) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Meal Requests');
+    if (!sheet) return jsonResponse({ success: true });
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return jsonResponse({ success: true });
+    const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    for (var i = data.length - 1; i >= 0; i--) {
+      const rowDate = data[i][0] instanceof Date
+        ? Utilities.formatDate(data[i][0], Session.getScriptTimeZone(), 'yyyy-MM-dd')
+        : String(data[i][0]);
+      if (rowDate === params.date && String(data[i][1]) === params.kidName && String(data[i][2]) === params.mealName) {
+        sheet.deleteRow(i + 2);
+      }
+    }
     return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({ error: error.toString() }, 500);

@@ -17,7 +17,8 @@ import { addChoreToSheets, updateChoreInSheets, setChoreMultiplier, fetchAllChor
 import { endOfDayAll } from './points.js';
 import { renderMenuSectionHtml, toggleMenuSection, toggleMealLibrary, getMealForDate, setMealForDate,
          getRandomMeal, addMealToCache, approveDinnerRequest, dismissDinnerRequest } from './menu.js';
-import { renderChecklistsAdminSectionHtml, getChecklists, addItemToChecklist } from './checklists.js';
+import { renderChecklistsAdminSectionHtml, getChecklists, addItemToChecklist,
+         approveChecklistItem, rejectChecklistItem } from './checklists.js';
 import { updateCalendar } from './calendar.js';
 
 const STORAGE_KEY = 'pending-approvals';
@@ -152,7 +153,7 @@ export function renderParentDashboard() {
                 const bpDisplay = item.multiplier > 1
                     ? `${item.bp}×${item.multiplier} = ${totalBP} BP`
                     : `${totalBP} BP`;
-                const typeIcon = item.type === 'chore' ? '🧹' : '⭐';
+                const typeIcon = item.type === 'chore' ? '🧹' : item.type === 'checklist-item' ? '✅' : '⭐';
                 const age = formatAge(item.markedAt);
 
                 html += `
@@ -195,6 +196,8 @@ export function renderParentDashboard() {
 export async function parentDashApprove(type, kidId, itemId, itemName, bp, multiplier) {
     if (type === 'chore') {
         await approveChore(kidId, itemId, itemName, bp, multiplier);
+    } else if (type === 'checklist-item') {
+        approveChecklistItem(kidId, itemId, bp, itemName);
     } else {
         await approveActivity(kidId, itemId, itemName, bp, multiplier);
     }
@@ -205,6 +208,8 @@ export async function parentDashApprove(type, kidId, itemId, itemName, bp, multi
 export function parentDashReject(type, kidId, itemId, itemName) {
     if (type === 'chore') {
         rejectChore(kidId, itemId, itemName);
+    } else if (type === 'checklist-item') {
+        rejectChecklistItem(kidId, itemId);
     } else {
         rejectActivity(kidId, itemId, itemName);
     }
@@ -330,7 +335,8 @@ function renderSettingsSectionHtml() {
                         Show upcoming events
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;">
-                        Days ahead: <input type="number" id="cal-days" value="${calendar.daysAhead ?? 7}" min="1" max="30"
+                        Days ahead (calendar &amp; meals):
+                        <input type="number" id="cal-days" value="${calendar.daysAhead ?? 7}" min="1" max="14"
                             class="chores-admin-input chores-admin-input-sm">
                     </label>
                     <button class="chore-btn approve-btn" onclick="adminSaveCalendar()" title="Save calendar settings">Save</button>
@@ -471,13 +477,15 @@ function renderChoresSectionHtml() {
 
     // Add form
     html += `
-        <div class="chores-admin-add-form">
+        <div class="chores-admin-add-form" style="flex-wrap:wrap;">
             <select id="newChoreKid" class="chores-admin-input">
                 <option value="">Shared</option>
                 ${kidOptions}
             </select>
             <input id="newChoreName" type="text" placeholder="Chore name" class="chores-admin-input chores-admin-input-grow">
+            <span class="admin-field-label">BP</span>
             <input id="newChoreBP" type="number" placeholder="BP" value="1" min="1" class="chores-admin-input chores-admin-input-sm">
+            ${_scheduleSelect('newChoreSchedule', '')}
             <button class="chore-btn approve-btn" onclick="adminAddChore()" title="Add chore">+</button>
         </div>
     </div></div>`;
@@ -485,18 +493,53 @@ function renderChoresSectionHtml() {
     return html;
 }
 
+function _scheduleLabel(schedule) {
+    if (!schedule || schedule === 'daily') return '';
+    if (schedule === 'Weekdays') return 'M–F';
+    if (schedule === 'Weekends') return 'Sa–Su';
+    // Comma-separated day abbreviations → shorten to first letters
+    return schedule.split(',').map(d => d.trim().slice(0, 2)).join('/');
+}
+
+function _scheduleSelect(id, current) {
+    const opts = [
+        ['', 'Daily'],
+        ['Weekdays', 'Weekdays (M–F)'],
+        ['Weekends', 'Weekends (Sa–Su)'],
+        ['Mon,Wed,Fri', 'Mon / Wed / Fri'],
+        ['Tue,Thu', 'Tue / Thu'],
+        ['Mon,Tue,Wed,Thu,Fri,Sat,Sun'.split(',').slice(0,1)[0], 'Mon only'],
+        ['Tue', 'Tue only'],
+        ['Wed', 'Wed only'],
+        ['Thu', 'Thu only'],
+        ['Fri', 'Fri only'],
+        ['Sat', 'Sat only'],
+        ['Sun', 'Sun only'],
+    ];
+    const options = opts.map(([v, l]) =>
+        `<option value="${v}"${v === (current || '') ? ' selected' : ''}>${l}</option>`
+    ).join('');
+    return `<select id="${id}" class="chores-admin-input" title="Schedule">${options}</select>`;
+}
+
 function choreAdminRow(chore, kidId) {
     const safeName = chore.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const safeSchedule = (chore.schedule || '').replace(/'/g, "\\'");
     const isDisabled = chore.multiplier === 0;
     const moveKey = `${kidId}|${chore.id}`;
     const isMoving = _movingChoreKey === moveKey;
     const nameHtml = isDisabled
         ? `<span class="chore-name chores-admin-disabled-name">${chore.name}</span>`
         : `<span class="chore-name">${chore.name}</span>`;
+    const schedLabel = _scheduleLabel(chore.schedule);
+    const schedBadge = schedLabel ? `<span class="chores-admin-meta">${schedLabel}</span>` : '';
 
     const checklists = getChecklists().filter(l => l.enabled !== false);
     const clOptions = checklists.length
-        ? checklists.map(l => `<option value="${l.id}">${l.icon ? l.icon + ' ' : ''}${l.name}</option>`).join('')
+        ? checklists.map(l => {
+            const lKidName = l.assignedKid ? Object.values(getConfig() || {}).find(k => k.id === l.assignedKid)?.name : null;
+            return `<option value="${l.id}">${l.icon ? l.icon + ' ' : ''}${l.name}${lKidName ? ` (${lKidName})` : ''}</option>`;
+        }).join('')
         : `<option value="">No checklists available</option>`;
 
     const kidName = kidId
@@ -527,6 +570,7 @@ function choreAdminRow(chore, kidId) {
             <div class="chores-admin-row-info">
                 ${nameHtml}
                 <span class="chores-admin-meta">${chore.bp} BP</span>
+                ${schedBadge}
             </div>
             <div class="chores-admin-row-actions">
                 <label class="chores-admin-mult-label">×</label>
@@ -536,8 +580,8 @@ function choreAdminRow(chore, kidId) {
                     onchange="adminSetMultiplier('${kidId}', '${chore.id}', this.value)">
                 <button class="chore-btn" title="Move to checklist"
                     onclick="adminStartMoveChore('${kidId}','${chore.id}')">📋</button>
-                <button class="chore-btn" title="Edit name/BP"
-                    onclick="adminEditChore('${kidId}', '${chore.id}', '${safeName}', ${chore.bp})">✏️</button>
+                <button class="chore-btn" title="Edit name/BP/schedule"
+                    onclick="adminEditChore('${kidId}', '${chore.id}', '${safeName}', ${chore.bp}, '${safeSchedule}')">✏️</button>
             </div>
         </div>
         ${moveForm}`;
@@ -576,34 +620,38 @@ export function adminSetMultiplier(kidId, choreId, rawValue) {
     renderParentDashboard();
 }
 
-export function adminEditChore(kidId, choreId, currentName, currentBP) {
+export function adminEditChore(kidId, choreId, currentName, currentBP, currentSchedule) {
     const rowEl = document.getElementById(`chore-admin-${kidId}-${choreId}`);
     if (!rowEl) return;
     rowEl.innerHTML = `
         <input type="text" value="${currentName}" id="editChoreName-${kidId}-${choreId}" class="chores-admin-input chores-admin-input-grow" placeholder="Chore name">
         <span class="admin-field-label">BP</span>
         <input type="number" value="${currentBP}" id="editChoreBP-${kidId}-${choreId}" class="chores-admin-input chores-admin-input-sm">
+        ${_scheduleSelect(`editChoreSchedule-${kidId}-${choreId}`, currentSchedule || '')}
         <button class="chore-btn approve-btn" onclick="adminSaveChoreEdit('${kidId}', '${choreId}')" title="Save">✓</button>
         <button class="chore-btn" onclick="renderParentDashboard()" title="Cancel">✗</button>
     `;
     rowEl.style.display = 'flex';
     rowEl.style.gap = '6px';
     rowEl.style.alignItems = 'center';
+    rowEl.style.flexWrap = 'wrap';
 }
 
 export async function adminSaveChoreEdit(kidId, choreId) {
-    const nameEl = document.getElementById(`editChoreName-${kidId}-${choreId}`);
-    const bpEl = document.getElementById(`editChoreBP-${kidId}-${choreId}`);
+    const nameEl     = document.getElementById(`editChoreName-${kidId}-${choreId}`);
+    const bpEl       = document.getElementById(`editChoreBP-${kidId}-${choreId}`);
+    const schedEl    = document.getElementById(`editChoreSchedule-${kidId}-${choreId}`);
     if (!nameEl || !bpEl) return;
 
-    const newName = nameEl.value.trim();
-    const newBP = parseInt(bpEl.value) || 1;
+    const newName     = nameEl.value.trim();
+    const newBP       = parseInt(bpEl.value) || 1;
+    const newSchedule = schedEl?.value || '';
     if (!newName) { showMessage('Chore name cannot be empty'); return; }
 
     // Update allChoresCache and active CHORES state
     const updateChore = (list) => {
         const chore = (list || []).find(c => c.id === choreId);
-        if (chore) { chore.name = newName; chore.bp = newBP; }
+        if (chore) { chore.name = newName; chore.bp = newBP; chore.schedule = newSchedule; }
     };
     if (kidId === '') {
         updateChore(allChoresCache?.shared);
@@ -614,23 +662,24 @@ export async function adminSaveChoreEdit(kidId, choreId) {
     }
 
     // Fire-and-forget to Sheets
-    updateChoreInSheets(choreId, kidId, newName, newBP);
+    updateChoreInSheets(choreId, kidId, newName, newBP, newSchedule);
 
     showMessage(`Chore updated: ${newName}`);
     renderParentDashboard();
 }
 
 export async function adminAddChore() {
-    const kidId = document.getElementById('newChoreKid')?.value || '';
+    const kidId   = document.getElementById('newChoreKid')?.value || '';
     const choreName = document.getElementById('newChoreName')?.value.trim() || '';
-    const bp = parseInt(document.getElementById('newChoreBP')?.value) || 1;
+    const bp       = parseInt(document.getElementById('newChoreBP')?.value) || 1;
+    const schedule = document.getElementById('newChoreSchedule')?.value || '';
 
     if (!choreName) { showMessage('Chore name is required'); return; }
 
     // Generate a unique chore ID from the name + timestamp
     const choreId = choreName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Date.now().toString(36);
 
-    const newChore = { id: choreId, name: choreName, bp, multiplier: 1 };
+    const newChore = { id: choreId, name: choreName, bp, multiplier: 1, schedule };
 
     // Update active CHORES state and allChoresCache
     const CHORES = getChores() || { shared: [], individual: {} };
@@ -650,7 +699,7 @@ export async function adminAddChore() {
     setChores(CHORES);
 
     // Fire-and-forget to Sheets
-    addChoreToSheets(kidId, choreId, choreName, bp, 1);
+    addChoreToSheets(kidId, choreId, choreName, bp, 1, schedule);
 
     showMessage(`Chore added: ${choreName}`);
     renderParentDashboard();

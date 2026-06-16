@@ -6,10 +6,47 @@ import { fetchChecklistsFromSheets, saveChecklistsToSheets, saveDailyStatusToShe
 import { getUseGoogleSheets } from './state.js';
 import { getConfig } from './config.js';
 import { renderRecentActivity } from './recent-activity.js';
+import { addPendingApproval, removePendingApproval, getPendingApprovals } from './parent-dashboard.js';
 
 
 const LIST_KEY  = 'checklists';
 const CLEAR_KEY = 'checklist-last-cleared';
+
+// ── Schedule helpers (mirrors chore scheduling in apps-script.js) ─────────────
+
+function _shouldShowToday(schedule) {
+    if (schedule === 'none') return false;
+    if (!schedule || schedule === 'daily') return true;
+    const abbrevs = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const today = abbrevs[new Date().getDay()];
+    if (schedule === 'Weekdays') return ['Mon','Tue','Wed','Thu','Fri'].includes(today);
+    if (schedule === 'Weekends') return ['Sat','Sun'].includes(today);
+    return schedule.split(',').map(s => s.trim()).includes(today);
+}
+
+function _scheduleLabel(schedule) {
+    if (!schedule || schedule === 'daily') return '';
+    if (schedule === 'Weekdays') return 'M–F';
+    if (schedule === 'Weekends') return 'Sa–Su';
+    return schedule.split(',').map(d => d.trim().slice(0, 2)).join('/');
+}
+
+function _scheduleSelect(id, current) {
+    const opts = [
+        ['', 'Daily'],
+        ['Weekdays', 'Weekdays (M–F)'],
+        ['Weekends', 'Weekends (Sa–Su)'],
+        ['Mon,Wed,Fri', 'Mon / Wed / Fri'],
+        ['Tue,Thu', 'Tue / Thu'],
+        ['Mon', 'Mon only'], ['Tue', 'Tue only'], ['Wed', 'Wed only'],
+        ['Thu', 'Thu only'], ['Fri', 'Fri only'],
+        ['Sat', 'Sat only'], ['Sun', 'Sun only'],
+        ['none', 'None (disabled)'],
+    ];
+    return `<select id="${id}" class="chores-admin-input" title="Schedule">`
+        + opts.map(([v, l]) => `<option value="${v}"${v === current ? ' selected' : ''}>${l}</option>`).join('')
+        + `</select>`;
+}
 
 // ── Storage helpers ───────────────────────────────────────────────────────────
 
@@ -54,53 +91,84 @@ function toggleCheck(listId, itemId) {
     saveChecks(listId, c);
     saveDailyStatusToSheets('checklist', listId, itemId, nowChecked ? 'checked' : 'unchecked');
 
-    if (!nowChecked) return;
-
     const lists = getChecklists();
     const list  = lists.find(l => l.id === listId);
     if (!list) return;
     const item  = list.items.find(it => it.id === itemId);
-    const today = todayStr();
 
-    // Award per-item BP (once per day)
-    if (item?.bp > 0 && item.awardTo) {
-        const ptsKey = `checklist-pts-${listId}-${itemId}-${today}`;
-        if (!localStorage.getItem(ptsKey)) {
-            _awardChecklistBP(item.awardTo, item.bp,
-                `Checked '${item.title}' — added ${item.bp} BP to bank`, 'checklist-item');
-            localStorage.setItem(ptsKey, 'awarded');
+    // Per-item BP: queue for parent approval (same flow as chores).
+    // Falls back to list.assignedKid when the item has no explicit awardTo.
+    const effectiveKidId = item?.awardTo || list.assignedKid;
+    if (item?.bp > 0 && effectiveKidId) {
+        if (nowChecked) {
+            const CONFIG = getConfig();
+            const kid = Object.values(CONFIG || {}).find(k => k.id === effectiveKidId);
+            addPendingApproval({
+                type: 'checklist-item',
+                kidId: effectiveKidId,
+                kidName: kid?.name || effectiveKidId,
+                itemId: item.id,
+                itemName: item.title,
+                bp: item.bp,
+                multiplier: 1
+            });
+        } else {
+            removePendingApproval(effectiveKidId, item.id, 'checklist-item');
         }
     }
 
-    // Award list-completion bonus (once per day, only when all items checked)
+    if (!nowChecked) return;
+
+    // Completion bonus: direct to bank (no approval — bonus for finishing the whole list)
+    const today = todayStr();
     if (list.completionBp > 0 && list.completionAwardTo) {
         const completeKey = `checklist-pts-complete-${listId}-${today}`;
-        const allChecked  = list.items.every(it => c.includes(it.id));
+        const allChecked  = list.items.filter(it => _shouldShowToday(it.schedule)).every(it => c.includes(it.id));
         if (allChecked && !localStorage.getItem(completeKey)) {
-            _awardChecklistBP(list.completionAwardTo, list.completionBp,
+            _awardToBank(list.completionAwardTo, list.completionBp,
                 `Completed checklist '${list.name}' — added ${list.completionBp} BP to bank`, 'checklist-complete');
             localStorage.setItem(completeKey, 'awarded');
         }
     }
 }
 
-function _awardChecklistBP(kidId, bp, note, type) {
+// Awards BP directly to the bank (total-bp). Used for the list-completion bonus
+// and for parent-approved per-item BP (same pattern as approveChore).
+function _awardToBank(kidId, bp, note, type) {
     const CONFIG = getConfig();
     if (!CONFIG) return;
     const kid = Object.values(CONFIG).find(k => k.id === kidId);
     if (!kid) return;
 
-    const totalEl = document.getElementById(`${kidId}-total-bp`);
-    const dailyEl = document.getElementById(`${kidId}-daily-bp`);
-    if (!totalEl) return;
+    const currentTotalBP = parseInt(localStorage.getItem(`${kidId}-total-bp`)) || 0;
+    const currentDailyBP = parseInt(localStorage.getItem(`${kidId}-daily-bp`)) || 0;
+    const newTotalBP = currentTotalBP + bp;
 
-    const newTotalBP = (parseInt(totalEl.textContent) || 0) + bp;
-    const currentDailyBP = parseInt(dailyEl?.textContent) || 0;
-
-    totalEl.textContent = newTotalBP;
     localStorage.setItem(`${kidId}-total-bp`, newTotalBP.toString());
+    const totalEl = document.getElementById(`${kidId}-total-bp`);
+    if (totalEl) totalEl.textContent = newTotalBP;
+
     savePointsToSheets(kidId, currentDailyBP, newTotalBP, type, note);
     renderRecentActivity();
+}
+
+/** Called by the parent dashboard when a pending checklist-item BP is approved. */
+export function approveChecklistItem(kidId, itemId, bp, itemName) {
+    const kid = Object.values(getConfig() || {}).find(k => k.id === kidId);
+    if (!kid) return;
+    _awardToBank(kidId, bp, `Approved task: ${itemName} (+${bp} BP to bank)`, 'checklist-approved');
+    showMessage(`✅ Approved! ${kid.name} earned ${bp} BP for: ${itemName}`);
+}
+
+/** Called by the parent dashboard when a pending checklist-item BP is rejected. */
+export function rejectChecklistItem(kidId, itemId) {
+    // Find which list contains this item and un-check it
+    const lists = getChecklists();
+    const list = lists.find(l => l.items.some(it => it.id === itemId));
+    if (!list) return;
+    const checks = getChecks(list.id).filter(id => id !== itemId);
+    saveChecks(list.id, checks);
+    if (_viewId === list.id) _renderModal();
 }
 
 function _kidOptions(selectedId = '') {
@@ -167,7 +235,7 @@ function addChecklist(name, icon) {
     const lists = getChecklists();
     const id = `cl-${Date.now()}`;
     lists.push({ id, name: name.trim(), icon: (icon ?? '').trim(), items: [], enabled: true,
-        completionBp: 0, completionAwardTo: null });
+        assignedKid: null, completionBp: 0, completionAwardTo: null });
     saveChecklists(lists);
     return id;
 }
@@ -183,19 +251,20 @@ function deleteChecklist(id) {
     saveChecklists(getChecklists().filter(l => l.id !== id));
 }
 
-function updateChecklist(listId, name, icon, completionBp, completionAwardTo) {
+function updateChecklist(listId, name, icon, assignedKid, completionBp, completionAwardTo) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
     if (list) {
         list.name = name.trim();
         list.icon = (icon ?? '').trim();
+        list.assignedKid = assignedKid || null;
         list.completionBp = parseInt(completionBp) || 0;
         list.completionAwardTo = completionAwardTo || null;
     }
     saveChecklists(lists);
 }
 
-function addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo) {
+function addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
     if (!list) return;
@@ -207,11 +276,12 @@ function addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awar
         deleteWhenDone: !!deleteWhenDone,
         bp: parseInt(bp) || 0,
         awardTo: awardTo || null,
+        schedule: schedule || '',
     });
     saveChecklists(lists);
 }
 
-function updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo) {
+function updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
     if (!list) return;
@@ -223,8 +293,19 @@ function updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDon
         item.deleteWhenDone = !!deleteWhenDone;
         item.bp             = parseInt(bp) || 0;
         item.awardTo        = awardTo || null;
+        item.schedule       = schedule || '';
     }
     saveChecklists(lists);
+}
+
+/** Add a pre-built item object to a checklist. Returns false if list not found. */
+export function addItemToChecklist(listId, item) {
+    const lists = getChecklists();
+    const list = lists.find(l => l.id === listId);
+    if (!list) return false;
+    list.items.push(item);
+    saveChecklists(lists);
+    return true;
 }
 
 function deleteChecklistItem(listId, itemId) {
@@ -330,22 +411,30 @@ function _renderListView(list) {
     if (!list) { _viewId = null; return _renderSelector(getChecklists()); }
 
     const checks = getChecks(list.id);
-    const total  = list.items.length;
-    const done   = list.items.filter(i => checks.includes(i.id)).length;
+    const visibleItems = list.items.filter(item => _shouldShowToday(item.schedule));
+    const total  = visibleItems.length;
+    const done   = visibleItems.filter(i => checks.includes(i.id)).length;
     const pct    = total ? Math.round(done / total * 100) : 0;
     const full   = total > 0 && done === total;
 
-    const items = list.items.map(item => {
+    const pendingIds = new Set(
+        getPendingApprovals().filter(p => p.type === 'checklist-item').map(p => p.itemId)
+    );
+
+    const items = visibleItems.map(item => {
         const isDone = checks.includes(item.id);
+        const isPending = isDone && pendingIds.has(item.id);
+        const checkIcon = isPending ? '⏳' : (isDone ? '✓' : '');
         return `
             <div class="cl-item${isDone ? ' cl-item-done' : ''}"
                 onclick="toggleCheckItem('${list.id}','${item.id}')">
-                <div class="cl-check-circle${isDone ? ' cl-checked' : ''}">${isDone ? '✓' : ''}</div>
+                <div class="cl-check-circle${isDone ? ' cl-checked' : ''}">${checkIcon}</div>
                 <div class="cl-item-emoji">${item.emoji}</div>
                 <div class="cl-item-body">
                     <div class="cl-item-title">${item.title}</div>
                     ${item.detail ? `<div class="cl-item-detail">${item.detail}</div>` : ''}
                 </div>
+                ${item.bp > 0 ? `<div class="cl-item-bp">+${item.bp} BP</div>` : ''}
             </div>`;
     }).join('');
 
@@ -363,7 +452,22 @@ function _renderListView(list) {
             ${items || '<div class="cl-empty">No items in this list yet.</div>'}
         </div>
         ${full ? '<div class="cl-banner">🏆 All done!</div>' : ''}
+        <div class="cl-quick-add">
+            <input id="cl-qa-${list.id}" type="text" class="cl-qa-input" placeholder="Add a task…"
+                onkeydown="if(event.key==='Enter')quickAddChecklistItem('${list.id}')">
+            <button class="cl-qa-btn" onclick="quickAddChecklistItem('${list.id}')">+</button>
+        </div>
         ${total > 0 ? `<button class="cl-reset-btn" onclick="resetChecklist('${list.id}')">↺ Reset</button>` : ''}`;
+}
+
+/** Quick-add a plain task from the list view. No points, auto-deletes when checked. */
+export function quickAddChecklistItem(listId) {
+    const input = document.getElementById(`cl-qa-${listId}`);
+    const title = input?.value.trim();
+    if (!title) return;
+    addChecklistItem(listId, '', title, '', true, 0, null);
+    if (input) input.value = '';
+    _renderModal();
 }
 
 // ── Admin panel (rendered inside parent dashboard) ────────────────────────────
@@ -418,10 +522,10 @@ export function adminEditChecklist(listId) {
 export function adminSaveChecklist(listId) {
     const name          = document.getElementById(`cl-ln-${listId}`)?.value.trim();
     const icon          = (document.getElementById(`cl-li-${listId}`)?.value ?? '').trim();
+    const assignedKid   = document.getElementById(`cl-akid-${listId}`)?.value || '';
     const completionBp  = document.getElementById(`cl-cbp-${listId}`)?.value || '0';
-    const completionAwardTo = document.getElementById(`cl-ckid-${listId}`)?.value || '';
     if (!name) { showMessage('Enter a checklist name'); return; }
-    updateChecklist(listId, name, icon, completionBp, completionAwardTo);
+    updateChecklist(listId, name, icon, assignedKid, completionBp, assignedKid);
     _editingListId = null;
     _rerender();
 }
@@ -438,8 +542,9 @@ export function adminAddChecklistItem(listId) {
     const deleteWhenDone = document.getElementById(`cl-dwd-${listId}`)?.checked ?? false;
     const bp             = document.getElementById(`cl-bp-${listId}`)?.value || '0';
     const awardTo        = document.getElementById(`cl-kid-${listId}`)?.value || '';
+    const schedule       = document.getElementById(`cl-sch-${listId}`)?.value || '';
     if (!title) { showMessage('Enter an item title'); return; }
-    addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo);
+    addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule);
     _rerender();
 }
 
@@ -460,8 +565,9 @@ export function adminSaveChecklistItem(listId, itemId) {
     const deleteWhenDone = document.getElementById(`cl-dwd-e-${itemId}`)?.checked ?? false;
     const bp             = document.getElementById(`cl-bp-e-${itemId}`)?.value || '0';
     const awardTo        = document.getElementById(`cl-kid-e-${itemId}`)?.value || '';
+    const schedule       = document.getElementById(`cl-sch-e-${itemId}`)?.value || '';
     if (!title) { showMessage('Item title cannot be empty'); return; }
-    updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo);
+    updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule);
     _editingItemId = null;
     _rerender();
 }
@@ -470,15 +576,6 @@ export function adminDeleteChecklistItem(listId, itemId) {
     deleteChecklistItem(listId, itemId);
     _editingItemId = null;
     _rerender();
-}
-
-export function addItemToChecklist(listId, item) {
-    const lists = getChecklists();
-    const list = lists.find(l => l.id === listId);
-    if (!list) return false;
-    list.items.push(item);
-    saveChecklists(lists);
-    return true;
 }
 
 export function adminMoveChecklistItem(listId, itemId, dir) {
@@ -510,11 +607,14 @@ export function renderChecklistsAdminSectionHtml() {
                     ${emojiPickerHtml(list.icon, `cl-li-${list.id}`, `cl-li-btn-${list.id}`, `cl-li-pick-${list.id}`)}
                     <input id="cl-ln-${list.id}" type="text" value="${safeName}"
                         class="chores-admin-input chores-admin-input-grow">
+                    <select id="cl-akid-${list.id}" class="chores-admin-input" title="Assigned kid (earns all BP on this list)">
+                        <option value=""${!list.assignedKid ? ' selected' : ''}>— any kid —</option>
+                        ${Object.values(getConfig() || {}).filter(k => k.id).map(k =>
+                            `<option value="${k.id}"${list.assignedKid === k.id ? ' selected' : ''}>${k.name}</option>`
+                        ).join('')}
+                    </select>
                     <input id="cl-cbp-${list.id}" type="number" min="0" value="${list.completionBp || 0}"
                         class="chores-admin-input chores-admin-input-sm" placeholder="Bonus BP" title="BP awarded on full completion">
-                    <select id="cl-ckid-${list.id}" class="chores-admin-input" title="Kid who earns the completion bonus">
-                        ${_kidOptions(list.completionAwardTo || '')}
-                    </select>
                     <button class="chore-btn approve-btn"
                         onclick="adminSaveChecklist('${list.id}')">✓</button>
                     <button class="chore-btn"
@@ -531,6 +631,7 @@ export function renderChecklistsAdminSectionHtml() {
                     onclick="toggleChecklistExpand('${list.id}')">
                     <span>${list.icon} ${list.name}
                         <span class="chores-admin-meta">${list.items.length} items</span>
+                        ${list.assignedKid ? `<span class="chores-admin-meta" style="color:var(--primary-color)">${Object.values(getConfig()||{}).find(k=>k.id===list.assignedKid)?.name||list.assignedKid}</span>` : ''}
                         ${!isEnabled ? `<span class="chores-admin-meta cl-dwd-tag">disabled</span>` : ''}
                     </span>
                     <div style="display:flex;gap:4px;align-items:center;">
@@ -562,9 +663,11 @@ export function renderChecklistsAdminSectionHtml() {
                                 class="chores-admin-input chores-admin-input-grow" placeholder="Detail (optional)">
                             <input id="cl-bp-e-${item.id}" type="number" min="0" value="${item.bp || 0}"
                                 class="chores-admin-input chores-admin-input-sm" placeholder="BP" title="BP awarded on check">
-                            <select id="cl-kid-e-${item.id}" class="chores-admin-input" title="Kid who earns the BP">
-                                ${_kidOptions(item.awardTo || '')}
-                            </select>
+                            ${list.assignedKid
+                                ? `<input type="hidden" id="cl-kid-e-${item.id}" value="${list.assignedKid}">
+                                   <span class="chores-admin-input" style="background:none;color:var(--primary-color);pointer-events:none;">${Object.values(getConfig()||{}).find(k=>k.id===list.assignedKid)?.name||'?'}</span>`
+                                : `<select id="cl-kid-e-${item.id}" class="chores-admin-input" title="Kid who earns the BP">${_kidOptions(item.awardTo || '')}</select>`}
+                            ${_scheduleSelect(`cl-sch-e-${item.id}`, item.schedule || '')}
                             <input type="checkbox" id="cl-dwd-e-${item.id}" style="display:none" ${dwdChecked}>
                             <button type="button" id="cl-dwd-btn-e-${item.id}"
                                 class="chore-btn cl-dwd-btn${item.deleteWhenDone ? ' active' : ''}"
@@ -583,6 +686,7 @@ export function renderChecklistsAdminSectionHtml() {
                                 ${item.detail ? `<span class="chores-admin-meta">${item.detail}</span>` : ''}
                                 ${item.deleteWhenDone ? `<span class="chores-admin-meta cl-dwd-tag">auto-delete</span>` : ''}
                                 ${item.bp > 0 ? `<span class="chores-admin-meta" style="color:var(--primary-color)">+${item.bp} BP</span>` : ''}
+                                ${_scheduleLabel(item.schedule) ? `<span class="chores-admin-meta">${_scheduleLabel(item.schedule)}</span>` : ''}
                             </div>
                             <div class="chores-admin-row-actions">
                                 ${idx > 0
@@ -611,9 +715,11 @@ export function renderChecklistsAdminSectionHtml() {
                         class="chores-admin-input chores-admin-input-grow">
                     <input id="cl-bp-${list.id}" type="number" min="0" value="0"
                         class="chores-admin-input chores-admin-input-sm" placeholder="BP" title="BP awarded on check">
-                    <select id="cl-kid-${list.id}" class="chores-admin-input" title="Kid who earns the BP">
-                        ${_kidOptions('')}
-                    </select>
+                    ${list.assignedKid
+                        ? `<input type="hidden" id="cl-kid-${list.id}" value="${list.assignedKid}">
+                           <span class="chores-admin-input" style="background:none;color:var(--primary-color);pointer-events:none;">${Object.values(getConfig()||{}).find(k=>k.id===list.assignedKid)?.name||'?'}</span>`
+                        : `<select id="cl-kid-${list.id}" class="chores-admin-input" title="Kid who earns the BP">${_kidOptions('')}</select>`}
+                    ${_scheduleSelect(`cl-sch-${list.id}`, '')}
                     <input type="checkbox" id="cl-dwd-${list.id}" style="display:none">
                     <button type="button" id="cl-dwd-btn-${list.id}"
                         class="chore-btn cl-dwd-btn"
