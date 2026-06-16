@@ -11,6 +11,40 @@ import { renderRecentActivity } from './recent-activity.js';
 const LIST_KEY  = 'checklists';
 const CLEAR_KEY = 'checklist-last-cleared';
 
+// ── Schedule helpers (mirrors chore scheduling in apps-script.js) ─────────────
+
+function _shouldShowToday(schedule) {
+    if (!schedule || schedule === 'daily') return true;
+    const abbrevs = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const today = abbrevs[new Date().getDay()];
+    if (schedule === 'Weekdays') return ['Mon','Tue','Wed','Thu','Fri'].includes(today);
+    if (schedule === 'Weekends') return ['Sat','Sun'].includes(today);
+    return schedule.split(',').map(s => s.trim()).includes(today);
+}
+
+function _scheduleLabel(schedule) {
+    if (!schedule || schedule === 'daily') return '';
+    if (schedule === 'Weekdays') return 'M–F';
+    if (schedule === 'Weekends') return 'Sa–Su';
+    return schedule.split(',').map(d => d.trim().slice(0, 2)).join('/');
+}
+
+function _scheduleSelect(id, current) {
+    const opts = [
+        ['', 'Daily'],
+        ['Weekdays', 'Weekdays (M–F)'],
+        ['Weekends', 'Weekends (Sa–Su)'],
+        ['Mon,Wed,Fri', 'Mon / Wed / Fri'],
+        ['Tue,Thu', 'Tue / Thu'],
+        ['Mon', 'Mon only'], ['Tue', 'Tue only'], ['Wed', 'Wed only'],
+        ['Thu', 'Thu only'], ['Fri', 'Fri only'],
+        ['Sat', 'Sat only'], ['Sun', 'Sun only'],
+    ];
+    return `<select id="${id}" class="chores-admin-input" title="Schedule">`
+        + opts.map(([v, l]) => `<option value="${v}"${v === current ? ' selected' : ''}>${l}</option>`).join('')
+        + `</select>`;
+}
+
 // ── Storage helpers ───────────────────────────────────────────────────────────
 
 export function getChecklists() {
@@ -197,7 +231,7 @@ function updateChecklist(listId, name, icon, completionBp, completionAwardTo) {
     saveChecklists(lists);
 }
 
-function addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo) {
+function addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
     if (!list) return;
@@ -209,11 +243,12 @@ function addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awar
         deleteWhenDone: !!deleteWhenDone,
         bp: parseInt(bp) || 0,
         awardTo: awardTo || null,
+        schedule: schedule || '',
     });
     saveChecklists(lists);
 }
 
-function updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo) {
+function updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule) {
     const lists = getChecklists();
     const list = lists.find(l => l.id === listId);
     if (!list) return;
@@ -225,6 +260,7 @@ function updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDon
         item.deleteWhenDone = !!deleteWhenDone;
         item.bp             = parseInt(bp) || 0;
         item.awardTo        = awardTo || null;
+        item.schedule       = schedule || '';
     }
     saveChecklists(lists);
 }
@@ -342,12 +378,13 @@ function _renderListView(list) {
     if (!list) { _viewId = null; return _renderSelector(getChecklists()); }
 
     const checks = getChecks(list.id);
-    const total  = list.items.length;
-    const done   = list.items.filter(i => checks.includes(i.id)).length;
+    const visibleItems = list.items.filter(item => _shouldShowToday(item.schedule));
+    const total  = visibleItems.length;
+    const done   = visibleItems.filter(i => checks.includes(i.id)).length;
     const pct    = total ? Math.round(done / total * 100) : 0;
     const full   = total > 0 && done === total;
 
-    const items = list.items.map(item => {
+    const items = visibleItems.map(item => {
         const isDone = checks.includes(item.id);
         return `
             <div class="cl-item${isDone ? ' cl-item-done' : ''}"
@@ -466,8 +503,9 @@ export function adminAddChecklistItem(listId) {
     const deleteWhenDone = document.getElementById(`cl-dwd-${listId}`)?.checked ?? false;
     const bp             = document.getElementById(`cl-bp-${listId}`)?.value || '0';
     const awardTo        = document.getElementById(`cl-kid-${listId}`)?.value || '';
+    const schedule       = document.getElementById(`cl-sch-${listId}`)?.value || '';
     if (!title) { showMessage('Enter an item title'); return; }
-    addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo);
+    addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule);
     _rerender();
 }
 
@@ -488,8 +526,9 @@ export function adminSaveChecklistItem(listId, itemId) {
     const deleteWhenDone = document.getElementById(`cl-dwd-e-${itemId}`)?.checked ?? false;
     const bp             = document.getElementById(`cl-bp-e-${itemId}`)?.value || '0';
     const awardTo        = document.getElementById(`cl-kid-e-${itemId}`)?.value || '';
+    const schedule       = document.getElementById(`cl-sch-e-${itemId}`)?.value || '';
     if (!title) { showMessage('Item title cannot be empty'); return; }
-    updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo);
+    updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule);
     _editingItemId = null;
     _rerender();
 }
@@ -584,6 +623,7 @@ export function renderChecklistsAdminSectionHtml() {
                             <select id="cl-kid-e-${item.id}" class="chores-admin-input" title="Kid who earns the BP">
                                 ${_kidOptions(item.awardTo || '')}
                             </select>
+                            ${_scheduleSelect(`cl-sch-e-${item.id}`, item.schedule || '')}
                             <input type="checkbox" id="cl-dwd-e-${item.id}" style="display:none" ${dwdChecked}>
                             <button type="button" id="cl-dwd-btn-e-${item.id}"
                                 class="chore-btn cl-dwd-btn${item.deleteWhenDone ? ' active' : ''}"
@@ -602,6 +642,7 @@ export function renderChecklistsAdminSectionHtml() {
                                 ${item.detail ? `<span class="chores-admin-meta">${item.detail}</span>` : ''}
                                 ${item.deleteWhenDone ? `<span class="chores-admin-meta cl-dwd-tag">auto-delete</span>` : ''}
                                 ${item.bp > 0 ? `<span class="chores-admin-meta" style="color:var(--primary-color)">+${item.bp} BP</span>` : ''}
+                                ${_scheduleLabel(item.schedule) ? `<span class="chores-admin-meta">${_scheduleLabel(item.schedule)}</span>` : ''}
                             </div>
                             <div class="chores-admin-row-actions">
                                 ${idx > 0
@@ -633,6 +674,7 @@ export function renderChecklistsAdminSectionHtml() {
                     <select id="cl-kid-${list.id}" class="chores-admin-input" title="Kid who earns the BP">
                         ${_kidOptions('')}
                     </select>
+                    ${_scheduleSelect(`cl-sch-${list.id}`, '')}
                     <input type="checkbox" id="cl-dwd-${list.id}" style="display:none">
                     <button type="button" id="cl-dwd-btn-${list.id}"
                         class="chore-btn cl-dwd-btn"
