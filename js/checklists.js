@@ -524,9 +524,8 @@ export function adminSaveChecklist(listId) {
     const icon          = (document.getElementById(`cl-li-${listId}`)?.value ?? '').trim();
     const assignedKid   = document.getElementById(`cl-akid-${listId}`)?.value || '';
     const completionBp  = document.getElementById(`cl-cbp-${listId}`)?.value || '0';
-    const completionAwardTo = document.getElementById(`cl-ckid-${listId}`)?.value || '';
     if (!name) { showMessage('Enter a checklist name'); return; }
-    updateChecklist(listId, name, icon, assignedKid, completionBp, completionAwardTo);
+    updateChecklist(listId, name, icon, assignedKid, completionBp, assignedKid);
     _editingListId = null;
     _rerender();
 }
@@ -608,7 +607,7 @@ export function renderChecklistsAdminSectionHtml() {
                     ${emojiPickerHtml(list.icon, `cl-li-${list.id}`, `cl-li-btn-${list.id}`, `cl-li-pick-${list.id}`)}
                     <input id="cl-ln-${list.id}" type="text" value="${safeName}"
                         class="chores-admin-input chores-admin-input-grow">
-                    <select id="cl-akid-${list.id}" class="chores-admin-input" title="Kid this list belongs to">
+                    <select id="cl-akid-${list.id}" class="chores-admin-input" title="Assigned kid (earns all BP on this list)">
                         <option value=""${!list.assignedKid ? ' selected' : ''}>— any kid —</option>
                         ${Object.values(getConfig() || {}).filter(k => k.id).map(k =>
                             `<option value="${k.id}"${list.assignedKid === k.id ? ' selected' : ''}>${k.name}</option>`
@@ -616,9 +615,6 @@ export function renderChecklistsAdminSectionHtml() {
                     </select>
                     <input id="cl-cbp-${list.id}" type="number" min="0" value="${list.completionBp || 0}"
                         class="chores-admin-input chores-admin-input-sm" placeholder="Bonus BP" title="BP awarded on full completion">
-                    <select id="cl-ckid-${list.id}" class="chores-admin-input" title="Kid who earns the completion bonus">
-                        ${_kidOptions(list.completionAwardTo || '')}
-                    </select>
                     <button class="chore-btn approve-btn"
                         onclick="adminSaveChecklist('${list.id}')">✓</button>
                     <button class="chore-btn"
