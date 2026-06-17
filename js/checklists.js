@@ -543,12 +543,11 @@ export function adminAddChecklistItem(listId) {
     const emoji          = (document.getElementById(`cl-ei-${listId}`)?.value ?? '').trim();
     const title          = document.getElementById(`cl-ti-${listId}`)?.value.trim();
     const detail         = document.getElementById(`cl-di-${listId}`)?.value.trim() || '';
-    const deleteWhenDone = document.getElementById(`cl-dwd-${listId}`)?.checked ?? false;
     const bp             = document.getElementById(`cl-bp-${listId}`)?.value || '0';
     const awardTo        = document.getElementById(`cl-kid-${listId}`)?.value || '';
     const schedule       = document.getElementById(`cl-sch-${listId}`)?.value || '';
     if (!title) { showMessage('Enter an item title'); return; }
-    addChecklistItem(listId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule);
+    addChecklistItem(listId, emoji, title, detail, false, bp, awardTo, schedule);
     _rerender();
 }
 
@@ -566,12 +565,11 @@ export function adminSaveChecklistItem(listId, itemId) {
     const emoji          = (document.getElementById(`cl-ee-${itemId}`)?.value ?? '').trim();
     const title          = document.getElementById(`cl-te-${itemId}`)?.value.trim();
     const detail         = document.getElementById(`cl-de-${itemId}`)?.value.trim() || '';
-    const deleteWhenDone = document.getElementById(`cl-dwd-e-${itemId}`)?.checked ?? false;
     const bp             = document.getElementById(`cl-bp-e-${itemId}`)?.value || '0';
     const awardTo        = document.getElementById(`cl-kid-e-${itemId}`)?.value || '';
     const schedule       = document.getElementById(`cl-sch-e-${itemId}`)?.value || '';
     if (!title) { showMessage('Item title cannot be empty'); return; }
-    updateChecklistItem(listId, itemId, emoji, title, detail, deleteWhenDone, bp, awardTo, schedule);
+    updateChecklistItem(listId, itemId, emoji, title, detail, false, bp, awardTo, schedule);
     _editingItemId = null;
     _rerender();
 }
@@ -657,7 +655,6 @@ export function renderChecklistsAdminSectionHtml() {
                 const safeDetail = item.detail.replace(/"/g, '&quot;');
 
                 if (_editingItemId === item.id) {
-                    const dwdChecked = item.deleteWhenDone ? 'checked' : '';
                     html += `
                         <div class="chores-admin-add-form" style="margin:4px 0;flex-wrap:wrap;">
                             ${emojiPickerHtml(item.emoji, `cl-ee-${item.id}`, `cl-ee-btn-${item.id}`, `cl-ee-pick-${item.id}`)}
@@ -672,11 +669,6 @@ export function renderChecklistsAdminSectionHtml() {
                                    <span class="chores-admin-input" style="background:none;color:var(--primary-color);pointer-events:none;">${Object.values(getConfig()||{}).find(k=>k.id===list.assignedKid)?.name||'?'}</span>`
                                 : `<select id="cl-kid-e-${item.id}" class="chores-admin-input" title="Kid who earns the BP">${_kidOptions(item.awardTo || '')}</select>`}
                             ${_scheduleSelect(`cl-sch-e-${item.id}`, item.schedule || '')}
-                            <input type="checkbox" id="cl-dwd-e-${item.id}" style="display:none" ${dwdChecked}>
-                            <button type="button" id="cl-dwd-btn-e-${item.id}"
-                                class="chore-btn cl-dwd-btn${item.deleteWhenDone ? ' active' : ''}"
-                                title="Delete when done"
-                                onclick="toggleDwdBtn('cl-dwd-e-${item.id}','cl-dwd-btn-e-${item.id}')">🗑</button>
                             <button class="chore-btn approve-btn"
                                 onclick="adminSaveChecklistItem('${list.id}','${item.id}')">✓</button>
                             <button class="chore-btn"
@@ -688,7 +680,6 @@ export function renderChecklistsAdminSectionHtml() {
                             <div class="chores-admin-row-info">
                                 <span class="chore-name">${[item.emoji, item.title].filter(Boolean).join(' ')}</span>
                                 ${item.detail ? `<span class="chores-admin-meta">${item.detail}</span>` : ''}
-                                ${item.deleteWhenDone ? `<span class="chores-admin-meta cl-dwd-tag">auto-delete</span>` : ''}
                                 ${item.bp > 0 ? `<span class="chores-admin-meta" style="color:var(--primary-color)">+${item.bp} BP</span>` : ''}
                                 ${_scheduleLabel(item.schedule) ? `<span class="chores-admin-meta">${_scheduleLabel(item.schedule)}</span>` : ''}
                             </div>
@@ -724,11 +715,6 @@ export function renderChecklistsAdminSectionHtml() {
                            <span class="chores-admin-input" style="background:none;color:var(--primary-color);pointer-events:none;">${Object.values(getConfig()||{}).find(k=>k.id===list.assignedKid)?.name||'?'}</span>`
                         : `<select id="cl-kid-${list.id}" class="chores-admin-input" title="Kid who earns the BP">${_kidOptions('')}</select>`}
                     ${_scheduleSelect(`cl-sch-${list.id}`, '')}
-                    <input type="checkbox" id="cl-dwd-${list.id}" style="display:none">
-                    <button type="button" id="cl-dwd-btn-${list.id}"
-                        class="chore-btn cl-dwd-btn"
-                        title="Delete when done"
-                        onclick="toggleDwdBtn('cl-dwd-${list.id}','cl-dwd-btn-${list.id}')">🗑</button>
                     <button class="chore-btn approve-btn"
                         onclick="adminAddChecklistItem('${list.id}')">+</button>
                 </div>`;
